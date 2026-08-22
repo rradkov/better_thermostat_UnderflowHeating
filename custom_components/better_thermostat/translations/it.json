@@ -7,7 +7,7 @@
         "data": {
           "name": "Nome",
           "thermostat": "Il termostato reale",
-          "cooler": "Il dispositivo di raffreddamento (opzionale)",
+          "cooler": "Dispositivo di raffreddamento / boost (opzionale)",
           "min_cooler_resend_interval": "Secondi minimi tra comandi ripetuti al raffreddatore (0 = disattivato)",
           "temperature_sensor": "Sensore di temperatura",
           "humidity_sensor": "Sensore di umidità",
@@ -23,11 +23,22 @@
           "weather": "La tua entità meteo per ottenere la temperatura esterna",
           "target_temp_step": "Passo della temperatura target",
           "presets": "Preset abilitati",
-          "underfloor_heating_enabled": "Abilita supporto per riscaldamento a pavimento"
+          "underfloor_heating_enabled": "Abilita supporto per riscaldamento a pavimento",
+          "boost_heater_enabled": "Abilita Boost alla richiusura della finestra",
+          "boost_threshold": "Soglia di scostamento temperatura per il boost (°C)",
+          "boost_fan_mode": "Velocità ventola boost",
+          "boost_lag_minutes": "Anticipazione boost (minuti)",
+          "boost_max_runtime": "Timeout di sicurezza boost (minuti)"
         },
         "data_description": {
           "presets": "Seleziona i preset che vuoi rendere disponibili per questo termostato.",
-          "underfloor_heating_enabled": "Attiva questa opzione se uno dei tuoi elementi riscaldanti è un circuito di riscaldamento a pavimento (UFH). Questo sblocca un'opzione 'Tipo di riscaldamento' per ogni elemento e la modalità Pavimento Caldo, che mantiene un basso livello di calore di fondo nel pavimento invece di lasciarlo raffreddare completamente tra i cicli di riscaldamento."
+          "underfloor_heating_enabled": "Attiva questa opzione se uno dei tuoi elementi riscaldanti è un circuito di riscaldamento a pavimento (UFH). Questo sblocca un'opzione 'Tipo di riscaldamento' per ogni elemento e la modalità Pavimento Caldo, che mantiene un basso livello di calore di fondo nel pavimento invece di lasciarlo raffreddare completamente tra i cicli di riscaldamento.",
+          "boost_heater_enabled": "Attiva questa opzione per usare anche il dispositivo di raffreddamento/boost sopra per il rapido recupero della temperatura dopo la riapertura di una finestra. Se la stanza si è raffreddata più della soglia sottostante mentre la finestra era aperta, la chiusura avvia il boost in riscaldamento; se si è riscaldata (es. una giornata calda con il raffreddamento sospeso), la chiusura avvia il boost in raffreddamento. In entrambi i casi punta alla normale temperatura target, poi si spegne automaticamente. Richiede un dispositivo di raffreddamento/boost configurato sopra.",
+          "boost_threshold": "Se la temperatura ambiente si scosta (in entrambe le direzioni) più di questo valore mentre una finestra è aperta, chiudere la finestra attiva il boost.",
+          "boost_fan_mode": "Facoltativamente imposta la velocità della ventola del dispositivo (es. al massimo) durante il boost; ripristinata automaticamente al termine del boost. Lascia su 'Non modificare la velocità della ventola' per saltare questa opzione.",
+          "boost_lag_minutes": "Quanti minuti di calore/freddo residuo il dispositivo continua a fornire alla stanza dopo che gli è stato detto di fermarsi, usato per evitare di superare il target.",
+          "boost_max_runtime": "Tempo massimo per cui il boost può funzionare prima di essere forzatamente spento, indipendentemente dalla temperatura.",
+          "cooler": "Opzionale. Un dispositivo usato per il raffreddamento (in configurazioni riscaldamento+raffreddamento) e/o, una volta abilitato il Boost qui sotto, come dispositivo che ripristina rapidamente la temperatura ambiente dopo la riapertura di una finestra - molti fan-coil, pompe di calore e condizionatori svolgono già entrambi i compiti, quindi un solo dispositivo può ricoprire entrambi i ruoli."
         }
       },
       "advanced": {
@@ -95,11 +106,21 @@
           "heat_auto_swapped": "Se 'auto' indica riscaldamento per il tuo TRV e vuoi invertirlo",
           "child_lock": "Ignora tutti gli input sul TRV come un blocco bambini",
           "homematicip": "Se usi HomematicIP, abilita questa opzione per rallentare le richieste e prevenire il ciclo di lavoro",
-          "underfloor_heating_enabled": "Abilita supporto per riscaldamento a pavimento"
+          "underfloor_heating_enabled": "Abilita supporto per riscaldamento a pavimento",
+          "boost_heater_enabled": "Abilita Boost alla richiusura della finestra",
+          "boost_threshold": "Soglia di scostamento temperatura per il boost (°C)",
+          "boost_fan_mode": "Velocità ventola boost",
+          "boost_lag_minutes": "Anticipazione boost (minuti)",
+          "boost_max_runtime": "Timeout di sicurezza boost (minuti)"
         },
         "data_description": {
           "presets": "Seleziona i preset che vuoi rendere disponibili per questo termostato.",
-          "underfloor_heating_enabled": "Attiva questa opzione se uno dei tuoi elementi riscaldanti è un circuito di riscaldamento a pavimento (UFH). Questo sblocca un'opzione 'Tipo di riscaldamento' per ogni elemento e la modalità Pavimento Caldo, che mantiene un basso livello di calore di fondo nel pavimento invece di lasciarlo raffreddare completamente tra i cicli di riscaldamento."
+          "underfloor_heating_enabled": "Attiva questa opzione se uno dei tuoi elementi riscaldanti è un circuito di riscaldamento a pavimento (UFH). Questo sblocca un'opzione 'Tipo di riscaldamento' per ogni elemento e la modalità Pavimento Caldo, che mantiene un basso livello di calore di fondo nel pavimento invece di lasciarlo raffreddare completamente tra i cicli di riscaldamento.",
+          "boost_heater_enabled": "Attiva questa opzione per usare anche il dispositivo di raffreddamento/boost sopra per il rapido recupero della temperatura dopo la riapertura di una finestra. Se la stanza si è raffreddata più della soglia sottostante mentre la finestra era aperta, la chiusura avvia il boost in riscaldamento; se si è riscaldata (es. una giornata calda con il raffreddamento sospeso), la chiusura avvia il boost in raffreddamento. In entrambi i casi punta alla normale temperatura target, poi si spegne automaticamente. Richiede un dispositivo di raffreddamento/boost configurato sopra.",
+          "boost_threshold": "Se la temperatura ambiente si scosta (in entrambe le direzioni) più di questo valore mentre una finestra è aperta, chiudere la finestra attiva il boost.",
+          "boost_fan_mode": "Facoltativamente imposta la velocità della ventola del dispositivo (es. al massimo) durante il boost; ripristinata automaticamente al termine del boost. Lascia su 'Non modificare la velocità della ventola' per saltare questa opzione.",
+          "boost_lag_minutes": "Quanti minuti di calore/freddo residuo il dispositivo continua a fornire alla stanza dopo che gli è stato detto di fermarsi, usato per evitare di superare il target.",
+          "boost_max_runtime": "Tempo massimo per cui il boost può funzionare prima di essere forzatamente spento, indipendentemente dalla temperatura."
         }
       },
       "advanced": {
@@ -241,6 +262,11 @@
       "options": {
         "radiator": "Radiatore",
         "underfloor": "Riscaldamento a pavimento"
+      }
+    },
+    "boost_fan_mode": {
+      "options": {
+        "__no_change__": "Non modificare la velocità della ventola"
       }
     }
   },

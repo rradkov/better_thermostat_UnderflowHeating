@@ -7,7 +7,7 @@
         "data": {
           "name": "Názov",
           "thermostat": "Skutočný termostat",
-          "cooler": "Chladiace zariadenie (voliteľné)",
+          "cooler": "Chladiace / posilňovacie zariadenie (voliteľné)",
           "min_cooler_resend_interval": "Minimálny počet sekúnd medzi opakovanými príkazmi chladenia (0 = vypnuté)",
           "temperature_sensor": "Snímač teploty",
           "humidity_sensor": "Snímač vlhkosti",
@@ -23,11 +23,22 @@
           "weather": "Váš meteorologický subjekt na zistenie vonkajšej teploty",
           "target_temp_step": "Krok cieľovej teploty",
           "presets": "Povolené predvoľby",
-          "underfloor_heating_enabled": "Povoliť podporu podlahového vykurovania"
+          "underfloor_heating_enabled": "Povoliť podporu podlahového vykurovania",
+          "boost_heater_enabled": "Povoliť Boost pri opätovnom zatvorení okna",
+          "boost_threshold": "Prah odchýlky teploty pre boost (°C)",
+          "boost_fan_mode": "Rýchlosť ventilátora boostu",
+          "boost_lag_minutes": "Predstih boostu (minúty)",
+          "boost_max_runtime": "Bezpečnostný časový limit boostu (minúty)"
         },
         "data_description": {
           "presets": "Vyberte predvoľby, ktoré chcete mať k dispozícii pre tento termostat.",
-          "underfloor_heating_enabled": "Zapnite túto možnosť, ak je niektorý z vašich ohrievačov slúčkou podlahového vykurovania (UFH). Týmto sa odomkne možnosť 'Typ vykurovania' pre každý ohrievač a režim Teplá Podlaha, ktorý udržiava nízku úroveň základného tepla v podlahe namiesto toho, aby ju nechal medzi cyklami vykurovania úplne vychladnúť."
+          "underfloor_heating_enabled": "Zapnite túto možnosť, ak je niektorý z vašich ohrievačov slúčkou podlahového vykurovania (UFH). Týmto sa odomkne možnosť 'Typ vykurovania' pre každý ohrievač a režim Teplá Podlaha, ktorý udržiava nízku úroveň základného tepla v podlahe namiesto toho, aby ju nechal medzi cyklami vykurovania úplne vychladnúť.",
+          "boost_heater_enabled": "Zapnite túto možnosť, aby sa chladiace/posilňovacie zariadenie vyššie použilo aj na rýchle obnovenie teploty po opätovnom otvorení okna. Ak miestnosť vychladla viac ako je prah nižšie, kým bolo okno otvorené, zatvorenie spustí boost na vykurovanie; ak sa zohriala (napr. horúci deň s pozastaveným chladením), zatvorenie spustí boost na chladenie. V oboch prípadoch smeruje k vašej bežnej cieľovej teplote a potom sa automaticky vypne. Vyžaduje nakonfigurované chladiace/posilňovacie zariadenie vyššie.",
+          "boost_threshold": "Ak sa teplota miestnosti odchýli (v ktoromkoľvek smere) o viac ako je táto hodnota, kým je okno otvorené, zatvorenie okna aktivuje boost.",
+          "boost_fan_mode": "Voliteľne nastavte rýchlosť ventilátora zariadenia (napr. na maximum) počas boostu; po skončení boostu sa automaticky obnoví. Ponechajte na 'Nemeniť rýchlosť ventilátora', ak chcete túto možnosť preskočiť.",
+          "boost_lag_minutes": "Koľko minút zvyškového tepla/chladu zariadenie naďalej dodáva do miestnosti po tom, čo mu bolo povedané, aby sa zastavilo, používané na zabránenie prekročeniu cieľa.",
+          "boost_max_runtime": "Maximálny čas, počas ktorého môže boost bežať, kým sa vynúti jeho vypnutie bez ohľadu na teplotu.",
+          "cooler": "Voliteľné. Zariadenie používané na chladenie (v konfiguráciách vykurovanie+chladenie) a/alebo, po zapnutí Boostu nižšie, ako zariadenie, ktoré rýchlo obnoví teplotu miestnosti po opätovnom otvorení okna - mnohé fan-coily, tepelné čerpadlá a klimatizácie už plnia obe úlohy, takže jedno zariadenie môže zastávať obe roly."
         }
       },
       "advanced": {
@@ -95,11 +106,21 @@
           "heat_auto_swapped": "Ak auto znamená teplo pre váš TRV a chcete ho vymeniť",
           "child_lock": "Ignorovať všetky vstupy na TRV ako detský zámok",
           "homematicip": "Ak používate HomematicIP, mali by ste túto funkciu povoliť, aby ste spomalili požiadavky a zabránili tak pracovnému cyklu",
-          "underfloor_heating_enabled": "Povoliť podporu podlahového vykurovania"
+          "underfloor_heating_enabled": "Povoliť podporu podlahového vykurovania",
+          "boost_heater_enabled": "Povoliť Boost pri opätovnom zatvorení okna",
+          "boost_threshold": "Prah odchýlky teploty pre boost (°C)",
+          "boost_fan_mode": "Rýchlosť ventilátora boostu",
+          "boost_lag_minutes": "Predstih boostu (minúty)",
+          "boost_max_runtime": "Bezpečnostný časový limit boostu (minúty)"
         },
         "data_description": {
           "presets": "Vyberte predvoľby, ktoré chcete mať k dispozícii pre tento termostat.",
-          "underfloor_heating_enabled": "Zapnite túto možnosť, ak je niektorý z vašich ohrievačov slúčkou podlahového vykurovania (UFH). Týmto sa odomkne možnosť 'Typ vykurovania' pre každý ohrievač a režim Teplá Podlaha, ktorý udržiava nízku úroveň základného tepla v podlahe namiesto toho, aby ju nechal medzi cyklami vykurovania úplne vychladnúť."
+          "underfloor_heating_enabled": "Zapnite túto možnosť, ak je niektorý z vašich ohrievačov slúčkou podlahového vykurovania (UFH). Týmto sa odomkne možnosť 'Typ vykurovania' pre každý ohrievač a režim Teplá Podlaha, ktorý udržiava nízku úroveň základného tepla v podlahe namiesto toho, aby ju nechal medzi cyklami vykurovania úplne vychladnúť.",
+          "boost_heater_enabled": "Zapnite túto možnosť, aby sa chladiace/posilňovacie zariadenie vyššie použilo aj na rýchle obnovenie teploty po opätovnom otvorení okna. Ak miestnosť vychladla viac ako je prah nižšie, kým bolo okno otvorené, zatvorenie spustí boost na vykurovanie; ak sa zohriala (napr. horúci deň s pozastaveným chladením), zatvorenie spustí boost na chladenie. V oboch prípadoch smeruje k vašej bežnej cieľovej teplote a potom sa automaticky vypne. Vyžaduje nakonfigurované chladiace/posilňovacie zariadenie vyššie.",
+          "boost_threshold": "Ak sa teplota miestnosti odchýli (v ktoromkoľvek smere) o viac ako je táto hodnota, kým je okno otvorené, zatvorenie okna aktivuje boost.",
+          "boost_fan_mode": "Voliteľne nastavte rýchlosť ventilátora zariadenia (napr. na maximum) počas boostu; po skončení boostu sa automaticky obnoví. Ponechajte na 'Nemeniť rýchlosť ventilátora', ak chcete túto možnosť preskočiť.",
+          "boost_lag_minutes": "Koľko minút zvyškového tepla/chladu zariadenie naďalej dodáva do miestnosti po tom, čo mu bolo povedané, aby sa zastavilo, používané na zabránenie prekročeniu cieľa.",
+          "boost_max_runtime": "Maximálny čas, počas ktorého môže boost bežať, kým sa vynúti jeho vypnutie bez ohľadu na teplotu."
         }
       },
       "advanced": {
@@ -241,6 +262,11 @@
       "options": {
         "radiator": "Radiátor",
         "underfloor": "Podlahové vykurovanie"
+      }
+    },
+    "boost_fan_mode": {
+      "options": {
+        "__no_change__": "Nemeniť rýchlosť ventilátora"
       }
     }
   },

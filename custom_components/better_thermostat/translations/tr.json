@@ -7,7 +7,7 @@
         "data": {
           "name": "Ad",
           "thermostat": "Gerçek termostat",
-          "cooler": "Soğutma cihazı (isteğe bağlı)",
+          "cooler": "Soğutma / Takviye cihazı (isteğe bağlı)",
           "min_cooler_resend_interval": "Tekrarlanan soğutucu komutları arasındaki minimum saniye (0 = devre dışı)",
           "temperature_sensor": "Sıcaklık sensörü",
           "humidity_sensor": "Nem sensörü",
@@ -23,11 +23,22 @@
           "weather": "Dış ortam sıcaklığını almak için hava durumu varlığı",
           "target_temp_step": "Hedef sıcaklık adımı",
           "presets": "Etkin ön ayarlar",
-          "underfloor_heating_enabled": "Yerden Isıtma desteğini etkinleştir"
+          "underfloor_heating_enabled": "Yerden Isıtma desteğini etkinleştir",
+          "boost_heater_enabled": "Pencere yeniden kapatıldığında Takviyeyi etkinleştir",
+          "boost_threshold": "Takviye sıcaklık sapma eşiği (°C)",
+          "boost_fan_mode": "Takviye fan hızı",
+          "boost_lag_minutes": "Takviye öngörüsü (dakika)",
+          "boost_max_runtime": "Takviye güvenlik zaman aşımı (dakika)"
         },
         "data_description": {
           "presets": "Bu termostat için kullanılabilir olmasını istediğiniz ön ayarları seçin.",
-          "underfloor_heating_enabled": "Isıtıcılarınızdan herhangi biri yerden ısıtma (UFH) devresiyse bunu açın. Bu, her ısıtıcı için bir 'Isıtma türü' seçeneğinin ve zemini ısıtma döngüleri arasında tamamen soğumaya bırakmak yerine düşük bir arka plan ısı seviyesinde tutan Sıcak Zemin modunun kilidini açar."
+          "underfloor_heating_enabled": "Isıtıcılarınızdan herhangi biri yerden ısıtma (UFH) devresiyse bunu açın. Bu, her ısıtıcı için bir 'Isıtma türü' seçeneğinin ve zemini ısıtma döngüleri arasında tamamen soğumaya bırakmak yerine düşük bir arka plan ısı seviyesinde tutan Sıcak Zemin modunun kilidini açar.",
+          "boost_heater_enabled": "Bir pencere yeniden açıldıktan sonra hızlı sıcaklık kazanımı için yukarıdaki Soğutma/Takviye cihazını da kullanmak üzere bunu açın. Pencere açıkken oda aşağıdaki eşikten daha fazla soğuduysa, kapatmak cihazı ısıtmaya doğru takviye eder; oda ısındıysa (örn. soğutmanın askıya alındığı sıcak bir gün), kapatmak cihazı soğutmaya doğru takviye eder. Her iki durumda da normal hedef sıcaklığınızı hedefler, ardından otomatik olarak kapanır. Yukarıda yapılandırılmış bir Soğutma/Takviye cihazı gerektirir.",
+          "boost_threshold": "Bir pencere açıkken oda sıcaklığı (her iki yönde de) bundan daha fazla saparsa, pencereyi kapatmak takviyeyi devreye sokar.",
+          "boost_fan_mode": "İsteğe bağlı olarak, takviye sırasında cihazın fan hızını (örneğin maksimuma) ayarlayın; takviye bittiğinde otomatik olarak geri yüklenir. Bunu atlamak için 'Fan modunu değiştirme' olarak bırakın.",
+          "boost_lag_minutes": "Cihazın durdurulması istendikten sonra odaya ne kadar süre (dakika) kalıntı ısı/soğuk vermeye devam ettiği; hedefi aşmayı önlemek için kullanılır.",
+          "boost_max_runtime": "Sıcaklığa bakılmaksızın takviyenin zorla kapatılmadan önce ne kadar süre çalışmasına izin verildiği.",
+          "cooler": "İsteğe bağlı. Soğutma için (ısıtma+soğutma kurulumlarında) ve/veya aşağıda Takviye etkinleştirildiğinde, bir pencere yeniden açıldıktan sonra oda sıcaklığını hızla geri kazandıran cihaz olarak kullanılan bir cihaz - birçok fan-coil, ısı pompası ve klima zaten her iki görevi de yapıyor, bu nedenle tek bir cihaz her iki rolü de üstlenebilir."
         }
       },
       "advanced": {
@@ -95,11 +106,21 @@
           "heat_auto_swapped": "TRV'nizde otomatik mod ısıtma anlamına geliyorsa ve değiştirmek istiyorsanız",
           "child_lock": "TRV üzerindeki tüm girişleri çocuk kilidi gibi yoksay",
           "homematicip": "HomematicIP kullanıyorsanız, görev döngüsünü önlemek için istekleri yavaşlatmak amacıyla bunu etkinleştirmelisiniz",
-          "underfloor_heating_enabled": "Yerden Isıtma desteğini etkinleştir"
+          "underfloor_heating_enabled": "Yerden Isıtma desteğini etkinleştir",
+          "boost_heater_enabled": "Pencere yeniden kapatıldığında Takviyeyi etkinleştir",
+          "boost_threshold": "Takviye sıcaklık sapma eşiği (°C)",
+          "boost_fan_mode": "Takviye fan hızı",
+          "boost_lag_minutes": "Takviye öngörüsü (dakika)",
+          "boost_max_runtime": "Takviye güvenlik zaman aşımı (dakika)"
         },
         "data_description": {
           "presets": "Bu termostat için kullanılabilir olmasını istediğiniz ön ayarları seçin.",
-          "underfloor_heating_enabled": "Isıtıcılarınızdan herhangi biri yerden ısıtma (UFH) devresiyse bunu açın. Bu, her ısıtıcı için bir 'Isıtma türü' seçeneğinin ve zemini ısıtma döngüleri arasında tamamen soğumaya bırakmak yerine düşük bir arka plan ısı seviyesinde tutan Sıcak Zemin modunun kilidini açar."
+          "underfloor_heating_enabled": "Isıtıcılarınızdan herhangi biri yerden ısıtma (UFH) devresiyse bunu açın. Bu, her ısıtıcı için bir 'Isıtma türü' seçeneğinin ve zemini ısıtma döngüleri arasında tamamen soğumaya bırakmak yerine düşük bir arka plan ısı seviyesinde tutan Sıcak Zemin modunun kilidini açar.",
+          "boost_heater_enabled": "Bir pencere yeniden açıldıktan sonra hızlı sıcaklık kazanımı için yukarıdaki Soğutma/Takviye cihazını da kullanmak üzere bunu açın. Pencere açıkken oda aşağıdaki eşikten daha fazla soğuduysa, kapatmak cihazı ısıtmaya doğru takviye eder; oda ısındıysa (örn. soğutmanın askıya alındığı sıcak bir gün), kapatmak cihazı soğutmaya doğru takviye eder. Her iki durumda da normal hedef sıcaklığınızı hedefler, ardından otomatik olarak kapanır. Yukarıda yapılandırılmış bir Soğutma/Takviye cihazı gerektirir.",
+          "boost_threshold": "Bir pencere açıkken oda sıcaklığı (her iki yönde de) bundan daha fazla saparsa, pencereyi kapatmak takviyeyi devreye sokar.",
+          "boost_fan_mode": "İsteğe bağlı olarak, takviye sırasında cihazın fan hızını (örneğin maksimuma) ayarlayın; takviye bittiğinde otomatik olarak geri yüklenir. Bunu atlamak için 'Fan modunu değiştirme' olarak bırakın.",
+          "boost_lag_minutes": "Cihazın durdurulması istendikten sonra odaya ne kadar süre (dakika) kalıntı ısı/soğuk vermeye devam ettiği; hedefi aşmayı önlemek için kullanılır.",
+          "boost_max_runtime": "Sıcaklığa bakılmaksızın takviyenin zorla kapatılmadan önce ne kadar süre çalışmasına izin verildiği."
         }
       },
       "advanced": {
@@ -241,6 +262,11 @@
       "options": {
         "radiator": "Radyatör",
         "underfloor": "Yerden ısıtma"
+      }
+    },
+    "boost_fan_mode": {
+      "options": {
+        "__no_change__": "Fan modunu değiştirme"
       }
     }
   },

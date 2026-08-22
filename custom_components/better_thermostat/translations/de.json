@@ -7,7 +7,7 @@
         "data": {
           "name": "Name",
           "thermostat": "Das reale Thermostat",
-          "cooler": "Klimagerät AC (optional)",
+          "cooler": "Kühl-/Boost-Gerät (optional)",
           "min_cooler_resend_interval": "Mindestsekunden zwischen wiederholten Klimagerät-Befehlen (0 = deaktiviert)",
           "temperature_sensor": "Externer Temperatursensor",
           "humidity_sensor": "Luftfeuchtigkeitssensor",
@@ -23,11 +23,22 @@
           "weather": "Die Wetter-Entität für die Außentemperatur.",
           "target_temp_step": "Solltemperatur-Schritt",
           "presets": "Aktivierte Presets",
-          "underfloor_heating_enabled": "Fußbodenheizung-Unterstützung aktivieren"
+          "underfloor_heating_enabled": "Fußbodenheizung-Unterstützung aktivieren",
+          "boost_heater_enabled": "Boost beim erneuten Schließen des Fensters aktivieren",
+          "boost_threshold": "Boost-Temperaturabweichung-Schwelle (°C)",
+          "boost_fan_mode": "Boost-Lüfterstufe",
+          "boost_lag_minutes": "Boost-Vorlaufzeit (Minuten)",
+          "boost_max_runtime": "Boost-Sicherheits-Timeout (Minuten)"
         },
         "data_description": {
           "presets": "Wähle die Presets aus, die für dieses Thermostat verfügbar sein sollen.",
-          "underfloor_heating_enabled": "Aktivieren Sie dies, wenn eines Ihrer Heizgeräte eine Fußbodenheizungsschleife ist. Dies schaltet eine Option 'Heizungstyp' pro Heizgerät sowie den Warmer-Boden-Modus frei, der ein niedriges Grundwärmeniveau im Boden hält, anstatt ihn zwischen Heizzyklen vollständig abkühlen zu lassen."
+          "underfloor_heating_enabled": "Aktivieren Sie dies, wenn eines Ihrer Heizgeräte eine Fußbodenheizungsschleife ist. Dies schaltet eine Option 'Heizungstyp' pro Heizgerät sowie den Warmer-Boden-Modus frei, der ein niedriges Grundwärmeniveau im Boden hält, anstatt ihn zwischen Heizzyklen vollständig abkühlen zu lassen.",
+          "boost_heater_enabled": "Aktivieren Sie dies, um das oben konfigurierte Kühl-/Boost-Gerät auch zur schnellen Temperaturwiederherstellung nach dem erneuten Öffnen eines Fensters zu nutzen. Ist der Raum kälter geworden als der untenstehende Schwellenwert, während das Fenster offen war, boostet das Schließen das Gerät zum Heizen; ist er wärmer geworden (z. B. an einem heißen Tag mit unterdrückter Kühlung), boostet das Schließen das Gerät zum Kühlen. In beiden Fällen wird die normale Zieltemperatur angestrebt und danach automatisch abgeschaltet. Erfordert ein oben konfiguriertes Kühl-/Boost-Gerät.",
+          "boost_threshold": "Wenn die Raumtemperatur (in beide Richtungen) um mehr als diesen Wert abweicht, während ein Fenster geöffnet ist, aktiviert das Schließen des Fensters den Boost.",
+          "boost_fan_mode": "Optional die Lüfterstufe des Geräts (z. B. auf Maximum) während des Boosts setzen; wird nach Ende des Boosts automatisch wiederhergestellt. Auf 'Lüfterstufe nicht ändern' belassen, um dies zu überspringen.",
+          "boost_lag_minutes": "Wie viele Minuten Restwärme/-kühlung das Gerät nach der Abschaltaufforderung noch an den Raum liefert, verwendet um ein Überschießen des Zielwerts zu vermeiden.",
+          "boost_max_runtime": "Maximale Laufzeit des Boosts, bevor er unabhängig von der Temperatur zwangsweise abgeschaltet wird.",
+          "cooler": "Optional. Ein Gerät, das zum Kühlen (bei Heiz+Kühl-Setups) und/oder, sobald Boost unten aktiviert ist, als Gerät zur schnellen Wiederherstellung der Raumtemperatur nach dem erneuten Öffnen eines Fensters verwendet wird - viele Fan-Coils, Wärmepumpen und Klimageräte erledigen bereits beide Aufgaben, sodass ein Gerät beide Rollen übernehmen kann."
         }
       },
       "advanced": {
@@ -95,11 +106,21 @@
           "heat_auto_swapped": "Wenn das Auto Wärme für Ihr TRV bedeutet und Sie es austauschen möchten.",
           "child_lock": "Ignorieren Sie alle Eingaben am TRV wie eine Kindersicherung.",
           "homematicip": "Wenn Sie HomematicIP verwenden, sollten Sie dies aktivieren, um die Anfragen zu verlangsamen und den Duty Cycle zu verhindern.",
-          "underfloor_heating_enabled": "Fußbodenheizung-Unterstützung aktivieren"
+          "underfloor_heating_enabled": "Fußbodenheizung-Unterstützung aktivieren",
+          "boost_heater_enabled": "Boost beim erneuten Schließen des Fensters aktivieren",
+          "boost_threshold": "Boost-Temperaturabweichung-Schwelle (°C)",
+          "boost_fan_mode": "Boost-Lüfterstufe",
+          "boost_lag_minutes": "Boost-Vorlaufzeit (Minuten)",
+          "boost_max_runtime": "Boost-Sicherheits-Timeout (Minuten)"
         },
         "data_description": {
           "presets": "Wähle die Presets aus, die für dieses Thermostat verfügbar sein sollen.",
-          "underfloor_heating_enabled": "Aktivieren Sie dies, wenn eines Ihrer Heizgeräte eine Fußbodenheizungsschleife ist. Dies schaltet eine Option 'Heizungstyp' pro Heizgerät sowie den Warmer-Boden-Modus frei, der ein niedriges Grundwärmeniveau im Boden hält, anstatt ihn zwischen Heizzyklen vollständig abkühlen zu lassen."
+          "underfloor_heating_enabled": "Aktivieren Sie dies, wenn eines Ihrer Heizgeräte eine Fußbodenheizungsschleife ist. Dies schaltet eine Option 'Heizungstyp' pro Heizgerät sowie den Warmer-Boden-Modus frei, der ein niedriges Grundwärmeniveau im Boden hält, anstatt ihn zwischen Heizzyklen vollständig abkühlen zu lassen.",
+          "boost_heater_enabled": "Aktivieren Sie dies, um das oben konfigurierte Kühl-/Boost-Gerät auch zur schnellen Temperaturwiederherstellung nach dem erneuten Öffnen eines Fensters zu nutzen. Ist der Raum kälter geworden als der untenstehende Schwellenwert, während das Fenster offen war, boostet das Schließen das Gerät zum Heizen; ist er wärmer geworden (z. B. an einem heißen Tag mit unterdrückter Kühlung), boostet das Schließen das Gerät zum Kühlen. In beiden Fällen wird die normale Zieltemperatur angestrebt und danach automatisch abgeschaltet. Erfordert ein oben konfiguriertes Kühl-/Boost-Gerät.",
+          "boost_threshold": "Wenn die Raumtemperatur (in beide Richtungen) um mehr als diesen Wert abweicht, während ein Fenster geöffnet ist, aktiviert das Schließen des Fensters den Boost.",
+          "boost_fan_mode": "Optional die Lüfterstufe des Geräts (z. B. auf Maximum) während des Boosts setzen; wird nach Ende des Boosts automatisch wiederhergestellt. Auf 'Lüfterstufe nicht ändern' belassen, um dies zu überspringen.",
+          "boost_lag_minutes": "Wie viele Minuten Restwärme/-kühlung das Gerät nach der Abschaltaufforderung noch an den Raum liefert, verwendet um ein Überschießen des Zielwerts zu vermeiden.",
+          "boost_max_runtime": "Maximale Laufzeit des Boosts, bevor er unabhängig von der Temperatur zwangsweise abgeschaltet wird."
         }
       },
       "advanced": {
@@ -241,6 +262,11 @@
       "options": {
         "radiator": "Heizkörper",
         "underfloor": "Fußbodenheizung"
+      }
+    },
+    "boost_fan_mode": {
+      "options": {
+        "__no_change__": "Lüfterstufe nicht ändern"
       }
     }
   },
