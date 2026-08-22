@@ -56,6 +56,7 @@ from custom_components.better_thermostat.utils.helpers import (
     round_by_step,
     rounding,
 )
+from custom_components.better_thermostat.utils.underfloor import apply_warm_floor_floor
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -1071,6 +1072,11 @@ def calculate_calibration_local(self, entity_id) -> float | None:
     t_max = float(t_max)
     _new_trv_calibration = max(t_min, min(_new_trv_calibration, t_max))
 
+    _new_trv_calibration = apply_warm_floor_floor(
+        self, entity_id, _new_trv_calibration, is_offset=True
+    )
+    _new_trv_calibration = max(t_min, min(_new_trv_calibration, t_max))
+
     _new_trv_calibration = _convert_to_float(_new_trv_calibration)
     if _new_trv_calibration is None:
         return None
@@ -1427,6 +1433,14 @@ def calculate_calibration_setpoint(self, entity_id) -> float | None:
     # limit new setpoint within min/max of the TRV's range
     t_min = _convert_to_float(self.real_trvs[entity_id].min_temp)
     t_max = _convert_to_float(self.real_trvs[entity_id].max_temp)
+    if t_min is not None:
+        _calibrated_setpoint = max(float(t_min), _calibrated_setpoint)
+    if t_max is not None:
+        _calibrated_setpoint = min(_calibrated_setpoint, float(t_max))
+
+    _calibrated_setpoint = apply_warm_floor_floor(
+        self, entity_id, _calibrated_setpoint, is_offset=False
+    )
     if t_min is not None:
         _calibrated_setpoint = max(float(t_min), _calibrated_setpoint)
     if t_max is not None:
