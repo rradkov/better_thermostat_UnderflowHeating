@@ -64,6 +64,15 @@ from .utils.const import (
 )
 from .utils.helpers import device_offers_mode, get_device_model, get_trv_intigration
 from .utils.preset_manager import DEFAULT_ENABLED_PRESETS
+from .utils.underfloor import (
+    CONF_HEATING_TYPE,
+    CONF_UNDERFLOOR_HEATING_ENABLED,
+    CONF_WARM_FLOOR_MAX_BACKOFF,
+    build_underfloor_advanced_fields,
+    build_underfloor_user_fields,
+    normalize_underfloor_advanced_submission,
+    normalize_underfloor_user_submission,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -311,6 +320,7 @@ def _build_advanced_fields(
     has_auto: bool,
     support_valve: bool = False,
     support_offset: bool = False,
+    underfloor_enabled: bool = False,
 ) -> OrderedDict:
     # Migrate old balance_mode to calibration_mode
     sources_list = list(sources)
@@ -407,11 +417,22 @@ def _build_advanced_fields(
         vol.Optional(CONF_HOMEMATICIP, default=get_bool(CONF_HOMEMATICIP, homematic))
     ] = bool
 
+    ordered.update(
+        build_underfloor_advanced_fields(
+            get_value, underfloor_enabled=underfloor_enabled
+        )
+    )
+
     return ordered
 
 
 def _normalize_advanced_submission(
-    data: dict[str, Any], *, default_calibration: str, homematic: bool, has_auto: bool
+    data: dict[str, Any],
+    *,
+    default_calibration: str,
+    homematic: bool,
+    has_auto: bool,
+    underfloor_enabled: bool = False,
 ) -> dict[str, Any]:
     normalized: dict[str, Any] = dict(data)
     normalized[CONF_CALIBRATION] = normalized.get(CONF_CALIBRATION, default_calibration)
@@ -432,6 +453,15 @@ def _normalize_advanced_submission(
     )
     normalized[CONF_CHILD_LOCK] = _as_bool(normalized.get(CONF_CHILD_LOCK), False)
     normalized[CONF_HOMEMATICIP] = _as_bool(normalized.get(CONF_HOMEMATICIP), homematic)
+
+    if underfloor_enabled:
+        normalized.update(normalize_underfloor_advanced_submission(data))
+    else:
+        # A stale heating_type/backoff from a submission made while the
+        # instance-level toggle was on must not silently persist once it's
+        # off again - `dict(data)` above would otherwise carry it through.
+        normalized.pop(CONF_HEATING_TYPE, None)
+        normalized.pop(CONF_WARM_FLOOR_MAX_BACKOFF, None)
 
     _LOGGER.debug("Normalized advanced submission: %s", normalized)
 
@@ -674,6 +704,9 @@ def _build_user_fields(
             )
     add_field(CONF_TARGET_TEMP_STEP, TEMP_STEP_SELECTOR, default=target_step_default)
 
+    for key, field_type in build_underfloor_user_fields(resolve).items():
+        fields[vol.Optional(key, default=resolve(key, False))] = field_type
+
     return fields
 
 
@@ -850,6 +883,8 @@ def _normalize_user_submission(
                 CONF_MIN_COOLER_RESEND_INTERVAL
             ]
 
+    normalized.update(normalize_underfloor_user_submission(user_input))
+
     return normalized
 
 
@@ -867,6 +902,13 @@ async def _prepare_advanced_context(
     homematic = bool(integration and "homematic" in integration.lower())
     has_auto = _trv_supports_auto(flow, trv_id)
 
+    # ConfigFlow stashes the top-level user-step data on `.data`;
+    # OptionsFlowHandler stashes it on `.updated_config` instead.
+    top_level_data = (
+        getattr(flow, "data", None) or getattr(flow, "updated_config", None) or {}
+    )
+    underfloor_enabled = _as_bool(top_level_data.get(CONF_UNDERFLOOR_HEATING_ENABLED))
+
     return {
         "adapter": adapter,
         "info": info,
@@ -875,6 +917,7 @@ async def _prepare_advanced_context(
         "has_auto": has_auto,
         "integration": integration,
         "trv_id": trv_id,
+        "underfloor_enabled": underfloor_enabled,
     }
 
 
@@ -973,6 +1016,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 default_calibration=ctx["default_calibration"],
                 homematic=ctx["homematic"],
                 has_auto=ctx["has_auto"],
+                underfloor_enabled=ctx.get("underfloor_enabled", False),
             )
             _LOGGER.debug(
                 "ConfigFlow advanced step storing data for %s (index %s): %s",
@@ -1014,6 +1058,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             has_auto=ctx["has_auto"],
             support_valve=info.get("support_valve", False),
             support_offset=info.get("support_offset", False),
+            underfloor_enabled=ctx.get("underfloor_enabled", False),
         )
         _LOGGER.debug(
             "ConfigFlow advanced step showing form for trv=%s with defaults=%s",
@@ -1139,6 +1184,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 default_calibration=ctx["default_calibration"],
                 homematic=ctx["homematic"],
                 has_auto=ctx["has_auto"],
+                underfloor_enabled=ctx.get("underfloor_enabled", False),
             )
             _LOGGER.debug(
                 "OptionsFlow advanced step storing data for %s (index %s): %s",
@@ -1188,6 +1234,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             has_auto=ctx["has_auto"],
             support_valve=info.get("support_valve", False),
             support_offset=info.get("support_offset", False),
+            underfloor_enabled=ctx.get("underfloor_enabled", False),
         )
         _LOGGER.debug(
             "OptionsFlow advanced step showing form for trv=%s with defaults=%s",

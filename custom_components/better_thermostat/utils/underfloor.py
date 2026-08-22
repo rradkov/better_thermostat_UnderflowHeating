@@ -1,0 +1,437 @@
+"""Warm Floor mode: a sustaining-heat floor for underfloor heating (UFH) heaters.
+
+Underfloor heating has much higher thermal inertia than a radiator TRV: once
+the room is satisfied and Better Thermostat backs a heater fully off, the
+slab keeps cooling for a long time, and recovering from a fully-cold floor
+is slow and energy-costly. Warm Floor keeps a low, continuous background
+heat level in UFH-flagged heaters instead of letting them fully idle,
+without ever pushing the room air above target.
+
+Everything here is additive: a heater only gets this behavior when its
+per-heater ``heating_type`` advanced option is explicitly set to
+``HeatingType.UNDERFLOOR`` (default is ``HeatingType.RADIATOR``, which is a
+strict no-op through this module). All computation reuses telemetry the
+BetterThermostat entity already maintains (``heat_loss_rate``,
+``heating_power``, ``temp_slope``, and, for MPC-calibrated heaters, the
+per-TRV learned MPC state) — no new thermal model is introduced.
+"""
+
+from __future__ import annotations
+
+from enum import StrEnum
+import logging
+from typing import Any, Final
+
+from homeassistant.components.climate.const import HVACMode
+
+from custom_components.better_thermostat.utils.const import (
+    MAX_HEAT_LOSS,
+    MAX_HEATING_POWER,
+    CalibrationMode,
+)
+from custom_components.better_thermostat.utils.helpers import (
+    convert_to_float,
+    normalize_calibration_mode,
+)
+
+_LOGGER = logging.getLogger(__name__)
+
+# -- Config keys ---------------------------------------------------------
+CONF_UNDERFLOOR_HEATING_ENABLED: Final = "underfloor_heating_enabled"
+CONF_HEATING_TYPE: Final = "heating_type"
+CONF_WARM_FLOOR_MAX_BACKOFF: Final = "warm_floor_max_backoff"
+
+
+class HeatingType(StrEnum):
+    """Per-heater emitter type. Only ``UNDERFLOOR`` gets Warm Floor behavior."""
+
+    RADIATOR = "radiator"
+    UNDERFLOOR = "underfloor"
+
+
+DEFAULT_HEATING_TYPE: Final = HeatingType.RADIATOR
+
+# -- Tunable bounds --------------------------------------------------------
+WARM_FLOOR_MIN_BACKOFF: Final = 0.2
+WARM_FLOOR_MAX_BACKOFF_DEFAULT: Final = 1.5
+WARM_FLOOR_MAX_BACKOFF_CAP: Final = 5.0
+# A leaky room or a weak emitter still gets *some* backoff allowance, never
+# zero - this is a floor on the structural scale factor, not on the
+# temperature itself.
+WARM_FLOOR_MIN_BACKOFF_RATIO: Final = 0.1
+# °C/min guards on the live temp_slope signal, see apply_warm_floor_floor().
+OVERSHOOT_SLOPE_GUARD: Final = 0.05
+UNDERSHOOT_SLOPE_GUARD: Final = 0.02
+
+
+# ---------------------------------------------------------------------------
+# Config flow helpers
+# ---------------------------------------------------------------------------
+
+
+def build_underfloor_user_fields(resolve) -> dict[str, Any]:
+    """Return the top-level 'user' step field(s) for this feature.
+
+    Plain ``{key: field_type}`` pairs - the caller (``config_flow.py``)
+    wraps each key in its own ``vol.Optional(key, default=resolve(key, ...))``,
+    same as every other field it builds. ``resolve`` is the same
+    ``resolve(key, default=None)`` closure ``config_flow.py`` already builds
+    for every other conditional field (e.g. the cooler resend-interval
+    field), unused here but accepted for a consistent call signature.
+    """
+    return {CONF_UNDERFLOOR_HEATING_ENABLED: bool}
+
+
+def normalize_underfloor_user_submission(data: dict[str, Any]) -> dict[str, Any]:
+    """Normalize the top-level submission for this feature."""
+    from custom_components.better_thermostat.config_flow import _as_bool
+
+    return {
+        CONF_UNDERFLOOR_HEATING_ENABLED: _as_bool(
+            data.get(CONF_UNDERFLOOR_HEATING_ENABLED), False
+        )
+    }
+
+
+def build_underfloor_advanced_fields(
+    get_value, *, underfloor_enabled: bool
+) -> dict[Any, Any]:
+    """Return the per-heater 'advanced' step field(s) for this feature.
+
+    Only shown when the parent instance has underfloor heating enabled;
+    otherwise every heater implicitly stays a radiator. ``get_value(key,
+    fallback)`` is the same closure ``config_flow._build_advanced_fields()``
+    already builds over its ``sources`` for every other field, so this
+    follows the exact existing idiom. Returned keys are already-wrapped
+    ``vol.Optional(...)`` markers, matching how the caller merges the result
+    straight into its ``OrderedDict`` schema via ``ordered.update(...)``.
+    """
+    if not underfloor_enabled:
+        return {}
+
+    from homeassistant.helpers import selector
+    import voluptuous as vol
+
+    heating_type_selector = selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[HeatingType.RADIATOR, HeatingType.UNDERFLOOR],
+            mode=selector.SelectSelectorMode.DROPDOWN,
+            translation_key="heating_type",
+        )
+    )
+
+    fields: dict[Any, Any] = {
+        vol.Optional(
+            CONF_HEATING_TYPE,
+            default=get_value(CONF_HEATING_TYPE, DEFAULT_HEATING_TYPE.value),
+        ): heating_type_selector,
+        vol.Optional(
+            CONF_WARM_FLOOR_MAX_BACKOFF,
+            default=get_value(
+                CONF_WARM_FLOOR_MAX_BACKOFF, WARM_FLOOR_MAX_BACKOFF_DEFAULT
+            ),
+        ): vol.All(
+            vol.Coerce(float),
+            vol.Range(min=WARM_FLOOR_MIN_BACKOFF, max=WARM_FLOOR_MAX_BACKOFF_CAP),
+        ),
+    }
+    return fields
+
+
+def normalize_underfloor_advanced_submission(data: dict[str, Any]) -> dict[str, Any]:
+    """Normalize one heater's advanced-step submission for this feature."""
+    out: dict[str, Any] = {}
+    raw_type = data.get(CONF_HEATING_TYPE, DEFAULT_HEATING_TYPE.value)
+    try:
+        out[CONF_HEATING_TYPE] = HeatingType(raw_type).value
+    except ValueError:
+        out[CONF_HEATING_TYPE] = DEFAULT_HEATING_TYPE.value
+
+    raw_backoff = data.get(CONF_WARM_FLOOR_MAX_BACKOFF, WARM_FLOOR_MAX_BACKOFF_DEFAULT)
+    try:
+        backoff = float(raw_backoff)
+    except TypeError, ValueError:
+        backoff = WARM_FLOOR_MAX_BACKOFF_DEFAULT
+    out[CONF_WARM_FLOOR_MAX_BACKOFF] = max(
+        WARM_FLOOR_MIN_BACKOFF, min(backoff, WARM_FLOOR_MAX_BACKOFF_CAP)
+    )
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Warm Floor computation
+# ---------------------------------------------------------------------------
+
+
+def _clamp(value: float, lo: float, hi: float) -> float:
+    return max(lo, min(value, hi))
+
+
+def _get_mpc_state(bt, entity_id: str):
+    """Best-effort lookup of the per-TRV MPC state, or None.
+
+    Mirrors the same key-selection logic ``calibration.py`` uses (a shared
+    group key for multi-TRV setups, an entity-specific key otherwise), reusing
+    the same public key builders rather than re-deriving anything.
+    """
+    state_mgr = getattr(bt, "state_mgr", None)
+    if state_mgr is None:
+        return None
+    try:
+        from custom_components.better_thermostat.utils.calibration.mpc import (
+            build_mpc_group_key,
+            build_mpc_key,
+        )
+    except ImportError:
+        return None
+
+    try:
+        is_multi_trv = len(bt.real_trvs) > 1
+        mpc_key = (
+            build_mpc_group_key(bt) if is_multi_trv else build_mpc_key(bt, entity_id)
+        )
+        return state_mgr.get_mpc(mpc_key)
+    except AttributeError, TypeError, ValueError:
+        return None
+
+
+def _structural_scale(bt, entity_id: str, calibration_mode: CalibrationMode) -> float:
+    """How much of the configured backoff a room's structure can safely afford.
+
+    A leaky/drafty room or a weak UFH loop must *not* be allowed to drift far
+    from target - it loses ground fast and recovers slowly, so a deep
+    backoff there reproduces the "cuts too early, room cools off, long
+    recovery" failure. A well-insulated room with a strong emitter can
+    tolerate the full configured backoff safely.
+    """
+    heat_loss_source = None
+    heating_power_source = None
+
+    if calibration_mode in (
+        CalibrationMode.MPC_CALIBRATION,
+        CalibrationMode.MPC_V2_CALIBRATION,
+    ):
+        mpc_state = _get_mpc_state(bt, entity_id)
+        if mpc_state is not None:
+            heat_loss_source = getattr(mpc_state, "loss_est", None)
+            heating_power_source = getattr(mpc_state, "gain_est", None)
+
+    if heat_loss_source is None:
+        heat_loss_source = getattr(bt, "heat_loss_rate", None)
+    if heating_power_source is None:
+        heating_power_source = getattr(bt, "heating_power", None)
+
+    loss_severity = 0.0
+    if isinstance(heat_loss_source, (int, float)) and MAX_HEAT_LOSS > 0:
+        loss_severity = _clamp(float(heat_loss_source) / MAX_HEAT_LOSS, 0.0, 1.0)
+
+    power_adequacy = 1.0
+    if isinstance(heating_power_source, (int, float)) and MAX_HEATING_POWER > 0:
+        power_adequacy = _clamp(
+            float(heating_power_source) / MAX_HEATING_POWER, 0.0, 1.0
+        )
+
+    return _clamp(
+        (1.0 - loss_severity) * power_adequacy, WARM_FLOOR_MIN_BACKOFF_RATIO, 1.0
+    )
+
+
+def _solar_scale(bt, entity_id: str, calibration_mode: CalibrationMode) -> float:
+    """How much of the current apparent comfort is transient solar gain.
+
+    Only meaningful for MPC-calibrated heaters that have actually learned a
+    solar gain factor; everything else is a strict no-op (scale == 1.0).
+    """
+    if calibration_mode not in (
+        CalibrationMode.MPC_CALIBRATION,
+        CalibrationMode.MPC_V2_CALIBRATION,
+    ):
+        return 1.0
+
+    mpc_state = _get_mpc_state(bt, entity_id)
+    if mpc_state is None:
+        return 1.0
+    solar_gain_est = getattr(mpc_state, "solar_gain_est", None)
+    if not isinstance(solar_gain_est, (int, float)):
+        return 1.0
+
+    try:
+        from custom_components.better_thermostat.calibration import (
+            _get_current_solar_intensity,
+        )
+
+        solar_intensity = _get_current_solar_intensity(bt)
+    except ImportError, AttributeError:
+        return 1.0
+
+    heat_loss_source = getattr(mpc_state, "loss_est", None)
+    if not isinstance(heat_loss_source, (int, float)):
+        heat_loss_source = getattr(bt, "heat_loss_rate", None)
+    if not isinstance(heat_loss_source, (int, float)) or heat_loss_source <= 0:
+        return 1.0
+
+    solar_gain_rate = float(solar_gain_est) * float(solar_intensity)
+    solar_offset_ratio = _clamp(solar_gain_rate / float(heat_loss_source), 0.0, 1.0)
+    return 1.0 - solar_offset_ratio
+
+
+def _sustaining_setpoint(
+    bt, entity_id: str, structural_scale: float, solar_scale: float
+):
+    """Return the floor-raised target temperature, or None if it can't be computed."""
+    trv_state = bt.real_trvs.get(entity_id)
+    if trv_state is None:
+        return None
+
+    max_backoff = trv_state.advanced.get(
+        CONF_WARM_FLOOR_MAX_BACKOFF, WARM_FLOOR_MAX_BACKOFF_DEFAULT
+    )
+    try:
+        max_backoff = float(max_backoff)
+    except TypeError, ValueError:
+        max_backoff = WARM_FLOOR_MAX_BACKOFF_DEFAULT
+
+    target_temp = bt.bt_target_temp
+    if not isinstance(target_temp, (int, float)):
+        return None
+
+    effective_backoff = max_backoff * structural_scale * solar_scale
+    sustaining = float(target_temp) - effective_backoff
+
+    min_temp = convert_to_float(
+        trv_state.min_temp, getattr(bt, "device_name", None), "warm_floor"
+    )
+    if isinstance(min_temp, (int, float)):
+        sustaining = max(sustaining, float(min_temp))
+    sustaining = min(sustaining, float(target_temp))
+    return sustaining
+
+
+def apply_warm_floor_floor(
+    bt, entity_id: str, computed_value: float | None, *, is_offset: bool
+) -> float | None:
+    """Raise ``computed_value`` toward a sustaining Warm Floor level, if applicable.
+
+    ``computed_value`` is the setpoint (``is_offset=False``, from
+    ``calculate_calibration_setpoint()``) or local-calibration offset
+    (``is_offset=True``, from ``calculate_calibration_local()``) that would
+    otherwise be sent. Returns it unchanged whenever any guard fails, so this
+    is always safe to call unconditionally at the tail of both functions.
+
+    As a side effect, when the heater's last computed ``calibration_balance``
+    carries a ``valve_percent`` (direct-valve-based control), that value is
+    floored the same way - covering every ``_compute_*_balance`` code path
+    from a single call site instead of editing each one individually.
+    """
+    if computed_value is None:
+        return computed_value
+
+    trv_state = bt.real_trvs.get(entity_id) if hasattr(bt, "real_trvs") else None
+    if trv_state is None:
+        return computed_value
+
+    heating_type = trv_state.advanced.get(CONF_HEATING_TYPE, DEFAULT_HEATING_TYPE.value)
+    try:
+        heating_type = HeatingType(heating_type)
+    except ValueError:
+        heating_type = DEFAULT_HEATING_TYPE
+    if heating_type != HeatingType.UNDERFLOOR:
+        return computed_value
+
+    # Never override the window/door OFF gate or the outdoor call-for-heat gate.
+    if getattr(bt, "contact_open", False):
+        return computed_value
+    if getattr(bt, "call_for_heat", True) is False:
+        return computed_value
+    if getattr(bt, "bt_hvac_mode", None) == HVACMode.OFF:
+        return computed_value
+
+    calibration_mode = normalize_calibration_mode(
+        trv_state.advanced.get("calibration_mode")
+    )
+    if calibration_mode is None:
+        calibration_mode = CalibrationMode.HEATING_POWER_CALIBRATION
+
+    structural_scale = _structural_scale(bt, entity_id, calibration_mode)
+    solar_scale = _solar_scale(bt, entity_id, calibration_mode)
+
+    # Real-time slope guard: what the room is doing *right now* overrides the
+    # structural/solar estimate above.
+    temp_slope = getattr(bt, "temp_slope", None)
+    if isinstance(temp_slope, (int, float)):
+        if temp_slope > OVERSHOOT_SLOPE_GUARD:
+            # Still actively gaining (residual heat or live solar) - raising
+            # the floor now would only compound overshoot risk.
+            return computed_value
+        if temp_slope < -UNDERSHOOT_SLOPE_GUARD:
+            structural_scale = WARM_FLOOR_MIN_BACKOFF_RATIO
+
+    sustaining_setpoint = _sustaining_setpoint(
+        bt, entity_id, structural_scale, solar_scale
+    )
+    if sustaining_setpoint is None:
+        return computed_value
+
+    if not is_offset:
+        # Setpoint semantics: higher = more heat. Warm Floor only ever raises.
+        result = max(computed_value, sustaining_setpoint)
+    else:
+        # Local-calibration-offset semantics are inverted: a *higher* offset
+        # makes the TRV read warmer and closes the valve, so Warm Floor must
+        # *cap* the offset rather than floor it. Convert the sustaining
+        # setpoint into the equivalent offset ceiling using the same
+        # external-vs-internal relationship calculate_calibration_local()
+        # itself uses, then never let the offset exceed it.
+        trv_internal_temp = convert_to_float(
+            trv_state.current_temperature,
+            getattr(bt, "device_name", None),
+            "warm_floor",
+        )
+        if not isinstance(trv_internal_temp, (int, float)):
+            return computed_value
+        offset_ceiling = sustaining_setpoint - float(trv_internal_temp)
+        result = min(computed_value, offset_ceiling)
+
+    _apply_valve_floor(bt, entity_id, structural_scale, solar_scale)
+    return result
+
+
+def _apply_valve_floor(
+    bt, entity_id: str, structural_scale: float, solar_scale: float
+) -> None:
+    """Floor a previously-computed direct-valve ``calibration_balance``, if any."""
+    trv_state = bt.real_trvs.get(entity_id)
+    if trv_state is None or not isinstance(trv_state.calibration_balance, dict):
+        return
+    balance = trv_state.calibration_balance
+    if not balance.get("apply_valve"):
+        return
+    valve_percent = balance.get("valve_percent")
+    if not isinstance(valve_percent, (int, float)):
+        return
+
+    max_backoff = trv_state.advanced.get(
+        CONF_WARM_FLOOR_MAX_BACKOFF, WARM_FLOOR_MAX_BACKOFF_DEFAULT
+    )
+    try:
+        max_backoff = float(max_backoff)
+    except TypeError, ValueError:
+        max_backoff = WARM_FLOOR_MAX_BACKOFF_DEFAULT
+
+    # `structural_scale * solar_scale` is exactly the fraction of the
+    # configured backoff that's currently being *allowed* (same quantity the
+    # setpoint path multiplies into effective_backoff) - a well-insulated,
+    # strong-emitter, sun-free room lets that fraction approach 1.0 (loose
+    # floor, valve can safely idle to 0%), while a leaky room, a weak
+    # emitter, or a solar-masked reading pulls it toward
+    # WARM_FLOOR_MIN_BACKOFF_RATIO (tight floor). The sustaining percentage
+    # must move the *opposite* way: the less backoff allowed, the more the
+    # valve is forced open, not the other way around.
+    backoff_allowed_fraction = _clamp(structural_scale * solar_scale, 0.0, 1.0)
+    tightness = 1.0 - backoff_allowed_fraction
+    peak_sustaining_pct = 20.0 * _clamp(
+        max_backoff / WARM_FLOOR_MAX_BACKOFF_CAP, 0.0, 1.0
+    )
+    sustaining_pct = peak_sustaining_pct * tightness
+    new_pct = max(float(valve_percent), sustaining_pct)
+    balance["valve_percent"] = int(round(_clamp(new_pct, 0.0, 100.0)))
