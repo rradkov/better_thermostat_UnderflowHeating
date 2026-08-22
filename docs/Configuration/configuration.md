@@ -116,3 +116,47 @@ Better Thermostat offers several algorithms to control your heating:
 **Ignore all inputs on the TRV like a child lock** If this option is enabled, all changes on the real TRV, even over HA, will be ignored or reverted, only input from the BT entity is accepted.
 
 **If you use HomematicIP you should enable this...** If your entity is a HomematicIP entity this option should be enabled, to prevent a duty cycle overload.
+
+## Underfloor heating (Warm Floor mode)
+
+Underfloor heating (UFH) has much higher thermal inertia than a radiator TRV: once the room is satisfied and BT backs a heater fully off, the slab keeps cooling for a long time, so recovering from a fully-cold floor is slow and energy-costly. Warm Floor mode keeps a low, continuous background heat level in UFH-flagged heaters instead of letting them fully idle, without ever pushing the room air above target.
+
+This works with any `climate.*` heater, including Home Assistant's own **Generic Thermostat** helper (external sensor + on/off relay) — the most common way to wire up UFH — with no extra plumbing.
+
+**Enable underfloor heating** (first step, top-level toggle) — turn this on if any heater in this Better Thermostat instance is underfloor heating. Leave it off if every heater is a radiator; it changes nothing until at least one heater is flagged below.
+
+Once enabled, each heater gets two extra fields on the advanced (second) step:
+
+**Heating type** — `Radiator` (default) or `Underfloor Heating`. Only heaters explicitly set to `Underfloor Heating` get the sustaining-floor behavior; everything else is unaffected.
+
+**Warm Floor max backoff (°C)** — how far below the target temperature the sustaining floor is allowed to drift during an idle cycle. Default `1.5°C`, range `0.2–5.0°C`. The *actual* backoff used each cycle is automatically scaled down (never up) from this configured maximum based on:
+
+- **Heat loss / heating power** (or, for MPC-calibrated heaters, the learned MPC Loss/Gain and MPC Insulation coefficients) — a leaky room or a weak emitter gets a *tighter* floor, since it can't afford to drift far without a slow, costly recovery.
+- **Solar gain** (MPC-calibrated heaters only, once learned) — if the room's current comfort is being propped up by sunlight rather than delivered heat, the floor stays close to target so it doesn't need to catch up once the sun's contribution fades.
+- **The room's real-time trend** — the floor never raises while the room is still actively gaining, and tightens immediately if the room is falling faster than expected.
+
+This never overrides an open window/door, a `call_for_heat=false` weather/outdoor gate, or BT being switched off — Warm Floor only ever raises what would otherwise be a fully-idle cycle, it never fights the normal heating computation or forces heat the room doesn't need.
+
+A **Warm Floor Status** diagnostic sensor is created per instance, showing `active`/`idle`/`disabled` plus the current sustaining setpoint and backoff amount.
+
+## Boost on window reopen
+
+If you've configured a **Cooler** entity (top of the first step), you can also use it for fast recovery after a window reopens — most fan-coil/hydronic units and heat pumps already run in both directions, so the same device that cools in summer can boost-heat a cold room back to temperature after airing it out.
+
+**Enable Boost on window reopen** — shown once a Cooler entity is configured. When on, if the room temperature drifts by more than the configured threshold while a window is open, closing the window arms a boost: colder than the threshold arms a **heat** boost, warmer arms a **cool** boost (checked against what the Cooler entity actually reports supporting). Either way it targets your normal target temperature, then switches off automatically — an active boost temporarily takes over the Cooler entity from its normal cooling duty and hands it back once the boost ends.
+
+**Boost temperature-drift threshold (°C)** — default `5.0°C`, range `0.1–15.0°C`.
+
+**Use a different threshold for cooling** — off by default (one threshold covers both directions). Turn this on to set a separate, lower or higher **Boost cooling threshold (°C)** for the warm-day case, independent of the heat-boost threshold.
+
+**Boost fan speed** — only shown if the Cooler entity reports fan modes. Optionally forces the device's fan speed (e.g. to maximum) while boosting, restored automatically once the boost ends. Leave as "Don't change fan mode" to skip this.
+
+**Boost anticipation (minutes)** — default `5`, range `0–30`. How many minutes of residual heating/cooling the device keeps delivering into the room after being told to stop; used to stop the boost *before* the room actually reaches target, avoiding overshoot in either direction. When the room's own learned solar gain is available, it's factored in too — a heat boost on a sunny day can stop a little earlier, a cool boost needs a little more margin.
+
+**Boost safety timeout (minutes)** — default `60`, range `5–240`. Forces the boost off after this long regardless of temperature, as a guard against a stuck sensor or a device that isn't actually acting.
+
+**Boost cooldown (minutes)** — default `15`, range `0–120`. Minimum time after a boost ends before another one can arm, so a room that keeps drifting past the threshold (e.g. repeated window in/out) doesn't short-cycle the shared device.
+
+A **Boost Status** diagnostic sensor is created per instance, showing `off`/`heating`/`cooling` plus how long the current boost has been running.
+
+**Manually testing it** — the `better_thermostat.test_boost` service arms a boost cycle on demand (pick `heat` or `cool`) so you can confirm the wiring — target device, fan mode, threshold reachability — without needing to actually open and close a window.
