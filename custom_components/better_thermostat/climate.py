@@ -78,6 +78,17 @@ from .events.trv import trigger_trv_change
 from .events.window import trigger_window_change, window_queue
 from .model_fixes.model_quirks import initial_tweak, load_model_quirks
 from .trv import Trv
+from .utils.boost_heater import (
+    CONF_BOOST_FAN_MODE,
+    CONF_BOOST_HEATER_ENABLED,
+    CONF_BOOST_LAG_MINUTES,
+    CONF_BOOST_MAX_RUNTIME,
+    CONF_BOOST_THRESHOLD,
+    DEFAULT_BOOST_LAG_MINUTES,
+    DEFAULT_BOOST_MAX_RUNTIME,
+    DEFAULT_BOOST_THRESHOLD,
+    BoostHeaterTracker,
+)
 from .utils.calibration.pid import (
     PIDParams,
     format_bucket,
@@ -276,6 +287,11 @@ async def async_setup_entry(hass, entry, async_add_entities):
         entry.data.get(CONF_MODEL, None),
         entry.data.get(CONF_COOLER, None),
         entry.data.get(CONF_MIN_COOLER_RESEND_INTERVAL, 0),
+        entry.data.get(CONF_BOOST_HEATER_ENABLED, False),
+        entry.data.get(CONF_BOOST_THRESHOLD, DEFAULT_BOOST_THRESHOLD),
+        entry.data.get(CONF_BOOST_FAN_MODE, None),
+        entry.data.get(CONF_BOOST_LAG_MINUTES, DEFAULT_BOOST_LAG_MINUTES),
+        entry.data.get(CONF_BOOST_MAX_RUNTIME, DEFAULT_BOOST_MAX_RUNTIME),
         entry.data.get(CONF_PRESETS, None),
         hass.config.units.temperature_unit,
         entry.entry_id,
@@ -464,6 +480,11 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         model,
         cooler_entity_id,
         min_cooler_resend_interval,
+        boost_enabled,
+        boost_threshold_k,
+        boost_fan_mode,
+        boost_lag_minutes,
+        boost_max_runtime_minutes,
         enabled_presets,
         unit,
         unique_id,
@@ -511,6 +532,17 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         min_cooler_resend_interval : int | float | None
             Minimum interval in seconds between identical cooler commands
             (0 disables the throttle).
+        boost_enabled : bool
+            Whether the Cooler entity is also boosted after a window reopen.
+        boost_threshold_k : float | None
+            Temperature drift (°C) while a window was open that arms a boost.
+        boost_fan_mode : str | None
+            Fan mode to set on the boosted device while boosting, if supported.
+        boost_lag_minutes : float | None
+            Anticipated residual-heat window used to stop the boost early.
+        boost_max_runtime_minutes : float | None
+            Safety cap: force the boost off after this many minutes regardless
+            of temperature.
         enabled_presets : list[str]
             Presets enabled for this thermostat.
         unit : str
@@ -536,6 +568,24 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
             )
         except TypeError, ValueError:
             self.min_cooler_resend_interval_s = 0.0
+        self.boost_enabled = bool(boost_enabled)
+        self.boost_threshold_k = (
+            float(boost_threshold_k)
+            if isinstance(boost_threshold_k, (int, float))
+            else DEFAULT_BOOST_THRESHOLD
+        )
+        self.boost_fan_mode = boost_fan_mode or None
+        self.boost_lag_minutes = (
+            float(boost_lag_minutes)
+            if isinstance(boost_lag_minutes, (int, float))
+            else DEFAULT_BOOST_LAG_MINUTES
+        )
+        self.boost_max_runtime_minutes = (
+            float(boost_max_runtime_minutes)
+            if isinstance(boost_max_runtime_minutes, (int, float))
+            else DEFAULT_BOOST_MAX_RUNTIME
+        )
+        self._boost_heater_tracker = BoostHeaterTracker()
         self.window_id = window_id or None
         self.window_delay = window_delay or 0
         self.window_delay_after = window_delay_after or 0
@@ -2021,6 +2071,8 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         # The battery scan below reads all_entities, so every configured
         # device has to be registered before it runs. The cooler and the
         # outdoor sensor are the two that no earlier init step registers.
+        # Boost reuses the cooler entity, so it needs no registration of its
+        # own.
         if self.cooler_entity_id is not None:
             self.all_entities.append(self.cooler_entity_id)
         if self.outdoor_sensor is not None:
