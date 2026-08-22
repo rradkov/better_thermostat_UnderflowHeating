@@ -30,7 +30,10 @@
           "boost_threshold": "Soglia di scostamento temperatura per il boost (°C)",
           "boost_fan_mode": "Velocità ventola boost",
           "boost_lag_minutes": "Anticipazione boost (minuti)",
-          "boost_max_runtime": "Timeout di sicurezza boost (minuti)"
+          "boost_max_runtime": "Timeout di sicurezza boost (minuti)",
+          "boost_asymmetric_threshold": "Usa una soglia diversa per il raffreddamento",
+          "boost_threshold_cool": "Soglia di boost raffreddamento (°C)",
+          "boost_cooldown_minutes": "Tempo di recupero del boost (minuti)"
         },
         "data_description": {
           "presets": "Seleziona i preset che vuoi rendere disponibili per questo termostato.",
@@ -40,7 +43,10 @@
           "boost_fan_mode": "Facoltativamente imposta la velocità della ventola del dispositivo (es. al massimo) durante il boost; ripristinata automaticamente al termine del boost. Lascia su 'Non modificare la velocità della ventola' per saltare questa opzione.",
           "boost_lag_minutes": "Quanti minuti di calore/freddo residuo il dispositivo continua a fornire alla stanza dopo che gli è stato detto di fermarsi, usato per evitare di superare il target.",
           "boost_max_runtime": "Tempo massimo per cui il boost può funzionare prima di essere forzatamente spento, indipendentemente dalla temperatura.",
-          "cooler": "Opzionale. Un dispositivo usato per il raffreddamento (in configurazioni riscaldamento+raffreddamento) e/o, una volta abilitato il Boost qui sotto, come dispositivo che ripristina rapidamente la temperatura ambiente dopo la riapertura di una finestra - molti fan-coil, pompe di calore e condizionatori svolgono già entrambi i compiti, quindi un solo dispositivo può ricoprire entrambi i ruoli."
+          "cooler": "Opzionale. Un dispositivo usato per il raffreddamento (in configurazioni riscaldamento+raffreddamento) e/o, una volta abilitato il Boost qui sotto, come dispositivo che ripristina rapidamente la temperatura ambiente dopo la riapertura di una finestra - molti fan-coil, pompe di calore e condizionatori svolgono già entrambi i compiti, quindi un solo dispositivo può ricoprire entrambi i ruoli.",
+          "boost_asymmetric_threshold": "Attiva per impostare una soglia di deriva diversa per attivare un boost di raffreddamento (ad esempio, una calda giornata estiva) rispetto a un boost di riscaldamento. Lascia disattivato per usare la stessa soglia in entrambe le direzioni.",
+          "boost_threshold_cool": "Se la temperatura ambiente è aumentata di oltre questo valore mentre una finestra era aperta, chiuderla attiva un boost di raffreddamento. Usato solo quando l'interruttore sopra è attivo.",
+          "boost_cooldown_minutes": "Tempo minimo dopo la fine di un boost prima che un altro possa riattivarsi, così una stanza che continua a superare la soglia (ad esempio finestra aperta e chiusa ripetutamente) non sovraccarica il dispositivo condiviso."
         }
       },
       "advanced": {
@@ -117,7 +123,10 @@
           "boost_threshold": "Soglia di scostamento temperatura per il boost (°C)",
           "boost_fan_mode": "Velocità ventola boost",
           "boost_lag_minutes": "Anticipazione boost (minuti)",
-          "boost_max_runtime": "Timeout di sicurezza boost (minuti)"
+          "boost_max_runtime": "Timeout di sicurezza boost (minuti)",
+          "boost_asymmetric_threshold": "Usa una soglia diversa per il raffreddamento",
+          "boost_threshold_cool": "Soglia di boost raffreddamento (°C)",
+          "boost_cooldown_minutes": "Tempo di recupero del boost (minuti)"
         },
         "data_description": {
           "presets": "Seleziona i preset che vuoi rendere disponibili per questo termostato.",
@@ -126,7 +135,10 @@
           "boost_threshold": "Se la temperatura ambiente si scosta (in entrambe le direzioni) più di questo valore mentre una finestra è aperta, chiudere la finestra attiva il boost.",
           "boost_fan_mode": "Facoltativamente imposta la velocità della ventola del dispositivo (es. al massimo) durante il boost; ripristinata automaticamente al termine del boost. Lascia su 'Non modificare la velocità della ventola' per saltare questa opzione.",
           "boost_lag_minutes": "Quanti minuti di calore/freddo residuo il dispositivo continua a fornire alla stanza dopo che gli è stato detto di fermarsi, usato per evitare di superare il target.",
-          "boost_max_runtime": "Tempo massimo per cui il boost può funzionare prima di essere forzatamente spento, indipendentemente dalla temperatura."
+          "boost_max_runtime": "Tempo massimo per cui il boost può funzionare prima di essere forzatamente spento, indipendentemente dalla temperatura.",
+          "boost_asymmetric_threshold": "Attiva per impostare una soglia di deriva diversa per attivare un boost di raffreddamento (ad esempio, una calda giornata estiva) rispetto a un boost di riscaldamento. Lascia disattivato per usare la stessa soglia in entrambe le direzioni.",
+          "boost_threshold_cool": "Se la temperatura ambiente è aumentata di oltre questo valore mentre una finestra era aperta, chiuderla attiva un boost di raffreddamento. Usato solo quando l'interruttore sopra è attivo.",
+          "boost_cooldown_minutes": "Tempo minimo dopo la fine di un boost prima che un altro possa riattivarsi, così una stanza che continua a superare la soglia (ad esempio finestra aperta e chiusa ripetutamente) non sovraccarica il dispositivo condiviso."
         }
       },
       "advanced": {
@@ -219,6 +231,16 @@
         "defaults_kd": {
           "name": "kd predefinito",
           "description": "Guadagno derivativo impostato dopo il reset (se non specificato viene usato BalanceParams.kd)."
+        }
+      }
+    },
+    "test_boost": {
+      "name": "Testa boost",
+      "description": "Attiva manualmente un ciclo di boost sul dispositivo di raffreddamento configurato, per testare il collegamento (dispositivo di destinazione, modalità ventola, raggiungibilità della soglia) senza dover aprire e chiudere una finestra.",
+      "fields": {
+        "direction": {
+          "name": "Direzione",
+          "description": "Quale direzione di boost testare."
         }
       }
     }
@@ -538,6 +560,12 @@
       },
       "solar_intensity": {
         "name": "Apporto di calore solare"
+      },
+      "warm_floor_status": {
+        "name": "Stato Pavimento Caldo"
+      },
+      "boost_status": {
+        "name": "Stato Boost"
       }
     }
   },

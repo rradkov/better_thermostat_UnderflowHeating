@@ -30,7 +30,10 @@
           "boost_threshold": "Takviye sıcaklık sapma eşiği (°C)",
           "boost_fan_mode": "Takviye fan hızı",
           "boost_lag_minutes": "Takviye öngörüsü (dakika)",
-          "boost_max_runtime": "Takviye güvenlik zaman aşımı (dakika)"
+          "boost_max_runtime": "Takviye güvenlik zaman aşımı (dakika)",
+          "boost_asymmetric_threshold": "Soğutma için farklı bir eşik kullan",
+          "boost_threshold_cool": "Boost soğutma eşiği (°C)",
+          "boost_cooldown_minutes": "Boost soğuma süresi (dakika)"
         },
         "data_description": {
           "presets": "Bu termostat için kullanılabilir olmasını istediğiniz ön ayarları seçin.",
@@ -40,7 +43,10 @@
           "boost_fan_mode": "İsteğe bağlı olarak, takviye sırasında cihazın fan hızını (örneğin maksimuma) ayarlayın; takviye bittiğinde otomatik olarak geri yüklenir. Bunu atlamak için 'Fan modunu değiştirme' olarak bırakın.",
           "boost_lag_minutes": "Cihazın durdurulması istendikten sonra odaya ne kadar süre (dakika) kalıntı ısı/soğuk vermeye devam ettiği; hedefi aşmayı önlemek için kullanılır.",
           "boost_max_runtime": "Sıcaklığa bakılmaksızın takviyenin zorla kapatılmadan önce ne kadar süre çalışmasına izin verildiği.",
-          "cooler": "İsteğe bağlı. Soğutma için (ısıtma+soğutma kurulumlarında) ve/veya aşağıda Takviye etkinleştirildiğinde, bir pencere yeniden açıldıktan sonra oda sıcaklığını hızla geri kazandıran cihaz olarak kullanılan bir cihaz - birçok fan-coil, ısı pompası ve klima zaten her iki görevi de yapıyor, bu nedenle tek bir cihaz her iki rolü de üstlenebilir."
+          "cooler": "İsteğe bağlı. Soğutma için (ısıtma+soğutma kurulumlarında) ve/veya aşağıda Takviye etkinleştirildiğinde, bir pencere yeniden açıldıktan sonra oda sıcaklığını hızla geri kazandıran cihaz olarak kullanılan bir cihaz - birçok fan-coil, ısı pompası ve klima zaten her iki görevi de yapıyor, bu nedenle tek bir cihaz her iki rolü de üstlenebilir.",
+          "boost_asymmetric_threshold": "Bir soğutma boost'unu (örneğin sıcak bir yaz günü) tetiklemek için ısıtma boost'undan farklı bir sapma eşiği ayarlamak için bunu açın. Her iki yön için de aynı eşiği kullanmak için kapalı bırakın.",
+          "boost_threshold_cool": "Pencere açıkken oda sıcaklığı bu değerden fazla yükseldiyse, pencereyi kapatmak bir soğutma boost'unu devreye sokar. Yalnızca yukarıdaki anahtar açıkken kullanılır.",
+          "boost_cooldown_minutes": "Bir boost bittikten sonra başka birinin devreye girebilmesi için gereken minimum süre, böylece eşiği tekrar tekrar aşan bir oda (örneğin tekrar tekrar pencere açma/kapama) paylaşılan cihazın çok sık geçiş yapmasına neden olmaz."
         }
       },
       "advanced": {
@@ -117,7 +123,10 @@
           "boost_threshold": "Takviye sıcaklık sapma eşiği (°C)",
           "boost_fan_mode": "Takviye fan hızı",
           "boost_lag_minutes": "Takviye öngörüsü (dakika)",
-          "boost_max_runtime": "Takviye güvenlik zaman aşımı (dakika)"
+          "boost_max_runtime": "Takviye güvenlik zaman aşımı (dakika)",
+          "boost_asymmetric_threshold": "Soğutma için farklı bir eşik kullan",
+          "boost_threshold_cool": "Boost soğutma eşiği (°C)",
+          "boost_cooldown_minutes": "Boost soğuma süresi (dakika)"
         },
         "data_description": {
           "presets": "Bu termostat için kullanılabilir olmasını istediğiniz ön ayarları seçin.",
@@ -126,7 +135,10 @@
           "boost_threshold": "Bir pencere açıkken oda sıcaklığı (her iki yönde de) bundan daha fazla saparsa, pencereyi kapatmak takviyeyi devreye sokar.",
           "boost_fan_mode": "İsteğe bağlı olarak, takviye sırasında cihazın fan hızını (örneğin maksimuma) ayarlayın; takviye bittiğinde otomatik olarak geri yüklenir. Bunu atlamak için 'Fan modunu değiştirme' olarak bırakın.",
           "boost_lag_minutes": "Cihazın durdurulması istendikten sonra odaya ne kadar süre (dakika) kalıntı ısı/soğuk vermeye devam ettiği; hedefi aşmayı önlemek için kullanılır.",
-          "boost_max_runtime": "Sıcaklığa bakılmaksızın takviyenin zorla kapatılmadan önce ne kadar süre çalışmasına izin verildiği."
+          "boost_max_runtime": "Sıcaklığa bakılmaksızın takviyenin zorla kapatılmadan önce ne kadar süre çalışmasına izin verildiği.",
+          "boost_asymmetric_threshold": "Bir soğutma boost'unu (örneğin sıcak bir yaz günü) tetiklemek için ısıtma boost'undan farklı bir sapma eşiği ayarlamak için bunu açın. Her iki yön için de aynı eşiği kullanmak için kapalı bırakın.",
+          "boost_threshold_cool": "Pencere açıkken oda sıcaklığı bu değerden fazla yükseldiyse, pencereyi kapatmak bir soğutma boost'unu devreye sokar. Yalnızca yukarıdaki anahtar açıkken kullanılır.",
+          "boost_cooldown_minutes": "Bir boost bittikten sonra başka birinin devreye girebilmesi için gereken minimum süre, böylece eşiği tekrar tekrar aşan bir oda (örneğin tekrar tekrar pencere açma/kapama) paylaşılan cihazın çok sık geçiş yapmasına neden olmaz."
         }
       },
       "advanced": {
@@ -219,6 +231,16 @@
         "defaults_kd": {
           "name": "Varsayılan kd",
           "description": "Sıfırlamadan sonra ayarlanacak türev kazancı (belirtilmezse BalanceParams.kd kullanılır)."
+        }
+      }
+    },
+    "test_boost": {
+      "name": "Boost'u test et",
+      "description": "Bir pencereyi açıp kapatmaya gerek kalmadan kablo bağlantısını (hedef cihaz, fan modu, eşiğe ulaşılabilirlik) test etmek için yapılandırılmış Soğutucu cihazında manuel olarak bir Boost döngüsü tetikler.",
+      "fields": {
+        "direction": {
+          "name": "Yön",
+          "description": "Hangi boost yönünün test edileceği."
         }
       }
     }
@@ -538,6 +560,12 @@
       },
       "solar_intensity": {
         "name": "Güneş ısı kazancı"
+      },
+      "warm_floor_status": {
+        "name": "Sıcak Zemin Durumu"
+      },
+      "boost_status": {
+        "name": "Boost Durumu"
       }
     }
   },

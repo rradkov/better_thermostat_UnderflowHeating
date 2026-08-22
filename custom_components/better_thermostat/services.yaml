@@ -56,3 +56,22 @@ reset_pid_learnings:
     entity:
       domain: climate
       integration: better_thermostat
+
+test_boost:
+  name: Test boost
+  description: Manually trigger a Boost cycle on the configured Cooler entity, for testing wiring (target device, fan mode, threshold reachability) without needing to open and close a window.
+  fields:
+    direction:
+      name: Direction
+      description: Which boost direction to test.
+      required: true
+      default: heat
+      selector:
+        select:
+          options:
+            - heat
+            - cool
+  target:
+    entity:
+      domain: climate
+      integration: better_thermostat

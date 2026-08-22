@@ -83,15 +83,19 @@ from .model_fixes.model_quirks import (
 )
 from .trv import Trv
 from .utils.boost_heater import (
+    CONF_BOOST_COOLDOWN_MINUTES,
     CONF_BOOST_FAN_MODE,
     CONF_BOOST_HEATER_ENABLED,
     CONF_BOOST_LAG_MINUTES,
     CONF_BOOST_MAX_RUNTIME,
     CONF_BOOST_THRESHOLD,
+    CONF_BOOST_THRESHOLD_COOL,
+    DEFAULT_BOOST_COOLDOWN_MINUTES,
     DEFAULT_BOOST_LAG_MINUTES,
     DEFAULT_BOOST_MAX_RUNTIME,
     DEFAULT_BOOST_THRESHOLD,
     BoostHeaterTracker,
+    trigger_test_boost,
 )
 from .utils.calibration.pid import (
     PIDParams,
@@ -117,6 +121,7 @@ from .utils.const import (
     ATTR_STATE_SAVED_TEMPERATURE,
     ATTR_STATE_WINDOW_OPEN,
     BETTERTHERMOSTAT_RESET_PID_SCHEMA,
+    BETTERTHERMOSTAT_TEST_BOOST_SCHEMA,
     CONF_COOLER,
     CONF_DOOR_TIMEOUT,
     CONF_DOOR_TIMEOUT_AFTER,
@@ -144,6 +149,7 @@ from .utils.const import (
     SERVICE_RESET_HEATING_POWER,
     SERVICE_RESET_PID_LEARNINGS,
     SERVICE_RUN_VALVE_MAINTENANCE,
+    SERVICE_TEST_BOOST,
     SUPPORT_FLAGS,
     VERSION,
     CalibrationMode,
@@ -274,6 +280,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
         BETTERTHERMOSTAT_RESET_PID_SCHEMA,
         "reset_pid_learnings_service",
     )
+    platform.async_register_entity_service(
+        SERVICE_TEST_BOOST, BETTERTHERMOSTAT_TEST_BOOST_SCHEMA, "test_boost_service"
+    )
 
     bt_entity = BetterThermostat(
         entry.data.get(CONF_NAME),
@@ -301,6 +310,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
         entry.data.get(CONF_BOOST_FAN_MODE, None),
         entry.data.get(CONF_BOOST_LAG_MINUTES, DEFAULT_BOOST_LAG_MINUTES),
         entry.data.get(CONF_BOOST_MAX_RUNTIME, DEFAULT_BOOST_MAX_RUNTIME),
+        entry.data.get(CONF_BOOST_THRESHOLD_COOL, None),
+        entry.data.get(CONF_BOOST_COOLDOWN_MINUTES, DEFAULT_BOOST_COOLDOWN_MINUTES),
         entry.data.get(CONF_PRESETS, None),
         hass.config.units.temperature_unit,
         entry.entry_id,
@@ -496,6 +507,8 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         boost_fan_mode,
         boost_lag_minutes,
         boost_max_runtime_minutes,
+        boost_threshold_cool_k,
+        boost_cooldown_minutes,
         enabled_presets,
         unit,
         unique_id,
@@ -558,6 +571,13 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         boost_max_runtime_minutes : float | None
             Safety cap: force the boost off after this many minutes regardless
             of temperature.
+        boost_threshold_cool_k : float | None
+            Temperature rise (°C) while a window was open that arms a cool
+            boost, if different from ``boost_threshold_k``. ``None`` mirrors
+            the heat threshold.
+        boost_cooldown_minutes : float | None
+            Minimum time after a boost ends before another one can re-arm,
+            protecting the shared device from short-cycling.
         enabled_presets : list[str]
             Presets enabled for this thermostat.
         unit : str
@@ -599,6 +619,16 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
             float(boost_max_runtime_minutes)
             if isinstance(boost_max_runtime_minutes, (int, float))
             else DEFAULT_BOOST_MAX_RUNTIME
+        )
+        self.boost_threshold_cool_k = (
+            float(boost_threshold_cool_k)
+            if isinstance(boost_threshold_cool_k, (int, float))
+            else None
+        )
+        self.boost_cooldown_minutes = (
+            float(boost_cooldown_minutes)
+            if isinstance(boost_cooldown_minutes, (int, float))
+            else DEFAULT_BOOST_COOLDOWN_MINUTES
         )
         self._boost_heater_tracker = BoostHeaterTracker()
         self.window_id = window_id or None
@@ -3867,6 +3897,19 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         except Exception as e:
             _LOGGER.debug(
                 "better_thermostat %s: reset_pid_learnings_service error: %s",
+                self.device_name,
+                e,
+            )
+
+    async def test_boost_service(self, direction: str = "heat") -> None:
+        """Entity service: manually trigger a Boost cycle, for testing wiring."""
+        try:
+            hvac_mode = HVACMode.COOL if direction == "cool" else HVACMode.HEAT
+            await trigger_test_boost(self, hvac_mode)
+            self.async_write_ha_state()
+        except Exception as e:
+            _LOGGER.debug(
+                "better_thermostat %s: test_boost_service error: %s",
                 self.device_name,
                 e,
             )

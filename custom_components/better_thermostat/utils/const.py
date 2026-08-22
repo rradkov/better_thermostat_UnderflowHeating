@@ -102,6 +102,7 @@ ATTR_STATE_OFF_TEMPERATURE: Final = "off_temperature"
 SERVICE_RESET_HEATING_POWER: Final = "reset_heating_power"
 SERVICE_RESET_PID_LEARNINGS: Final = "reset_pid_learnings"
 SERVICE_RUN_VALVE_MAINTENANCE: Final = "run_valve_maintenance"
+SERVICE_TEST_BOOST: Final = "test_boost"
 
 # Optional schema for resetting PID learnings
 BETTERTHERMOSTAT_RESET_PID_SCHEMA: Final = make_entity_service_schema(
@@ -111,6 +112,11 @@ BETTERTHERMOSTAT_RESET_PID_SCHEMA: Final = make_entity_service_schema(
         vol.Optional("defaults_ki"): vol.Coerce(float),
         vol.Optional("defaults_kd"): vol.Coerce(float),
     }
+)
+
+# Schema for manually triggering a test Boost cycle
+BETTERTHERMOSTAT_TEST_BOOST_SCHEMA: Final = make_entity_service_schema(
+    {vol.Required("direction"): vol.In(["heat", "cool"])}
 )
 
 

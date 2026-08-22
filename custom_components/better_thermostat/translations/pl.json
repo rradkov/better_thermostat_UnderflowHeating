@@ -30,7 +30,10 @@
           "boost_threshold": "Próg odchylenia temperatury doładowania (°C)",
           "boost_fan_mode": "Prędkość wentylatora doładowania",
           "boost_lag_minutes": "Wyprzedzenie doładowania (minuty)",
-          "boost_max_runtime": "Limit bezpieczeństwa doładowania (minuty)"
+          "boost_max_runtime": "Limit bezpieczeństwa doładowania (minuty)",
+          "boost_asymmetric_threshold": "Użyj innego progu dla chłodzenia",
+          "boost_threshold_cool": "Próg boostu chłodzenia (°C)",
+          "boost_cooldown_minutes": "Czas odnowienia boostu (minuty)"
         },
         "data_description": {
           "presets": "Wybierz ustawienia predefiniowane, które mają być dostępne dla tego termostatu.",
@@ -40,7 +43,10 @@
           "boost_fan_mode": "Opcjonalnie ustaw prędkość wentylatora urządzenia (np. na maksimum) podczas doładowania; przywracana automatycznie po zakończeniu doładowania. Pozostaw jako 'Nie zmieniaj prędkości wentylatora', aby pominąć tę opcję.",
           "boost_lag_minutes": "Ile minut resztkowego ciepła/chłodu urządzenie nadal dostarcza do pomieszczenia po poleceniu zatrzymania, używane, aby uniknąć przekroczenia wartości docelowej.",
           "boost_max_runtime": "Maksymalny czas, przez jaki doładowanie może działać, zanim zostanie wymuszone wyłączenie niezależnie od temperatury.",
-          "cooler": "Opcjonalnie. Urządzenie używane do chłodzenia (w konfiguracjach grzanie+chłodzenie) i/lub, po włączeniu Doładowania poniżej, jako urządzenie szybko przywracające temperaturę pomieszczenia po ponownym otwarciu okna - wiele klimakonwektorów, pomp ciepła i klimatyzatorów pełni już obie funkcje, więc jedno urządzenie może obsłużyć obie role."
+          "cooler": "Opcjonalnie. Urządzenie używane do chłodzenia (w konfiguracjach grzanie+chłodzenie) i/lub, po włączeniu Doładowania poniżej, jako urządzenie szybko przywracające temperaturę pomieszczenia po ponownym otwarciu okna - wiele klimakonwektorów, pomp ciepła i klimatyzatorów pełni już obie funkcje, więc jedno urządzenie może obsłużyć obie role.",
+          "boost_asymmetric_threshold": "Włącz, aby ustawić inny próg dryfu temperatury dla uzbrojenia boostu chłodzenia (np. w gorący letni dzień) niż dla boostu grzania. Pozostaw wyłączone, aby używać tego samego progu w obu kierunkach.",
+          "boost_threshold_cool": "Jeśli temperatura w pomieszczeniu wzrosła o więcej niż ta wartość, gdy okno było otwarte, zamknięcie go uzbraja boost chłodzenia. Używane tylko, gdy powyższy przełącznik jest włączony.",
+          "boost_cooldown_minutes": "Minimalny czas po zakończeniu boostu, zanim będzie mógł się uzbroić kolejny, aby pomieszczenie, które wielokrotnie przekracza próg (np. powtarzane otwieranie/zamykanie okna), nie powodowało zbyt częstego przełączania współdzielonego urządzenia."
         }
       },
       "advanced": {
@@ -117,7 +123,10 @@
           "boost_threshold": "Próg odchylenia temperatury doładowania (°C)",
           "boost_fan_mode": "Prędkość wentylatora doładowania",
           "boost_lag_minutes": "Wyprzedzenie doładowania (minuty)",
-          "boost_max_runtime": "Limit bezpieczeństwa doładowania (minuty)"
+          "boost_max_runtime": "Limit bezpieczeństwa doładowania (minuty)",
+          "boost_asymmetric_threshold": "Użyj innego progu dla chłodzenia",
+          "boost_threshold_cool": "Próg boostu chłodzenia (°C)",
+          "boost_cooldown_minutes": "Czas odnowienia boostu (minuty)"
         },
         "data_description": {
           "presets": "Wybierz ustawienia predefiniowane, które mają być dostępne dla tego termostatu.",
@@ -126,7 +135,10 @@
           "boost_threshold": "Jeśli temperatura pomieszczenia odchyli się (w dowolnym kierunku) o więcej niż ta wartość, gdy okno jest otwarte, zamknięcie okna uzbraja doładowanie.",
           "boost_fan_mode": "Opcjonalnie ustaw prędkość wentylatora urządzenia (np. na maksimum) podczas doładowania; przywracana automatycznie po zakończeniu doładowania. Pozostaw jako 'Nie zmieniaj prędkości wentylatora', aby pominąć tę opcję.",
           "boost_lag_minutes": "Ile minut resztkowego ciepła/chłodu urządzenie nadal dostarcza do pomieszczenia po poleceniu zatrzymania, używane, aby uniknąć przekroczenia wartości docelowej.",
-          "boost_max_runtime": "Maksymalny czas, przez jaki doładowanie może działać, zanim zostanie wymuszone wyłączenie niezależnie od temperatury."
+          "boost_max_runtime": "Maksymalny czas, przez jaki doładowanie może działać, zanim zostanie wymuszone wyłączenie niezależnie od temperatury.",
+          "boost_asymmetric_threshold": "Włącz, aby ustawić inny próg dryfu temperatury dla uzbrojenia boostu chłodzenia (np. w gorący letni dzień) niż dla boostu grzania. Pozostaw wyłączone, aby używać tego samego progu w obu kierunkach.",
+          "boost_threshold_cool": "Jeśli temperatura w pomieszczeniu wzrosła o więcej niż ta wartość, gdy okno było otwarte, zamknięcie go uzbraja boost chłodzenia. Używane tylko, gdy powyższy przełącznik jest włączony.",
+          "boost_cooldown_minutes": "Minimalny czas po zakończeniu boostu, zanim będzie mógł się uzbroić kolejny, aby pomieszczenie, które wielokrotnie przekracza próg (np. powtarzane otwieranie/zamykanie okna), nie powodowało zbyt częstego przełączania współdzielonego urządzenia."
         }
       },
       "advanced": {
@@ -219,6 +231,16 @@
         "defaults_kd": {
           "name": "Domyślne kd",
           "description": "Wzmocnienie różniczkujące ustawiane po resecie (jeśli nie podano, używane jest BalanceParams.kd)."
+        }
+      }
+    },
+    "test_boost": {
+      "name": "Testuj boost",
+      "description": "Ręcznie uruchamia cykl boostu na skonfigurowanym urządzeniu chłodzącym, aby przetestować okablowanie (urządzenie docelowe, tryb wentylatora, osiągalność progu) bez konieczności otwierania i zamykania okna.",
+      "fields": {
+        "direction": {
+          "name": "Kierunek",
+          "description": "Który kierunek boostu przetestować."
         }
       }
     }
@@ -538,6 +560,12 @@
       },
       "solar_intensity": {
         "name": "Zysk ciepła od słońca"
+      },
+      "warm_floor_status": {
+        "name": "Status Ciepłej Podłogi"
+      },
+      "boost_status": {
+        "name": "Status Boostu"
       }
     }
   },

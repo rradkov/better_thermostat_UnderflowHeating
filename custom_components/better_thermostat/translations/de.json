@@ -30,7 +30,10 @@
           "boost_threshold": "Boost-Temperaturabweichung-Schwelle (°C)",
           "boost_fan_mode": "Boost-Lüfterstufe",
           "boost_lag_minutes": "Boost-Vorlaufzeit (Minuten)",
-          "boost_max_runtime": "Boost-Sicherheits-Timeout (Minuten)"
+          "boost_max_runtime": "Boost-Sicherheits-Timeout (Minuten)",
+          "boost_asymmetric_threshold": "Für Kühlung einen anderen Schwellenwert verwenden",
+          "boost_threshold_cool": "Boost-Kühlschwellenwert (°C)",
+          "boost_cooldown_minutes": "Boost-Abklingzeit (Minuten)"
         },
         "data_description": {
           "presets": "Wähle die Presets aus, die für dieses Thermostat verfügbar sein sollen.",
@@ -40,7 +43,10 @@
           "boost_fan_mode": "Optional die Lüfterstufe des Geräts (z. B. auf Maximum) während des Boosts setzen; wird nach Ende des Boosts automatisch wiederhergestellt. Auf 'Lüfterstufe nicht ändern' belassen, um dies zu überspringen.",
           "boost_lag_minutes": "Wie viele Minuten Restwärme/-kühlung das Gerät nach der Abschaltaufforderung noch an den Raum liefert, verwendet um ein Überschießen des Zielwerts zu vermeiden.",
           "boost_max_runtime": "Maximale Laufzeit des Boosts, bevor er unabhängig von der Temperatur zwangsweise abgeschaltet wird.",
-          "cooler": "Optional. Ein Gerät, das zum Kühlen (bei Heiz+Kühl-Setups) und/oder, sobald Boost unten aktiviert ist, als Gerät zur schnellen Wiederherstellung der Raumtemperatur nach dem erneuten Öffnen eines Fensters verwendet wird - viele Fan-Coils, Wärmepumpen und Klimageräte erledigen bereits beide Aufgaben, sodass ein Gerät beide Rollen übernehmen kann."
+          "cooler": "Optional. Ein Gerät, das zum Kühlen (bei Heiz+Kühl-Setups) und/oder, sobald Boost unten aktiviert ist, als Gerät zur schnellen Wiederherstellung der Raumtemperatur nach dem erneuten Öffnen eines Fensters verwendet wird - viele Fan-Coils, Wärmepumpen und Klimageräte erledigen bereits beide Aufgaben, sodass ein Gerät beide Rollen übernehmen kann.",
+          "boost_asymmetric_threshold": "Aktivieren, um für das Auslösen eines Kühl-Boosts (z. B. an einem heißen Sommertag) einen anderen Temperaturabweichungs-Schwellenwert als für einen Heiz-Boost festzulegen. Lassen Sie dies deaktiviert, um denselben Schwellenwert für beide Richtungen zu verwenden.",
+          "boost_threshold_cool": "Wenn die Raumtemperatur bei geöffnetem Fenster um mehr als diesen Wert gestiegen ist, löst das Schließen einen Kühl-Boost aus. Wird nur verwendet, wenn der Schalter oben aktiviert ist.",
+          "boost_cooldown_minutes": "Mindestzeit nach Ende eines Boosts, bevor ein weiterer ausgelöst werden kann, damit ein Raum, der wiederholt über den Schwellenwert driftet (z. B. wiederholtes Öffnen/Schließen des Fensters), das gemeinsam genutzte Gerät nicht zu häufig schaltet."
         }
       },
       "advanced": {
@@ -117,7 +123,10 @@
           "boost_threshold": "Boost-Temperaturabweichung-Schwelle (°C)",
           "boost_fan_mode": "Boost-Lüfterstufe",
           "boost_lag_minutes": "Boost-Vorlaufzeit (Minuten)",
-          "boost_max_runtime": "Boost-Sicherheits-Timeout (Minuten)"
+          "boost_max_runtime": "Boost-Sicherheits-Timeout (Minuten)",
+          "boost_asymmetric_threshold": "Für Kühlung einen anderen Schwellenwert verwenden",
+          "boost_threshold_cool": "Boost-Kühlschwellenwert (°C)",
+          "boost_cooldown_minutes": "Boost-Abklingzeit (Minuten)"
         },
         "data_description": {
           "presets": "Wähle die Presets aus, die für dieses Thermostat verfügbar sein sollen.",
@@ -126,7 +135,10 @@
           "boost_threshold": "Wenn die Raumtemperatur (in beide Richtungen) um mehr als diesen Wert abweicht, während ein Fenster geöffnet ist, aktiviert das Schließen des Fensters den Boost.",
           "boost_fan_mode": "Optional die Lüfterstufe des Geräts (z. B. auf Maximum) während des Boosts setzen; wird nach Ende des Boosts automatisch wiederhergestellt. Auf 'Lüfterstufe nicht ändern' belassen, um dies zu überspringen.",
           "boost_lag_minutes": "Wie viele Minuten Restwärme/-kühlung das Gerät nach der Abschaltaufforderung noch an den Raum liefert, verwendet um ein Überschießen des Zielwerts zu vermeiden.",
-          "boost_max_runtime": "Maximale Laufzeit des Boosts, bevor er unabhängig von der Temperatur zwangsweise abgeschaltet wird."
+          "boost_max_runtime": "Maximale Laufzeit des Boosts, bevor er unabhängig von der Temperatur zwangsweise abgeschaltet wird.",
+          "boost_asymmetric_threshold": "Aktivieren, um für das Auslösen eines Kühl-Boosts (z. B. an einem heißen Sommertag) einen anderen Temperaturabweichungs-Schwellenwert als für einen Heiz-Boost festzulegen. Lassen Sie dies deaktiviert, um denselben Schwellenwert für beide Richtungen zu verwenden.",
+          "boost_threshold_cool": "Wenn die Raumtemperatur bei geöffnetem Fenster um mehr als diesen Wert gestiegen ist, löst das Schließen einen Kühl-Boost aus. Wird nur verwendet, wenn der Schalter oben aktiviert ist.",
+          "boost_cooldown_minutes": "Mindestzeit nach Ende eines Boosts, bevor ein weiterer ausgelöst werden kann, damit ein Raum, der wiederholt über den Schwellenwert driftet (z. B. wiederholtes Öffnen/Schließen des Fensters), das gemeinsam genutzte Gerät nicht zu häufig schaltet."
         }
       },
       "advanced": {
@@ -219,6 +231,16 @@
         "defaults_kd": {
           "name": "Standard-kd",
           "description": "Differenzialverstärkung, die nach dem Zurücksetzen gesetzt wird (fällt auf BalanceParams.kd zurück, wenn nicht angegeben)."
+        }
+      }
+    },
+    "test_boost": {
+      "name": "Boost testen",
+      "description": "Löst manuell einen Boost-Zyklus am konfigurierten Kühlgerät aus, um die Verkabelung (Zielgerät, Lüftermodus, Schwellenwert-Erreichbarkeit) zu testen, ohne ein Fenster öffnen und schließen zu müssen.",
+      "fields": {
+        "direction": {
+          "name": "Richtung",
+          "description": "Welche Boost-Richtung getestet werden soll."
         }
       }
     }
@@ -538,6 +560,12 @@
       },
       "solar_intensity": {
         "name": "Solare Wärmeaufnahme"
+      },
+      "warm_floor_status": {
+        "name": "Warmboden-Status"
+      },
+      "boost_status": {
+        "name": "Boost-Status"
       }
     }
   },

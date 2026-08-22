@@ -30,7 +30,10 @@
           "boost_threshold": "Boost temperature-drift threshold (°C)",
           "boost_fan_mode": "Boost fan speed",
           "boost_lag_minutes": "Boost anticipation (minutes)",
-          "boost_max_runtime": "Boost safety timeout (minutes)"
+          "boost_max_runtime": "Boost safety timeout (minutes)",
+          "boost_asymmetric_threshold": "Use a different threshold for cooling",
+          "boost_threshold_cool": "Boost cooling threshold (°C)",
+          "boost_cooldown_minutes": "Boost cooldown (minutes)"
         },
         "data_description": {
           "presets": "Select the presets you want to be available for this thermostat.",
@@ -40,7 +43,10 @@
           "boost_threshold": "If the room temperature drifts (in either direction) by more than this while a window is open, closing the window arms the boost.",
           "boost_fan_mode": "Optionally set the device's fan speed (e.g. to maximum) while boosting; restored automatically once the boost ends. Leave as 'Don't change fan mode' to skip this.",
           "boost_lag_minutes": "How many minutes of residual heating/cooling the device keeps delivering into the room after being told to stop, used to avoid overshooting the target.",
-          "boost_max_runtime": "Maximum time the boost is allowed to run before forcing it off regardless of temperature."
+          "boost_max_runtime": "Maximum time the boost is allowed to run before forcing it off regardless of temperature.",
+          "boost_asymmetric_threshold": "Turn this on to set a separate drift threshold for arming a cool boost (e.g. a hot summer day) than for arming a heat boost. Leave off to use the same threshold for both directions.",
+          "boost_threshold_cool": "If the room temperature rose by more than this while a window was open, closing it arms a cool boost. Only used when the toggle above is on.",
+          "boost_cooldown_minutes": "Minimum time after a boost ends before another one can re-arm, so a room that keeps drifting past the threshold (e.g. repeated window in/out) doesn't short-cycle the shared device."
         }
       },
       "advanced": {
@@ -117,7 +123,10 @@
           "boost_threshold": "Boost temperature-drift threshold (°C)",
           "boost_fan_mode": "Boost fan speed",
           "boost_lag_minutes": "Boost anticipation (minutes)",
-          "boost_max_runtime": "Boost safety timeout (minutes)"
+          "boost_max_runtime": "Boost safety timeout (minutes)",
+          "boost_asymmetric_threshold": "Use a different threshold for cooling",
+          "boost_threshold_cool": "Boost cooling threshold (°C)",
+          "boost_cooldown_minutes": "Boost cooldown (minutes)"
         },
         "data_description": {
           "presets": "Select the presets you want to be available for this thermostat.",
@@ -126,7 +135,10 @@
           "boost_threshold": "If the room temperature drifts (in either direction) by more than this while a window is open, closing the window arms the boost.",
           "boost_fan_mode": "Optionally set the device's fan speed (e.g. to maximum) while boosting; restored automatically once the boost ends. Leave as 'Don't change fan mode' to skip this.",
           "boost_lag_minutes": "How many minutes of residual heating/cooling the device keeps delivering into the room after being told to stop, used to avoid overshooting the target.",
-          "boost_max_runtime": "Maximum time the boost is allowed to run before forcing it off regardless of temperature."
+          "boost_max_runtime": "Maximum time the boost is allowed to run before forcing it off regardless of temperature.",
+          "boost_asymmetric_threshold": "Turn this on to set a separate drift threshold for arming a cool boost (e.g. a hot summer day) than for arming a heat boost. Leave off to use the same threshold for both directions.",
+          "boost_threshold_cool": "If the room temperature rose by more than this while a window was open, closing it arms a cool boost. Only used when the toggle above is on.",
+          "boost_cooldown_minutes": "Minimum time after a boost ends before another one can re-arm, so a room that keeps drifting past the threshold (e.g. repeated window in/out) doesn't short-cycle the shared device."
         }
       },
       "advanced": {
@@ -219,6 +231,16 @@
         "defaults_kd": {
           "name": "Default kd",
           "description": "Derivative gain to seed after reset (falls back to BalanceParams.kd if not provided)."
+        }
+      }
+    },
+    "test_boost": {
+      "name": "Test boost",
+      "description": "Manually trigger a Boost cycle on the configured Cooler entity, for testing wiring (target device, fan mode, threshold reachability) without needing to open and close a window.",
+      "fields": {
+        "direction": {
+          "name": "Direction",
+          "description": "Which boost direction to test."
         }
       }
     }
@@ -538,6 +560,12 @@
       },
       "solar_intensity": {
         "name": "Sun Intensity Heatup"
+      },
+      "warm_floor_status": {
+        "name": "Warm Floor Status"
+      },
+      "boost_status": {
+        "name": "Boost Status"
       }
     }
   },

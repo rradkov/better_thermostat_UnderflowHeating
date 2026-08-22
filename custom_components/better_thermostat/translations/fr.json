@@ -30,7 +30,10 @@
           "boost_threshold": "Seuil d'écart de température pour le boost (°C)",
           "boost_fan_mode": "Vitesse de ventilateur du boost",
           "boost_lag_minutes": "Anticipation du boost (minutes)",
-          "boost_max_runtime": "Délai de sécurité du boost (minutes)"
+          "boost_max_runtime": "Délai de sécurité du boost (minutes)",
+          "boost_asymmetric_threshold": "Utiliser un seuil différent pour le refroidissement",
+          "boost_threshold_cool": "Seuil de boost de refroidissement (°C)",
+          "boost_cooldown_minutes": "Délai de récupération du boost (minutes)"
         },
         "data_description": {
           "presets": "Sélectionnez les préréglages qui doivent être disponibles pour ce thermostat.",
@@ -40,7 +43,10 @@
           "boost_fan_mode": "Réglez éventuellement la vitesse du ventilateur de l'appareil (par ex. au maximum) pendant le boost ; restaurée automatiquement une fois le boost terminé. Laissez sur 'Ne pas changer la vitesse du ventilateur' pour ignorer cette option.",
           "boost_lag_minutes": "Combien de minutes de chaleur/froid résiduel l'appareil continue de délivrer dans la pièce après avoir reçu l'ordre de s'arrêter, utilisé pour éviter de dépasser la consigne.",
           "boost_max_runtime": "Durée maximale pendant laquelle le boost est autorisé à fonctionner avant d'être arrêté de force, quelle que soit la température.",
-          "cooler": "Optionnel. Un appareil utilisé pour le refroidissement (dans les installations chauffage+climatisation) et/ou, une fois le Boost activé ci-dessous, comme appareil qui rétablit rapidement la température de la pièce après la réouverture d'une fenêtre - de nombreux ventilo-convecteurs, pompes à chaleur et climatiseurs remplissent déjà les deux rôles, un seul appareil peut donc suffire."
+          "cooler": "Optionnel. Un appareil utilisé pour le refroidissement (dans les installations chauffage+climatisation) et/ou, une fois le Boost activé ci-dessous, comme appareil qui rétablit rapidement la température de la pièce après la réouverture d'une fenêtre - de nombreux ventilo-convecteurs, pompes à chaleur et climatiseurs remplissent déjà les deux rôles, un seul appareil peut donc suffire.",
+          "boost_asymmetric_threshold": "Activez ceci pour définir un seuil de dérive différent pour déclencher un boost de refroidissement (par exemple, une chaude journée d'été) que pour un boost de chauffage. Laissez désactivé pour utiliser le même seuil dans les deux sens.",
+          "boost_threshold_cool": "Si la température de la pièce a augmenté de plus de cette valeur pendant qu'une fenêtre était ouverte, la fermer déclenche un boost de refroidissement. Utilisé uniquement lorsque l'option ci-dessus est activée.",
+          "boost_cooldown_minutes": "Délai minimal après la fin d'un boost avant qu'un autre puisse se déclencher, afin qu'une pièce qui dérive continuellement au-delà du seuil (par exemple des ouvertures/fermetures répétées de fenêtre) ne sollicite pas trop fréquemment l'appareil partagé."
         }
       },
       "advanced": {
@@ -117,7 +123,10 @@
           "boost_threshold": "Seuil d'écart de température pour le boost (°C)",
           "boost_fan_mode": "Vitesse de ventilateur du boost",
           "boost_lag_minutes": "Anticipation du boost (minutes)",
-          "boost_max_runtime": "Délai de sécurité du boost (minutes)"
+          "boost_max_runtime": "Délai de sécurité du boost (minutes)",
+          "boost_asymmetric_threshold": "Utiliser un seuil différent pour le refroidissement",
+          "boost_threshold_cool": "Seuil de boost de refroidissement (°C)",
+          "boost_cooldown_minutes": "Délai de récupération du boost (minutes)"
         },
         "data_description": {
           "presets": "Sélectionnez les préréglages qui doivent être disponibles pour ce thermostat.",
@@ -126,7 +135,10 @@
           "boost_threshold": "Si la température de la pièce s'écarte (dans un sens ou l'autre) de plus que cette valeur pendant qu'une fenêtre est ouverte, la fermeture de la fenêtre active le boost.",
           "boost_fan_mode": "Réglez éventuellement la vitesse du ventilateur de l'appareil (par ex. au maximum) pendant le boost ; restaurée automatiquement une fois le boost terminé. Laissez sur 'Ne pas changer la vitesse du ventilateur' pour ignorer cette option.",
           "boost_lag_minutes": "Combien de minutes de chaleur/froid résiduel l'appareil continue de délivrer dans la pièce après avoir reçu l'ordre de s'arrêter, utilisé pour éviter de dépasser la consigne.",
-          "boost_max_runtime": "Durée maximale pendant laquelle le boost est autorisé à fonctionner avant d'être arrêté de force, quelle que soit la température."
+          "boost_max_runtime": "Durée maximale pendant laquelle le boost est autorisé à fonctionner avant d'être arrêté de force, quelle que soit la température.",
+          "boost_asymmetric_threshold": "Activez ceci pour définir un seuil de dérive différent pour déclencher un boost de refroidissement (par exemple, une chaude journée d'été) que pour un boost de chauffage. Laissez désactivé pour utiliser le même seuil dans les deux sens.",
+          "boost_threshold_cool": "Si la température de la pièce a augmenté de plus de cette valeur pendant qu'une fenêtre était ouverte, la fermer déclenche un boost de refroidissement. Utilisé uniquement lorsque l'option ci-dessus est activée.",
+          "boost_cooldown_minutes": "Délai minimal après la fin d'un boost avant qu'un autre puisse se déclencher, afin qu'une pièce qui dérive continuellement au-delà du seuil (par exemple des ouvertures/fermetures répétées de fenêtre) ne sollicite pas trop fréquemment l'appareil partagé."
         }
       },
       "advanced": {
@@ -219,6 +231,16 @@
         "defaults_kd": {
           "name": "kd par défaut",
           "description": "Gain dérivé appliqué après la réinitialisation (utilise BalanceParams.kd si non renseigné)."
+        }
+      }
+    },
+    "test_boost": {
+      "name": "Tester le boost",
+      "description": "Déclenche manuellement un cycle de boost sur l'appareil de refroidissement configuré, pour tester le câblage (appareil cible, mode ventilateur, atteignabilité du seuil) sans avoir besoin d'ouvrir et de fermer une fenêtre.",
+      "fields": {
+        "direction": {
+          "name": "Direction",
+          "description": "Quelle direction de boost tester."
         }
       }
     }
@@ -538,6 +560,12 @@
       },
       "solar_intensity": {
         "name": "Apport de chaleur solaire"
+      },
+      "warm_floor_status": {
+        "name": "État du plancher chauffant"
+      },
+      "boost_status": {
+        "name": "État du boost"
       }
     }
   },

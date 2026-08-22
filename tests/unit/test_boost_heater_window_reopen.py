@@ -48,6 +48,11 @@ def _make_bt(
     bt.boost_enabled = boost_enabled
     bt.cooler_entity_id = cooler_entity_id
     bt.boost_threshold_k = 5.0
+    # An attribute a Mock was never given is a truthy child mock, so these
+    # have to be pinned or evaluate_on_close()'s cooldown/asymmetric-
+    # threshold math (Mock * 60.0, etc.) blows up.
+    bt.boost_threshold_cool_k = None
+    bt.boost_cooldown_minutes = 0.0
     bt._boost_heater_tracker = BoostHeaterTracker()
     bt.async_write_ha_state = Mock()
     bt.window_queue_task = asyncio.Queue()
@@ -199,4 +204,37 @@ async def test_reopening_mid_boost_cancels_it_and_a_fresh_close_reevaluates():
     await _run_window_queue(bt, True, "open")
     bt.cur_temp = 22.5  # small drift this time
     await _run_window_queue(bt, False, "closed")
+    assert bt._boost_heater_tracker.boost_active is False
+
+
+@pytest.mark.asyncio
+async def test_asymmetric_cool_threshold_is_read_from_the_instance():
+    """A room that wouldn't clear the (higher) heat threshold as a rise does
+    clear a separately configured, lower cool threshold."""
+    bt = _make_bt(cur_temp=23.0)
+    bt.boost_threshold_k = 5.0
+    bt.boost_threshold_cool_k = 2.0
+    await _run_window_queue(bt, True, "open")
+
+    bt.cur_temp = 25.5  # 2.5 rise: below the heat threshold, above the cool one
+    await _run_window_queue(bt, False, "closed")
+
+    assert bt._boost_heater_tracker.boost_direction == HVACMode.COOL
+
+
+@pytest.mark.asyncio
+async def test_cooldown_blocks_a_rearm_reached_through_the_real_event_path():
+    bt = _make_bt(cur_temp=23.0)
+    bt.boost_cooldown_minutes = 15.0
+    # Simulate a just-completed boost.
+    bt._boost_heater_tracker.boost_started_ts = 0.0
+    from time import monotonic
+
+    bt._boost_heater_tracker.clear(now_ts=monotonic())
+
+    await _run_window_queue(bt, True, "open")
+    bt.cur_temp = 16.0  # a clear 7.0 drop, well past threshold
+    await _run_window_queue(bt, False, "closed")
+
+    # Still inside the 15-minute cooldown - must not have rearmed.
     assert bt._boost_heater_tracker.boost_active is False
