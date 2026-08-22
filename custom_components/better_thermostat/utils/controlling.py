@@ -24,6 +24,7 @@ from custom_components.better_thermostat.model_fixes.model_quirks import (
     override_set_temperature,
     trv_state_unknown_as_available,
 )
+from custom_components.better_thermostat.utils.boost_heater import control_boost
 from custom_components.better_thermostat.utils.const import (
     DEFAULT_CALIBRATION_MODE,
     CalibrationMode,
@@ -264,15 +265,27 @@ async def control_queue(self):
                             self.device_name,
                         )
 
-                    # Handle cooler logic once per cycle
+                    # Handle cooler/boost logic once per cycle. Boost and the
+                    # normal cooler pass both drive self.cooler_entity_id, so
+                    # they must never run in the same cycle: an armed boost
+                    # preempts control_cooler() entirely, and control_cooler()
+                    # resumes on its own the cycle after the boost ends.
                     _cooler_pass_completed = False
+                    _boost_active_this_cycle = (
+                        self.boost_enabled
+                        and self._boost_heater_tracker.boost_direction is not None
+                    )
                     if self.cooler_entity_id is not None:
                         try:
-                            await control_cooler(self)
+                            if _boost_active_this_cycle:
+                                await control_boost(self)
+                            else:
+                                await control_cooler(self)
                         except Exception:
                             _LOGGER.exception(
-                                "better_thermostat %s: ERROR controlling cooler",
+                                "better_thermostat %s: ERROR controlling %s",
                                 self.device_name,
+                                "boost" if _boost_active_this_cycle else "cooler",
                             )
                         else:
                             _cooler_pass_completed = True
@@ -280,14 +293,17 @@ async def control_queue(self):
                     # Create tasks for all TRVs to run in parallel. A device
                     # that carries both roles takes one mode and one setpoint,
                     # so the heating channel stands down for the cycles the
-                    # cooling channel drives it. A cooling pass that raised left
-                    # no decision to read, and the permissive default is the
-                    # heating channel keeping the device.
+                    # cooling or boost channel drives it. A pass that raised
+                    # left no decision to read, and the permissive default is
+                    # the heating channel keeping the device.
                     _shared_entity_id = dual_role_entity_id(self)
-                    _cooling_owns_shared = (
-                        _shared_entity_id is not None
-                        and _cooler_pass_completed
-                        and cooling_owns_dual_role_device(self, _shared_entity_id)
+                    _cooling_owns_shared = _shared_entity_id is not None and (
+                        (_cooler_pass_completed and _boost_active_this_cycle)
+                        or (
+                            _cooler_pass_completed
+                            and not _boost_active_this_cycle
+                            and cooling_owns_dual_role_device(self, _shared_entity_id)
+                        )
                     )
                     tasks = []
                     controlled_trvs = []

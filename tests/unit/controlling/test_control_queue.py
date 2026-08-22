@@ -224,6 +224,9 @@ class TestControlQueue:
         mock_self.calculate_heating_power = AsyncMock()
         mock_self.cooler_entity_id = "climate.cooler"
         mock_self.real_trvs = {}
+        # An attribute a Mock was never given is a truthy child mock, so
+        # boost_enabled has to be pinned or every cycle reads as boosting.
+        mock_self.boost_enabled = False
 
         queue = asyncio.Queue()
         mock_self.control_queue_task = queue
@@ -256,6 +259,9 @@ class TestControlQueue:
         mock_self.calculate_heating_power = AsyncMock()
         mock_self.cooler_entity_id = "climate.cooler"
         mock_self.real_trvs = {}
+        # An attribute a Mock was never given is a truthy child mock, so
+        # boost_enabled has to be pinned or every cycle reads as boosting.
+        mock_self.boost_enabled = False
 
         queue = asyncio.Queue()
         mock_self.control_queue_task = queue
@@ -614,6 +620,9 @@ class TestControlQueueOnADualRoleEntity:
             {cls.SHARED_ID: Mock()} if real_trvs is None else real_trvs
         )
         mock_self.last_cooler_mode_decided = last_cooler_mode_decided
+        # An attribute a Mock was never given is a truthy child mock, so
+        # boost_enabled has to be pinned or every cycle reads as boosting.
+        mock_self.boost_enabled = False
         mock_self.control_queue_task = asyncio.Queue()
         return mock_self
 

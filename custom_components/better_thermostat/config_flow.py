@@ -27,6 +27,11 @@ import voluptuous as vol
 
 from . import DOMAIN  # pylint: disable=unused-import
 from .adapters.delegate import load_adapter
+from .utils.boost_heater import (
+    CONF_BOOST_HEATER_ENABLED,
+    build_boost_heater_user_fields,
+    normalize_boost_heater_user_submission,
+)
 from .utils.const import (
     CONF_CALIBRATION,
     CONF_CALIBRATION_MODE,
@@ -496,7 +501,11 @@ def _seconds_to_duration_dict(value: int | float | str | None) -> dict[str, int]
 
 
 def _build_user_fields(
-    *, mode: str, current: Mapping[str, Any], user_input: dict[str, Any] | None = None
+    *,
+    mode: str,
+    current: Mapping[str, Any],
+    user_input: dict[str, Any] | None = None,
+    hass: Any = None,
 ) -> OrderedDict:
     user_input = user_input or {}
     is_create = mode == "create"
@@ -707,6 +716,24 @@ def _build_user_fields(
     for key, field_type in build_underfloor_user_fields(resolve).items():
         fields[vol.Optional(key, default=resolve(key, False))] = field_type
 
+    # Boost reuses the Cooler entity, so it's only offered once one is
+    # configured - there's nothing for it to boost otherwise.
+    if resolve(CONF_COOLER):
+        add_field(
+            CONF_BOOST_HEATER_ENABLED,
+            bool,
+            default=_as_bool(resolve(CONF_BOOST_HEATER_ENABLED, False)),
+        )
+        fields.update(
+            build_boost_heater_user_fields(
+                hass,
+                resolve,
+                boost_heater_enabled=_as_bool(
+                    resolve(CONF_BOOST_HEATER_ENABLED, False)
+                ),
+            )
+        )
+
     return fields
 
 
@@ -884,6 +911,19 @@ def _normalize_user_submission(
             ]
 
     normalized.update(normalize_underfloor_user_submission(user_input))
+
+    # Boost can only be enabled while a Cooler is configured - it has
+    # nothing to boost otherwise, and a submission where the Cooler was
+    # just removed must not leave a stale boost toggle behind.
+    boost_heater_enabled = bool(normalized.get(CONF_COOLER)) and _as_bool(
+        user_input.get(CONF_BOOST_HEATER_ENABLED), False
+    )
+    normalized[CONF_BOOST_HEATER_ENABLED] = boost_heater_enabled
+    normalized.update(
+        normalize_boost_heater_user_submission(
+            user_input, boost_heater_enabled=boost_heater_enabled
+        )
+    )
 
     return normalized
 
@@ -1120,7 +1160,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self.async_step_advanced(None, self.trv_bundle[0])
 
         fields = _build_user_fields(
-            mode="create", current=self.data or {}, user_input=user_input
+            mode="create",
+            current=self.data or {},
+            user_input=user_input,
+            hass=self.hass,
         )
 
         return self.async_show_form(
@@ -1322,7 +1365,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 errors[CONF_HEATER] = "no_heater"
 
         fields = _build_user_fields(
-            mode="update", current=self._config_entry.data, user_input=user_input
+            mode="update",
+            current=self._config_entry.data,
+            user_input=user_input,
+            hass=self.hass,
         )
 
         return self.async_show_form(
