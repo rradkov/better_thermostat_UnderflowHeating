@@ -420,6 +420,27 @@ def _boost_should_stop(
     return projected_temp <= target and trend_confirmed
 
 
+def update_boost_trend(bt) -> None:
+    """Feed the slow trend EMA every control cycle, not just while boosting.
+
+    Called unconditionally from ``control_queue()`` so the anti-blip guard
+    in ``_boost_should_stop()`` has genuine standing memory of the room's
+    slow-moving temperature by the time a boost starts, rather than only
+    accumulating history during the boost's own short duration (which made
+    it little more than a lagged copy of the fast reading). A no-op
+    whenever boost isn't enabled.
+    """
+    if not getattr(bt, "boost_enabled", False):
+        return
+    tracker: BoostHeaterTracker | None = getattr(bt, "_boost_heater_tracker", None)
+    if tracker is None:
+        return
+    tracker.update_slow_ema(
+        getattr(bt, "cur_temp_filtered", None) or getattr(bt, "cur_temp", None),
+        monotonic(),
+    )
+
+
 async def control_boost(self) -> None:
     """Drive ``self.cooler_entity_id`` for an active boost.
 
@@ -430,6 +451,10 @@ async def control_boost(self) -> None:
     """
     tracker: BoostHeaterTracker = self._boost_heater_tracker
     now_ts = monotonic()
+    # update_boost_trend() already ran this cycle (control_queue() calls it
+    # unconditionally before routing here); this second call is a near
+    # no-op (dt_s ~= 0) but keeps control_boost() correct in isolation, e.g.
+    # under direct unit test.
     tracker.update_slow_ema(
         getattr(self, "cur_temp_filtered", None) or getattr(self, "cur_temp", None),
         now_ts,

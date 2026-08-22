@@ -23,7 +23,10 @@ from custom_components.better_thermostat.model_fixes.model_quirks import (
     override_set_hvac_mode,
     override_set_temperature,
 )
-from custom_components.better_thermostat.utils.boost_heater import control_boost
+from custom_components.better_thermostat.utils.boost_heater import (
+    control_boost,
+    update_boost_trend,
+)
 from custom_components.better_thermostat.utils.const import (
     DEFAULT_CALIBRATION_MODE,
     CalibrationMode,
@@ -263,6 +266,11 @@ async def control_queue(self):
                             "better_thermostat %s: ERROR calculating heat loss",
                             self.device_name,
                         )
+
+                    # Feed the boost trend EMA every cycle (not just while
+                    # boosting) so it has real standing memory of the room's
+                    # slow-moving temperature by the time a boost starts.
+                    update_boost_trend(self)
 
                     # Handle cooler/boost logic once per cycle. Boost and the
                     # normal cooler pass both drive self.cooler_entity_id, so
