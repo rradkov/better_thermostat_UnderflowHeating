@@ -698,6 +698,8 @@ class TestControlCoolerLatchOfAFreshThermostat:
             boost_fan_mode=None,
             boost_lag_minutes=None,
             boost_max_runtime_minutes=None,
+            boost_threshold_cool_k=None,
+            boost_cooldown_minutes=None,
             enabled_presets=None,
             unit=UnitOfTemperature.CELSIUS,
             unique_id="cooler_band",

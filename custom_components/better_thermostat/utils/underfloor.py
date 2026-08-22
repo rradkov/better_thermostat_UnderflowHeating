@@ -206,6 +206,7 @@ def _structural_scale(bt, entity_id: str, calibration_mode: CalibrationMode) -> 
     """
     heat_loss_source = None
     heating_power_source = None
+    ka_est = None
 
     if calibration_mode in (
         CalibrationMode.MPC_CALIBRATION,
@@ -215,11 +216,36 @@ def _structural_scale(bt, entity_id: str, calibration_mode: CalibrationMode) -> 
         if mpc_state is not None:
             heat_loss_source = getattr(mpc_state, "loss_est", None)
             heating_power_source = getattr(mpc_state, "gain_est", None)
+            ka_est = getattr(mpc_state, "ka_est", None)
 
     if heat_loss_source is None:
         heat_loss_source = getattr(bt, "heat_loss_rate", None)
     if heating_power_source is None:
         heating_power_source = getattr(bt, "heating_power", None)
+
+    # MPC Insulation (Ka) is delta-normalized (loss per degree of indoor/
+    # outdoor difference) - unlike loss_est/heat_loss_rate, which reflect
+    # today's specific weather and can read artificially low on a mild day
+    # even for a genuinely leaky room. Cross-check: never let the structural
+    # estimate read *tighter-envelope* (lower loss) than what Ka itself
+    # implies at the live delta - only the other way. This mirrors
+    # _structural_scale's own convention that more apparent loss means less
+    # backoff allowance, so the cross-check can only tighten the floor, never
+    # loosen it. A no-op whenever Ka or an outdoor reading isn't available.
+    if isinstance(ka_est, (int, float)):
+        outdoor_temp = getattr(bt, "last_avg_outdoor_temp", None)
+        indoor_temp = getattr(bt, "cur_temp", None)
+        if isinstance(outdoor_temp, (int, float)) and isinstance(
+            indoor_temp, (int, float)
+        ):
+            # Same 5°C floor calculate_calibration's own Ka math uses, so the
+            # two stay consistent at a small or inverted delta.
+            delta = max(5.0, float(indoor_temp) - float(outdoor_temp))
+            ka_implied_loss = float(ka_est) * delta
+            if isinstance(heat_loss_source, (int, float)):
+                heat_loss_source = max(float(heat_loss_source), ka_implied_loss)
+            else:
+                heat_loss_source = ka_implied_loss
 
     loss_severity = 0.0
     if isinstance(heat_loss_source, (int, float)) and MAX_HEAT_LOSS > 0:
@@ -236,24 +262,29 @@ def _structural_scale(bt, entity_id: str, calibration_mode: CalibrationMode) -> 
     )
 
 
-def _solar_scale(bt, entity_id: str, calibration_mode: CalibrationMode) -> float:
-    """How much of the current apparent comfort is transient solar gain.
+def estimate_solar_gain_rate(
+    bt, entity_id: str, calibration_mode: CalibrationMode
+) -> float | None:
+    """Best-effort current solar gain rate (°C/min) for a heater's room, or None.
 
     Only meaningful for MPC-calibrated heaters that have actually learned a
-    solar gain factor; everything else is a strict no-op (scale == 1.0).
+    solar gain factor; ``None`` otherwise (before enough data exists, or for
+    a non-MPC heater). Public - reused by ``boost_heater.py`` so Boost's
+    termination can account for the same solar signal Warm Floor does,
+    without either module owning a private copy of the lookup.
     """
     if calibration_mode not in (
         CalibrationMode.MPC_CALIBRATION,
         CalibrationMode.MPC_V2_CALIBRATION,
     ):
-        return 1.0
+        return None
 
     mpc_state = _get_mpc_state(bt, entity_id)
     if mpc_state is None:
-        return 1.0
+        return None
     solar_gain_est = getattr(mpc_state, "solar_gain_est", None)
     if not isinstance(solar_gain_est, (int, float)):
-        return 1.0
+        return None
 
     try:
         from custom_components.better_thermostat.calibration import (
@@ -262,15 +293,30 @@ def _solar_scale(bt, entity_id: str, calibration_mode: CalibrationMode) -> float
 
         solar_intensity = _get_current_solar_intensity(bt)
     except ImportError, AttributeError:
+        return None
+    if not isinstance(solar_intensity, (int, float)):
+        return None
+
+    return float(solar_gain_est) * float(solar_intensity)
+
+
+def _solar_scale(bt, entity_id: str, calibration_mode: CalibrationMode) -> float:
+    """How much of the current apparent comfort is transient solar gain.
+
+    Only meaningful for MPC-calibrated heaters that have actually learned a
+    solar gain factor; everything else is a strict no-op (scale == 1.0).
+    """
+    solar_gain_rate = estimate_solar_gain_rate(bt, entity_id, calibration_mode)
+    if solar_gain_rate is None:
         return 1.0
 
-    heat_loss_source = getattr(mpc_state, "loss_est", None)
+    mpc_state = _get_mpc_state(bt, entity_id)
+    heat_loss_source = getattr(mpc_state, "loss_est", None) if mpc_state else None
     if not isinstance(heat_loss_source, (int, float)):
         heat_loss_source = getattr(bt, "heat_loss_rate", None)
     if not isinstance(heat_loss_source, (int, float)) or heat_loss_source <= 0:
         return 1.0
 
-    solar_gain_rate = float(solar_gain_est) * float(solar_intensity)
     solar_offset_ratio = _clamp(solar_gain_rate / float(heat_loss_source), 0.0, 1.0)
     return 1.0 - solar_offset_ratio
 
@@ -307,6 +353,29 @@ def _sustaining_setpoint(
     return sustaining
 
 
+def _record_status(
+    bt, entity_id: str, *, active: bool, sustaining_setpoint: float | None
+) -> None:
+    """Publish the last Warm Floor decision for ``entity_id`` onto ``bt``.
+
+    Read by ``sensor.py``'s Warm Floor status diagnostic. Only called for
+    entities already confirmed ``HeatingType.UNDERFLOOR`` - a radiator TRV
+    controlled by the same instance never touches this.
+    """
+    target = getattr(bt, "bt_target_temp", None)
+    backoff_c = None
+    if isinstance(target, (int, float)) and isinstance(
+        sustaining_setpoint, (int, float)
+    ):
+        backoff_c = round(float(target) - float(sustaining_setpoint), 3)
+    bt._warm_floor_status = {
+        "active": bool(active),
+        "entity_id": entity_id,
+        "sustaining_setpoint_c": sustaining_setpoint,
+        "backoff_c": backoff_c,
+    }
+
+
 def apply_warm_floor_floor(
     bt, entity_id: str, computed_value: float | None, *, is_offset: bool
 ) -> float | None:
@@ -340,10 +409,13 @@ def apply_warm_floor_floor(
 
     # Never override the window/door OFF gate or the outdoor call-for-heat gate.
     if getattr(bt, "contact_open", False):
+        _record_status(bt, entity_id, active=False, sustaining_setpoint=None)
         return computed_value
     if getattr(bt, "call_for_heat", True) is False:
+        _record_status(bt, entity_id, active=False, sustaining_setpoint=None)
         return computed_value
     if getattr(bt, "bt_hvac_mode", None) == HVACMode.OFF:
+        _record_status(bt, entity_id, active=False, sustaining_setpoint=None)
         return computed_value
 
     calibration_mode = normalize_calibration_mode(
@@ -362,6 +434,7 @@ def apply_warm_floor_floor(
         if temp_slope > OVERSHOOT_SLOPE_GUARD:
             # Still actively gaining (residual heat or live solar) - raising
             # the floor now would only compound overshoot risk.
+            _record_status(bt, entity_id, active=False, sustaining_setpoint=None)
             return computed_value
         if temp_slope < -UNDERSHOOT_SLOPE_GUARD:
             structural_scale = WARM_FLOOR_MIN_BACKOFF_RATIO
@@ -370,6 +443,7 @@ def apply_warm_floor_floor(
         bt, entity_id, structural_scale, solar_scale
     )
     if sustaining_setpoint is None:
+        _record_status(bt, entity_id, active=False, sustaining_setpoint=None)
         return computed_value
 
     if not is_offset:
@@ -388,11 +462,18 @@ def apply_warm_floor_floor(
             "warm_floor",
         )
         if not isinstance(trv_internal_temp, (int, float)):
+            _record_status(bt, entity_id, active=False, sustaining_setpoint=None)
             return computed_value
         offset_ceiling = sustaining_setpoint - float(trv_internal_temp)
         result = min(computed_value, offset_ceiling)
 
     _apply_valve_floor(bt, entity_id, structural_scale, solar_scale)
+    _record_status(
+        bt,
+        entity_id,
+        active=(result != computed_value),
+        sustaining_setpoint=sustaining_setpoint,
+    )
     return result
 
 

@@ -863,8 +863,9 @@ class TestAsyncSetupEntry:
         async_add_entities.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_creates_six_core_sensors(self):
-        """Should create 6 core sensors when climate exists."""
+    async def test_creates_eight_core_sensors(self):
+        """Should create 8 core sensors when climate exists: the original 6
+        telemetry sensors plus the Warm Floor and Boost status diagnostics."""
         bt = _make_bt_climate()
         hass = MagicMock()
         hass.data = {DOMAIN: {"entry_1": {"climate": bt}}}
@@ -884,7 +885,7 @@ class TestAsyncSetupEntry:
 
         async_add_entities.assert_called_once()
         sensors = async_add_entities.call_args[0][0]
-        assert len(sensors) == 6
+        assert len(sensors) == 8
 
 
 # ===========================================================================

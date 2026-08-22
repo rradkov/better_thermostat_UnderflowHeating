@@ -6,6 +6,7 @@ from collections.abc import Callable
 import logging
 from typing import TYPE_CHECKING
 
+from homeassistant.components.climate.const import HVACMode
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -68,6 +69,8 @@ async def async_setup_entry(
         BetterThermostatHeatingPowerSensor(bt_climate),
         BetterThermostatHeatLossSensor(bt_climate),
         BetterThermostatSolarIntensitySensor(bt_climate),
+        BetterThermostatWarmFloorStatusSensor(bt_climate),
+        BetterThermostatBoostStatusSensor(bt_climate),
     ]
 
     # Dynamische algorithmus-spezifische Sensor-Erstellung
@@ -934,3 +937,68 @@ class BetterThermostatSolarIntensitySensor(_BtSensorBase):
                 self._attr_native_value = 0.0
         except Exception:
             self._attr_native_value = None
+
+
+class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
+    """Representation of a Better Thermostat Warm Floor status sensor.
+
+    Reflects ``apply_warm_floor_floor()``'s last decision, published onto the
+    climate entity as ``_warm_floor_status``. ``"disabled"`` means no heater
+    on this instance is configured for underfloor heating (or none has run a
+    calibration cycle yet); ``"idle"`` means Warm Floor evaluated a cycle but
+    a guard (open contact, no call for heat, HVAC off, still gaining) held it
+    off; ``"active"`` means it actually raised the floor this cycle.
+    """
+
+    _attr_translation_key = "warm_floor_status"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_state_class = None
+    _attr_options = ["active", "idle", "disabled"]
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:heat-wave"
+    _unique_id_suffix = "warm_floor_status"
+
+    def _update_state(self) -> None:
+        """Update state from the last Warm Floor decision."""
+        status = getattr(self._bt_climate, "_warm_floor_status", None)
+        if not isinstance(status, dict):
+            self._attr_native_value = "disabled"
+            self._attr_extra_state_attributes = {}
+            return
+        self._attr_native_value = "active" if status.get("active") else "idle"
+        self._attr_extra_state_attributes = {
+            "entity_id": status.get("entity_id"),
+            "sustaining_setpoint_c": status.get("sustaining_setpoint_c"),
+            "backoff_c": status.get("backoff_c"),
+        }
+
+
+class BetterThermostatBoostStatusSensor(_BtSensorBase):
+    """Representation of a Better Thermostat Boost status sensor.
+
+    Reflects ``update_boost_trend()``'s last snapshot, published onto the
+    climate entity as ``_boost_status``. ``"off"`` covers both a disabled
+    instance and an enabled one with no boost currently armed.
+    """
+
+    _attr_translation_key = "boost_status"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_state_class = None
+    _attr_options = ["off", "heating", "cooling"]
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:fan-plus"
+    _unique_id_suffix = "boost_status"
+
+    def _update_state(self) -> None:
+        """Update state from the last Boost decision."""
+        status = getattr(self._bt_climate, "_boost_status", None)
+        if not isinstance(status, dict) or not status.get("active"):
+            self._attr_native_value = "off"
+            self._attr_extra_state_attributes = {}
+            return
+        direction = status.get("direction")
+        self._attr_native_value = "heating" if direction == HVACMode.HEAT else "cooling"
+        self._attr_extra_state_attributes = {
+            "cooler_entity_id": status.get("cooler_entity_id"),
+            "elapsed_s": status.get("elapsed_s"),
+        }

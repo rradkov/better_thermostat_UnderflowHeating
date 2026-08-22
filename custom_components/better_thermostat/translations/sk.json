@@ -28,7 +28,10 @@
           "boost_threshold": "Prah odchýlky teploty pre boost (°C)",
           "boost_fan_mode": "Rýchlosť ventilátora boostu",
           "boost_lag_minutes": "Predstih boostu (minúty)",
-          "boost_max_runtime": "Bezpečnostný časový limit boostu (minúty)"
+          "boost_max_runtime": "Bezpečnostný časový limit boostu (minúty)",
+          "boost_asymmetric_threshold": "Použiť iný prah pre chladenie",
+          "boost_threshold_cool": "Prah boostu chladenia (°C)",
+          "boost_cooldown_minutes": "Čas obnovy boostu (minúty)"
         },
         "data_description": {
           "presets": "Vyberte predvoľby, ktoré chcete mať k dispozícii pre tento termostat.",
@@ -38,7 +41,10 @@
           "boost_fan_mode": "Voliteľne nastavte rýchlosť ventilátora zariadenia (napr. na maximum) počas boostu; po skončení boostu sa automaticky obnoví. Ponechajte na 'Nemeniť rýchlosť ventilátora', ak chcete túto možnosť preskočiť.",
           "boost_lag_minutes": "Koľko minút zvyškového tepla/chladu zariadenie naďalej dodáva do miestnosti po tom, čo mu bolo povedané, aby sa zastavilo, používané na zabránenie prekročeniu cieľa.",
           "boost_max_runtime": "Maximálny čas, počas ktorého môže boost bežať, kým sa vynúti jeho vypnutie bez ohľadu na teplotu.",
-          "cooler": "Voliteľné. Zariadenie používané na chladenie (v konfiguráciách vykurovanie+chladenie) a/alebo, po zapnutí Boostu nižšie, ako zariadenie, ktoré rýchlo obnoví teplotu miestnosti po opätovnom otvorení okna - mnohé fan-coily, tepelné čerpadlá a klimatizácie už plnia obe úlohy, takže jedno zariadenie môže zastávať obe roly."
+          "cooler": "Voliteľné. Zariadenie používané na chladenie (v konfiguráciách vykurovanie+chladenie) a/alebo, po zapnutí Boostu nižšie, ako zariadenie, ktoré rýchlo obnoví teplotu miestnosti po opätovnom otvorení okna - mnohé fan-coily, tepelné čerpadlá a klimatizácie už plnia obe úlohy, takže jedno zariadenie môže zastávať obe roly.",
+          "boost_asymmetric_threshold": "Zapnutím nastavíte iný prah odchýlky teploty na aktiváciu boostu chladenia (napr. horúci letný deň) ako pre boost kúrenia. Ponechajte vypnuté, ak chcete použiť rovnaký prah pre oba smery.",
+          "boost_threshold_cool": "Ak teplota v miestnosti stúpla o viac ako túto hodnotu, kým bolo okno otvorené, jeho zatvorenie aktivuje boost chladenia. Používa sa iba vtedy, keď je vyššie uvedený prepínač zapnutý.",
+          "boost_cooldown_minutes": "Minimálny čas po skončení boostu, kým sa môže aktivovať ďalší, aby miestnosť, ktorá opakovane prekračuje prah (napr. opakované otváranie/zatváranie okna), nespôsobovala príliš časté prepínanie zdieľaného zariadenia."
         }
       },
       "advanced": {
@@ -111,7 +117,10 @@
           "boost_threshold": "Prah odchýlky teploty pre boost (°C)",
           "boost_fan_mode": "Rýchlosť ventilátora boostu",
           "boost_lag_minutes": "Predstih boostu (minúty)",
-          "boost_max_runtime": "Bezpečnostný časový limit boostu (minúty)"
+          "boost_max_runtime": "Bezpečnostný časový limit boostu (minúty)",
+          "boost_asymmetric_threshold": "Použiť iný prah pre chladenie",
+          "boost_threshold_cool": "Prah boostu chladenia (°C)",
+          "boost_cooldown_minutes": "Čas obnovy boostu (minúty)"
         },
         "data_description": {
           "presets": "Vyberte predvoľby, ktoré chcete mať k dispozícii pre tento termostat.",
@@ -120,7 +129,10 @@
           "boost_threshold": "Ak sa teplota miestnosti odchýli (v ktoromkoľvek smere) o viac ako je táto hodnota, kým je okno otvorené, zatvorenie okna aktivuje boost.",
           "boost_fan_mode": "Voliteľne nastavte rýchlosť ventilátora zariadenia (napr. na maximum) počas boostu; po skončení boostu sa automaticky obnoví. Ponechajte na 'Nemeniť rýchlosť ventilátora', ak chcete túto možnosť preskočiť.",
           "boost_lag_minutes": "Koľko minút zvyškového tepla/chladu zariadenie naďalej dodáva do miestnosti po tom, čo mu bolo povedané, aby sa zastavilo, používané na zabránenie prekročeniu cieľa.",
-          "boost_max_runtime": "Maximálny čas, počas ktorého môže boost bežať, kým sa vynúti jeho vypnutie bez ohľadu na teplotu."
+          "boost_max_runtime": "Maximálny čas, počas ktorého môže boost bežať, kým sa vynúti jeho vypnutie bez ohľadu na teplotu.",
+          "boost_asymmetric_threshold": "Zapnutím nastavíte iný prah odchýlky teploty na aktiváciu boostu chladenia (napr. horúci letný deň) ako pre boost kúrenia. Ponechajte vypnuté, ak chcete použiť rovnaký prah pre oba smery.",
+          "boost_threshold_cool": "Ak teplota v miestnosti stúpla o viac ako túto hodnotu, kým bolo okno otvorené, jeho zatvorenie aktivuje boost chladenia. Používa sa iba vtedy, keď je vyššie uvedený prepínač zapnutý.",
+          "boost_cooldown_minutes": "Minimálny čas po skončení boostu, kým sa môže aktivovať ďalší, aby miestnosť, ktorá opakovane prekračuje prah (napr. opakované otváranie/zatváranie okna), nespôsobovala príliš časté prepínanie zdieľaného zariadenia."
         }
       },
       "advanced": {
@@ -204,6 +216,16 @@
         "defaults_kd": {
           "name": "Predvolené kd",
           "description": "Derivačné zosilnenie nastavené po vynulovaní (ak nie je zadané, použije sa BalanceParams.kd)."
+        }
+      }
+    },
+    "test_boost": {
+      "name": "Testovať boost",
+      "description": "Manuálne spustí cyklus boostu na nakonfigurovanom chladiacom zariadení na otestovanie zapojenia (cieľové zariadenie, režim ventilátora, dosiahnuteľnosť prahu) bez potreby otvoriť a zatvoriť okno.",
+      "fields": {
+        "direction": {
+          "name": "Smer",
+          "description": "Ktorý smer boostu otestovať."
         }
       }
     }
@@ -431,6 +453,12 @@
       },
       "solar_intensity": {
         "name": "Solárny tepelný zisk"
+      },
+      "warm_floor_status": {
+        "name": "Stav teplej podlahy"
+      },
+      "boost_status": {
+        "name": "Stav boostu"
       }
     }
   },

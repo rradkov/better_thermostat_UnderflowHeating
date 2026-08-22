@@ -28,7 +28,10 @@
           "boost_threshold": "Boost temperaturafvigelse-grænse (°C)",
           "boost_fan_mode": "Boost ventilatorhastighed",
           "boost_lag_minutes": "Boost-foregribelse (minutter)",
-          "boost_max_runtime": "Boost sikkerhedstimeout (minutter)"
+          "boost_max_runtime": "Boost sikkerhedstimeout (minutter)",
+          "boost_asymmetric_threshold": "Brug en anden grænseværdi til køling",
+          "boost_threshold_cool": "Boost-køletærskel (°C)",
+          "boost_cooldown_minutes": "Boost-nedkølingstid (minutter)"
         },
         "data_description": {
           "presets": "Vælg de forudindstillinger, der skal være tilgængelige for denne termostat.",
@@ -38,7 +41,10 @@
           "boost_fan_mode": "Angiv eventuelt enhedens ventilatorhastighed (f.eks. til maksimum) under boost; gendannes automatisk, når boostet slutter. Lad stå som 'Skift ikke ventilatorhastighed' for at springe dette over.",
           "boost_lag_minutes": "Hvor mange minutters resterende varme/køling enheden fortsat leverer til rummet, efter den er blevet bedt om at stoppe, brugt til at undgå at overskyde målet.",
           "boost_max_runtime": "Maksimal tid boostet må køre, før det tvinges fra, uanset temperatur.",
-          "cooler": "Valgfrit. En enhed der bruges til køling (i varme+køl-opsætninger) og/eller, når Boost er aktiveret nedenfor, som den enhed der hurtigt genopretter rumtemperaturen, efter et vindue genåbnes - mange fan-coils, varmepumper og aircondition-enheder udfører allerede begge opgaver, så én enhed kan varetage begge roller."
+          "cooler": "Valgfrit. En enhed der bruges til køling (i varme+køl-opsætninger) og/eller, når Boost er aktiveret nedenfor, som den enhed der hurtigt genopretter rumtemperaturen, efter et vindue genåbnes - mange fan-coils, varmepumper og aircondition-enheder udfører allerede begge opgaver, så én enhed kan varetage begge roller.",
+          "boost_asymmetric_threshold": "Slå dette til for at angive en anden temperaturafvigelsestærskel for at aktivere et køleboost (f.eks. en varm sommerdag) end for et varmeboost. Lad det være slået fra for at bruge samme tærskel i begge retninger.",
+          "boost_threshold_cool": "Hvis rumtemperaturen steg mere end denne værdi, mens et vindue var åbent, aktiverer lukning af det et køleboost. Bruges kun, når kontakten ovenfor er slået til.",
+          "boost_cooldown_minutes": "Minimumstid efter et boost er afsluttet, før et nyt kan aktiveres, så et rum, der gentagne gange driver forbi tærsklen (f.eks. gentagen åbning/lukning af vindue), ikke får den delte enhed til at skifte for ofte."
         }
       },
       "advanced": {
@@ -111,7 +117,10 @@
           "boost_threshold": "Boost temperaturafvigelse-grænse (°C)",
           "boost_fan_mode": "Boost ventilatorhastighed",
           "boost_lag_minutes": "Boost-foregribelse (minutter)",
-          "boost_max_runtime": "Boost sikkerhedstimeout (minutter)"
+          "boost_max_runtime": "Boost sikkerhedstimeout (minutter)",
+          "boost_asymmetric_threshold": "Brug en anden grænseværdi til køling",
+          "boost_threshold_cool": "Boost-køletærskel (°C)",
+          "boost_cooldown_minutes": "Boost-nedkølingstid (minutter)"
         },
         "data_description": {
           "presets": "Vælg de forudindstillinger, der skal være tilgængelige for denne termostat.",
@@ -120,7 +129,10 @@
           "boost_threshold": "Hvis rumtemperaturen afviger (i begge retninger) mere end dette, mens et vindue er åbent, aktiverer lukning af vinduet boostet.",
           "boost_fan_mode": "Angiv eventuelt enhedens ventilatorhastighed (f.eks. til maksimum) under boost; gendannes automatisk, når boostet slutter. Lad stå som 'Skift ikke ventilatorhastighed' for at springe dette over.",
           "boost_lag_minutes": "Hvor mange minutters resterende varme/køling enheden fortsat leverer til rummet, efter den er blevet bedt om at stoppe, brugt til at undgå at overskyde målet.",
-          "boost_max_runtime": "Maksimal tid boostet må køre, før det tvinges fra, uanset temperatur."
+          "boost_max_runtime": "Maksimal tid boostet må køre, før det tvinges fra, uanset temperatur.",
+          "boost_asymmetric_threshold": "Slå dette til for at angive en anden temperaturafvigelsestærskel for at aktivere et køleboost (f.eks. en varm sommerdag) end for et varmeboost. Lad det være slået fra for at bruge samme tærskel i begge retninger.",
+          "boost_threshold_cool": "Hvis rumtemperaturen steg mere end denne værdi, mens et vindue var åbent, aktiverer lukning af det et køleboost. Bruges kun, når kontakten ovenfor er slået til.",
+          "boost_cooldown_minutes": "Minimumstid efter et boost er afsluttet, før et nyt kan aktiveres, så et rum, der gentagne gange driver forbi tærsklen (f.eks. gentagen åbning/lukning af vindue), ikke får den delte enhed til at skifte for ofte."
         }
       },
       "advanced": {
@@ -204,6 +216,16 @@
         "defaults_kd": {
           "name": "Standard-kd",
           "description": "Differentialforstærkning, der sættes efter nulstilling (falder tilbage til BalanceParams.kd, hvis ikke angivet)."
+        }
+      }
+    },
+    "test_boost": {
+      "name": "Test boost",
+      "description": "Udløser manuelt en boost-cyklus på den konfigurerede køleenhed for at teste opkoblingen (målenhed, blæsertilstand, om tærsklen kan nås) uden at skulle åbne og lukke et vindue.",
+      "fields": {
+        "direction": {
+          "name": "Retning",
+          "description": "Hvilken boost-retning der skal testes."
         }
       }
     }
@@ -431,6 +453,12 @@
       },
       "solar_intensity": {
         "name": "Solvarmetilskud"
+      },
+      "warm_floor_status": {
+        "name": "Varmt gulv-status"
+      },
+      "boost_status": {
+        "name": "Boost-status"
       }
     }
   },

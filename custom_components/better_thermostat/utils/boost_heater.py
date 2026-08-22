@@ -50,14 +50,19 @@ _LOGGER = logging.getLogger(__name__)
 # -- Config keys ---------------------------------------------------------
 CONF_BOOST_HEATER_ENABLED: Final = "boost_heater_enabled"
 CONF_BOOST_THRESHOLD: Final = "boost_threshold"
+CONF_BOOST_ASYMMETRIC_THRESHOLD: Final = "boost_asymmetric_threshold"
+CONF_BOOST_THRESHOLD_COOL: Final = "boost_threshold_cool"
 CONF_BOOST_FAN_MODE: Final = "boost_fan_mode"
 CONF_BOOST_LAG_MINUTES: Final = "boost_lag_minutes"
 CONF_BOOST_MAX_RUNTIME: Final = "boost_max_runtime"
+CONF_BOOST_COOLDOWN_MINUTES: Final = "boost_cooldown_minutes"
 
 DEFAULT_BOOST_THRESHOLD: Final = 5.0
+DEFAULT_BOOST_THRESHOLD_COOL: Final = None  # unset = mirror CONF_BOOST_THRESHOLD
 DEFAULT_BOOST_FAN_MODE: Final = None  # unset = don't touch fan_mode; opt-in only
 DEFAULT_BOOST_LAG_MINUTES: Final = 5.0
 DEFAULT_BOOST_MAX_RUNTIME: Final = 60.0
+DEFAULT_BOOST_COOLDOWN_MINUTES: Final = 15.0
 
 # Sentinel meaning "leave fan_mode alone" in the config-flow selector, since
 # voluptuous/HA selectors need a real string option, not a bare None.
@@ -86,6 +91,7 @@ class BoostHeaterTracker:
     last_action: HVACAction = field(default=HVACAction.IDLE)
     slow_ema: float | None = None
     _slow_ema_ts: float | None = None
+    last_boost_end_ts: float | None = None
 
     @property
     def boost_active(self) -> bool:
@@ -99,27 +105,43 @@ class BoostHeaterTracker:
     def evaluate_on_close(
         self,
         cur_temp: float | None,
-        threshold: float,
+        threshold_heat: float,
+        threshold_cool: float,
         *,
         supports_heat: bool,
         supports_cool: bool,
+        now_ts: float | None = None,
+        cooldown_s: float = 0.0,
     ) -> HVACMode | None:
-        """Arm a direction if the drift since open exceeded ``threshold``.
+        """Arm a direction if the drift since open exceeded its threshold.
 
         Returns the armed direction (or None). The recorded open temperature
         is consumed either way, so a second close without an intervening
         open can't re-arm on stale data. A direction the device doesn't
-        actually support is never armed.
+        actually support is never armed. A close that lands inside the
+        cooldown window following the previous boost's end never re-arms
+        either - protects the shared device from short-cycling on repeated
+        quick window in/out - but the recorded temperature is still
+        consumed, so the cooldown can't be bypassed by a rapid open/close
+        that lands just after it expires re-using a stale drop.
         """
         open_temp = self.open_temp
         self.open_temp = None
         if open_temp is None or cur_temp is None:
             return None
 
-        if open_temp - cur_temp > threshold and supports_heat:
+        if (
+            now_ts is not None
+            and cooldown_s > 0
+            and self.last_boost_end_ts is not None
+            and (now_ts - self.last_boost_end_ts) < cooldown_s
+        ):
+            return None
+
+        if open_temp - cur_temp > threshold_heat and supports_heat:
             self.boost_direction = HVACMode.HEAT
             return HVACMode.HEAT
-        if cur_temp - open_temp > threshold and supports_cool:
+        if cur_temp - open_temp > threshold_cool and supports_cool:
             self.boost_direction = HVACMode.COOL
             return HVACMode.COOL
         return None
@@ -136,8 +158,16 @@ class BoostHeaterTracker:
             self.slow_ema = self.slow_ema + alpha * (value - self.slow_ema)
         self._slow_ema_ts = now_ts
 
-    def clear(self) -> None:
-        """Reset all boost-cycle state - called on cancellation or completion."""
+    def clear(self, *, now_ts: float | None = None) -> None:
+        """Reset all boost-cycle state - called on cancellation or completion.
+
+        Records ``last_boost_end_ts`` only when the boost had actually begun
+        actuating (``boost_started_ts`` was set) and a timestamp was given -
+        an armed-but-never-run boost (e.g. the device was unavailable the
+        whole time) never starts the cooldown clock.
+        """
+        if now_ts is not None and self.boost_started_ts is not None:
+            self.last_boost_end_ts = now_ts
         self.boost_direction = None
         self.previous_fan_mode = None
         self.boost_started_ts = None
@@ -172,20 +202,44 @@ def build_boost_heater_user_fields(
     from homeassistant.helpers import selector
     import voluptuous as vol
 
+    _asymmetric = bool(resolve(CONF_BOOST_ASYMMETRIC_THRESHOLD, False))
     fields: dict[Any, Any] = {
         vol.Optional(
             CONF_BOOST_THRESHOLD,
             default=resolve(CONF_BOOST_THRESHOLD, DEFAULT_BOOST_THRESHOLD),
         ): vol.All(vol.Coerce(float), vol.Range(min=0.1, max=15.0)),
         vol.Optional(
-            CONF_BOOST_LAG_MINUTES,
-            default=resolve(CONF_BOOST_LAG_MINUTES, DEFAULT_BOOST_LAG_MINUTES),
-        ): vol.All(vol.Coerce(float), vol.Range(min=0.0, max=30.0)),
-        vol.Optional(
-            CONF_BOOST_MAX_RUNTIME,
-            default=resolve(CONF_BOOST_MAX_RUNTIME, DEFAULT_BOOST_MAX_RUNTIME),
-        ): vol.All(vol.Coerce(float), vol.Range(min=5.0, max=240.0)),
+            CONF_BOOST_ASYMMETRIC_THRESHOLD, default=_asymmetric
+        ): selector.BooleanSelector(),
     }
+    if _asymmetric:
+        fields[
+            vol.Optional(
+                CONF_BOOST_THRESHOLD_COOL,
+                default=resolve(
+                    CONF_BOOST_THRESHOLD_COOL,
+                    resolve(CONF_BOOST_THRESHOLD, DEFAULT_BOOST_THRESHOLD),
+                ),
+            )
+        ] = vol.All(vol.Coerce(float), vol.Range(min=0.1, max=15.0))
+    fields.update(
+        {
+            vol.Optional(
+                CONF_BOOST_LAG_MINUTES,
+                default=resolve(CONF_BOOST_LAG_MINUTES, DEFAULT_BOOST_LAG_MINUTES),
+            ): vol.All(vol.Coerce(float), vol.Range(min=0.0, max=30.0)),
+            vol.Optional(
+                CONF_BOOST_MAX_RUNTIME,
+                default=resolve(CONF_BOOST_MAX_RUNTIME, DEFAULT_BOOST_MAX_RUNTIME),
+            ): vol.All(vol.Coerce(float), vol.Range(min=5.0, max=240.0)),
+            vol.Optional(
+                CONF_BOOST_COOLDOWN_MINUTES,
+                default=resolve(
+                    CONF_BOOST_COOLDOWN_MINUTES, DEFAULT_BOOST_COOLDOWN_MINUTES
+                ),
+            ): vol.All(vol.Coerce(float), vol.Range(min=0.0, max=120.0)),
+        }
+    )
 
     from custom_components.better_thermostat.utils.const import CONF_COOLER
 
@@ -226,9 +280,12 @@ def normalize_boost_heater_user_submission(
     if not boost_heater_enabled:
         return {
             CONF_BOOST_THRESHOLD: DEFAULT_BOOST_THRESHOLD,
+            CONF_BOOST_ASYMMETRIC_THRESHOLD: False,
+            CONF_BOOST_THRESHOLD_COOL: DEFAULT_BOOST_THRESHOLD_COOL,
             CONF_BOOST_FAN_MODE: None,
             CONF_BOOST_LAG_MINUTES: DEFAULT_BOOST_LAG_MINUTES,
             CONF_BOOST_MAX_RUNTIME: DEFAULT_BOOST_MAX_RUNTIME,
+            CONF_BOOST_COOLDOWN_MINUTES: DEFAULT_BOOST_COOLDOWN_MINUTES,
         }
 
     out: dict[str, Any] = {}
@@ -238,6 +295,22 @@ def normalize_boost_heater_user_submission(
         out[CONF_BOOST_THRESHOLD] = max(0.1, min(float(raw_threshold), 15.0))
     except TypeError, ValueError:
         out[CONF_BOOST_THRESHOLD] = DEFAULT_BOOST_THRESHOLD
+
+    asymmetric = bool(data.get(CONF_BOOST_ASYMMETRIC_THRESHOLD, False))
+    out[CONF_BOOST_ASYMMETRIC_THRESHOLD] = asymmetric
+    if asymmetric:
+        raw_threshold_cool = data.get(
+            CONF_BOOST_THRESHOLD_COOL, out[CONF_BOOST_THRESHOLD]
+        )
+        try:
+            out[CONF_BOOST_THRESHOLD_COOL] = max(
+                0.1, min(float(raw_threshold_cool), 15.0)
+            )
+        except TypeError, ValueError:
+            out[CONF_BOOST_THRESHOLD_COOL] = out[CONF_BOOST_THRESHOLD]
+    else:
+        # Unset - evaluate_on_close()'s caller mirrors the heat threshold.
+        out[CONF_BOOST_THRESHOLD_COOL] = DEFAULT_BOOST_THRESHOLD_COOL
 
     raw_fan_mode = data.get(CONF_BOOST_FAN_MODE)
     if raw_fan_mode in (None, "", _NO_FAN_MODE_OVERRIDE):
@@ -256,6 +329,12 @@ def normalize_boost_heater_user_submission(
         out[CONF_BOOST_MAX_RUNTIME] = max(5.0, min(float(raw_runtime), 240.0))
     except TypeError, ValueError:
         out[CONF_BOOST_MAX_RUNTIME] = DEFAULT_BOOST_MAX_RUNTIME
+
+    raw_cooldown = data.get(CONF_BOOST_COOLDOWN_MINUTES, DEFAULT_BOOST_COOLDOWN_MINUTES)
+    try:
+        out[CONF_BOOST_COOLDOWN_MINUTES] = max(0.0, min(float(raw_cooldown), 120.0))
+    except TypeError, ValueError:
+        out[CONF_BOOST_COOLDOWN_MINUTES] = DEFAULT_BOOST_COOLDOWN_MINUTES
 
     return out
 
@@ -285,16 +364,23 @@ def record_window_transition(bt, role, is_open: bool) -> None:
         tracker.record_window_open(getattr(bt, "cur_temp", None))
         return
 
-    threshold = getattr(bt, "boost_threshold_k", None) or DEFAULT_BOOST_THRESHOLD
+    threshold_heat = getattr(bt, "boost_threshold_k", None) or DEFAULT_BOOST_THRESHOLD
+    threshold_cool = getattr(bt, "boost_threshold_cool_k", None) or threshold_heat
+    cooldown_minutes = (
+        getattr(bt, "boost_cooldown_minutes", None) or DEFAULT_BOOST_COOLDOWN_MINUTES
+    )
     state = bt.hass.states.get(bt.cooler_entity_id)
     hvac_modes = (
         state.attributes.get("hvac_modes") if state is not None else None
     ) or []
     direction = tracker.evaluate_on_close(
         getattr(bt, "cur_temp", None),
-        threshold,
+        threshold_heat,
+        threshold_cool,
         supports_heat=HVACMode.HEAT in hvac_modes,
         supports_cool=HVACMode.COOL in hvac_modes,
+        now_ts=monotonic(),
+        cooldown_s=cooldown_minutes * 60.0,
     )
     if direction is not None:
         _LOGGER.debug(
@@ -345,6 +431,37 @@ async def _ensure_off(bt, entity_id: str, state) -> None:
     )
 
 
+def _room_solar_gain_rate(bt) -> float | None:
+    """Best-effort current solar gain rate (°C/min) for the room Boost recovers.
+
+    Boost drives a device separate from the TRVs the MPC model characterizes,
+    but the *room* the learned solar signal describes is the same room Boost
+    is trying to bring back to target. Reuses whichever TRV(s) heat it - same
+    room, so any MPC-calibrated one with a learned solar factor describes it.
+    ``None`` whenever nothing is learned yet (a strict no-op for the caller).
+    """
+    real_trvs = getattr(bt, "real_trvs", None)
+    if not isinstance(real_trvs, dict) or not real_trvs:
+        return None
+
+    from custom_components.better_thermostat.utils.helpers import (
+        normalize_calibration_mode,
+    )
+    from custom_components.better_thermostat.utils.underfloor import (
+        estimate_solar_gain_rate,
+    )
+
+    for entity_id, trv_state in real_trvs.items():
+        advanced = getattr(trv_state, "advanced", None) or {}
+        calibration_mode = normalize_calibration_mode(advanced.get("calibration_mode"))
+        if calibration_mode is None:
+            continue
+        rate = estimate_solar_gain_rate(bt, entity_id, calibration_mode)
+        if rate is not None:
+            return rate
+    return None
+
+
 def _boost_should_stop(
     bt, tracker: BoostHeaterTracker, cur_temp: float, now_ts: float, direction: HVACMode
 ) -> bool:
@@ -383,6 +500,23 @@ def _boost_should_stop(
         ema_reference = cur_temp
     temp_slope = getattr(bt, "temp_slope", None)
 
+    # Solar gain persists past the lag window in a way the boost device's own
+    # residual heat/cooling doesn't - the lag term above models the latter
+    # decaying to zero, so this is added on top rather than folded into
+    # temp_slope, which already reflects whatever combination of boost/solar/
+    # baseline produced the room's currently observed rate of change. Solar is
+    # always a warming contribution, so it always pushes the *projection*
+    # warmer - it's the stop condition per direction that then reads that
+    # differently: a heat boost on a sunny day can afford to stop a little
+    # earlier (the sun keeps finishing the job, so the warmer projection
+    # crosses the target sooner); a cool boost on a sunny day needs a little
+    # more margin (the sun keeps fighting it, so the warmer projection is
+    # slower to fall to the target). A no-op whenever nothing is learned yet.
+    solar_gain_rate = _room_solar_gain_rate(bt)
+    solar_adjustment = 0.0
+    if isinstance(solar_gain_rate, (int, float)) and solar_gain_rate > 0:
+        solar_adjustment = float(solar_gain_rate) * float(lag_minutes)
+
     if direction == HVACMode.HEAT:
         still_needs_heat = should_heat_with_tolerance(
             cur_temp, target, tolerance, tracker.last_action
@@ -398,7 +532,11 @@ def _boost_should_stop(
             return False
         if not isinstance(temp_slope, (int, float)):
             return False  # no rate data yet: fall back to the plain check above
-        projected_temp = float(ema_reference) + float(temp_slope) * float(lag_minutes)
+        projected_temp = (
+            float(ema_reference)
+            + float(temp_slope) * float(lag_minutes)
+            + solar_adjustment
+        )
         trend_confirmed = (
             tracker.slow_ema is None or tracker.slow_ema >= target - tolerance
         )
@@ -415,9 +553,24 @@ def _boost_should_stop(
         return False
     if not isinstance(temp_slope, (int, float)):
         return False
-    projected_temp = float(ema_reference) + float(temp_slope) * float(lag_minutes)
+    projected_temp = (
+        float(ema_reference) + float(temp_slope) * float(lag_minutes) + solar_adjustment
+    )
     trend_confirmed = tracker.slow_ema is None or tracker.slow_ema <= target + tolerance
     return projected_temp <= target and trend_confirmed
+
+
+def _record_boost_status(bt, tracker: BoostHeaterTracker, now_ts: float) -> None:
+    """Publish the current boost state onto ``bt`` for the diagnostic sensor."""
+    elapsed_s = None
+    if isinstance(tracker.boost_started_ts, (int, float)):
+        elapsed_s = round(now_ts - tracker.boost_started_ts, 1)
+    bt._boost_status = {
+        "active": tracker.boost_active,
+        "direction": tracker.boost_direction,
+        "elapsed_s": elapsed_s,
+        "cooler_entity_id": getattr(bt, "cooler_entity_id", None),
+    }
 
 
 def update_boost_trend(bt) -> None:
@@ -427,18 +580,22 @@ def update_boost_trend(bt) -> None:
     in ``_boost_should_stop()`` has genuine standing memory of the room's
     slow-moving temperature by the time a boost starts, rather than only
     accumulating history during the boost's own short duration (which made
-    it little more than a lagged copy of the fast reading). A no-op
-    whenever boost isn't enabled.
+    it little more than a lagged copy of the fast reading). Also publishes
+    the diagnostic status snapshot every cycle - this runs whether or not a
+    boost is active this cycle, unlike control_boost(), so it is the one
+    place that reliably reflects an idle instance too. A no-op whenever
+    boost isn't enabled.
     """
     if not getattr(bt, "boost_enabled", False):
         return
     tracker: BoostHeaterTracker | None = getattr(bt, "_boost_heater_tracker", None)
     if tracker is None:
         return
+    now_ts = monotonic()
     tracker.update_slow_ema(
-        getattr(bt, "cur_temp_filtered", None) or getattr(bt, "cur_temp", None),
-        monotonic(),
+        getattr(bt, "cur_temp_filtered", None) or getattr(bt, "cur_temp", None), now_ts
     )
+    _record_boost_status(bt, tracker, now_ts)
 
 
 async def control_boost(self) -> None:
@@ -471,7 +628,7 @@ async def control_boost(self) -> None:
     ):
         await _restore_fan_mode(self, self.cooler_entity_id, tracker)
         await _ensure_off(self, self.cooler_entity_id, state)
-        tracker.clear()
+        tracker.clear(now_ts=now_ts)
         self.last_cooler_mode_decided = HVACMode.OFF
         return
 
@@ -527,4 +684,55 @@ async def control_boost(self) -> None:
     if _boost_should_stop(self, tracker, float(cur_temp), now_ts, direction):
         await _restore_fan_mode(self, self.cooler_entity_id, tracker)
         await _ensure_off(self, self.cooler_entity_id, state)
-        tracker.clear()
+        tracker.clear(now_ts=now_ts)
+
+
+# ---------------------------------------------------------------------------
+# Manual test trigger (entity service)
+# ---------------------------------------------------------------------------
+
+
+async def trigger_test_boost(bt, direction: HVACMode) -> None:
+    """Manually arm a boost cycle, bypassing the normal window/threshold gate.
+
+    Backs the ``better_thermostat.test_boost`` entity service - lets a user
+    sanity-check wiring (target device, fan mode, threshold reachability)
+    without needing to actually open and close a window. From here on it
+    behaves exactly like a normally-armed boost: same termination guards,
+    same cooldown bookkeeping, same cancellation on an open contact.
+    """
+    if not getattr(bt, "boost_enabled", False):
+        _LOGGER.warning(
+            "better_thermostat %s: test_boost requested but boost is not enabled",
+            getattr(bt, "device_name", None),
+        )
+        return
+    cooler_entity_id = getattr(bt, "cooler_entity_id", None)
+    if cooler_entity_id is None:
+        _LOGGER.warning(
+            "better_thermostat %s: test_boost requested but no Cooler entity is configured",
+            getattr(bt, "device_name", None),
+        )
+        return
+    tracker: BoostHeaterTracker | None = getattr(bt, "_boost_heater_tracker", None)
+    if tracker is None:
+        return
+
+    state = bt.hass.states.get(cooler_entity_id)
+    hvac_modes = (
+        state.attributes.get("hvac_modes") if state is not None else None
+    ) or []
+    if direction not in hvac_modes:
+        _LOGGER.warning(
+            "better_thermostat %s: test_boost requested %s but %s does not support it "
+            "(supports: %s)",
+            getattr(bt, "device_name", None),
+            direction,
+            cooler_entity_id,
+            hvac_modes,
+        )
+        return
+
+    tracker.boost_direction = direction
+    tracker.boost_started_ts = None  # control_boost() stamps it fresh below
+    await control_boost(bt)
