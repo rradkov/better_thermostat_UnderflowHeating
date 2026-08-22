@@ -22,10 +22,12 @@
           "outdoor_sensor": "Hvis du har en udeføler, kan du bruge den til at få udetemperaturen",
           "weather": "Din vejrentitet for at få udendørstemperaturen",
           "target_temp_step": "Trin for måltemperatur",
-          "presets": "Aktiverede forudindstillinger"
+          "presets": "Aktiverede forudindstillinger",
+          "underfloor_heating_enabled": "Aktivér understøttelse af gulvvarme"
         },
         "data_description": {
-          "presets": "Vælg de forudindstillinger, der skal være tilgængelige for denne termostat."
+          "presets": "Vælg de forudindstillinger, der skal være tilgængelige for denne termostat.",
+          "underfloor_heating_enabled": "Slå dette til, hvis nogen af dine varmelegemer er gulvvarmeslynger. Dette låser en varmelegeme-indstilling for 'Varmetype' op samt Varm Gulv-tilstand, som holder et lavt baggrundsvarmeniveau i gulvet i stedet for at lade det køle helt af mellem varmecyklusser."
         }
       },
       "advanced": {
@@ -38,12 +40,16 @@
           "valve_maintenance": "Hvis din termostat ikke har nogen egen vedligeholdelsestilstand, kan du bruge denne",
           "calibration": "Den slags kalibrering du vil bruge",
           "calibration_mode": "Kalibreringstilstand",
-          "no_off_system_mode": "Hvis din TRV ikke kan håndtere den slukkede tilstand, kan du aktivere denne for at bruge måltemperatur 5°C i stedet"
+          "no_off_system_mode": "Hvis din TRV ikke kan håndtere den slukkede tilstand, kan du aktivere denne for at bruge måltemperatur 5°C i stedet",
+          "heating_type": "Varmetype",
+          "warm_floor_max_backoff": "Varm Gulv maks. tilbagetrækning (°C)"
         },
         "data_description": {
           "protect_overheating": "Nogle TRV'er lukker ikke ventilen helt, når temperaturen er nået. Eller radiatoren har meget hvilevarme. Dette kan forårsage overophedning. Denne mulighed kan forhindre dette.",
           "calibration_mode": "Hvordan kalibreringen skal beregnes\n***Normal***: I denne tilstand er TRV's interne temperaturføler fastgjort af den eksterne temperaturføler.\n***Aggressiv***: I denne tilstand er TRV's interne temperaturføler fikseret af den eksterne temperaturføler, men indstillet meget lavere/højere for at få et hurtigere løft.\n***AI-tidsbaseret***: I denne tilstand er TRV's interne temperatursensor fastsat af den eksterne temperatursensor, men værdien beregnes af en brugerdefineret algoritme for at forbedre TRV's interne algoritme.",
-          "calibration": "Hvordan kalibreringen skal anvendes på TRV (Target temp or offset)\n***Måltemperaturbaseret***: Anvend kalibreringen til måltemperaturen.\n***Offset-baseret***: Anvend kalibreringen til offset."
+          "calibration": "Hvordan kalibreringen skal anvendes på TRV (Target temp or offset)\n***Måltemperaturbaseret***: Anvend kalibreringen til måltemperaturen.\n***Offset-baseret***: Anvend kalibreringen til offset.",
+          "heating_type": "Radiator: normal TRV-adfærd. Gulvvarme: aktiverer Varm Gulv-tilstand for dette varmelegeme.",
+          "warm_floor_max_backoff": "Hvor langt under måltemperaturen Varm Gulv må lade dette varmelegemes sætpunkt drive i det der ellers ville være en tomgangscyklus. Den faktiske tilbagetrækning skaleres automatisk ned fra dette maksimum baseret på målt varmetab, varmeeffekt og solindstråling, så gulvet kun trækkes så langt tilbage, som rummet trygt kan klare."
         }
       },
       "confirm": {
@@ -88,10 +94,12 @@
           "calibration": "Den slags kalibrering",
           "heat_auto_swapped": "Hvis auto betyder varme til din TRV, og du ønsker at bytte den",
           "child_lock": "Ignorer alle input på TRV som en børnesikring",
-          "homematicip": "Hvis du bruger HomematicIP, bør du aktivere dette for at bremse anmodningerne for at forhindre arbejdscyklus"
+          "homematicip": "Hvis du bruger HomematicIP, bør du aktivere dette for at bremse anmodningerne for at forhindre arbejdscyklus",
+          "underfloor_heating_enabled": "Aktivér understøttelse af gulvvarme"
         },
         "data_description": {
-          "presets": "Vælg de forudindstillinger, der skal være tilgængelige for denne termostat."
+          "presets": "Vælg de forudindstillinger, der skal være tilgængelige for denne termostat.",
+          "underfloor_heating_enabled": "Slå dette til, hvis nogen af dine varmelegemer er gulvvarmeslynger. Dette låser en varmelegeme-indstilling for 'Varmetype' op samt Varm Gulv-tilstand, som holder et lavt baggrundsvarmeniveau i gulvet i stedet for at lade det køle helt af mellem varmecyklusser."
         }
       },
       "advanced": {
@@ -104,12 +112,16 @@
           "valve_maintenance": "Hvis din termostat ikke har nogen egen vedligeholdelsestilstand, kan du bruge denne",
           "calibration": "Den slags kalibrering du vil bruge",
           "calibration_mode": "Kalibreringstilstand",
-          "no_off_system_mode": "Hvis din TRV ikke kan håndtere den slukkede tilstand, kan du aktivere denne for at bruge måltemperatur 5°C i stedet"
+          "no_off_system_mode": "Hvis din TRV ikke kan håndtere den slukkede tilstand, kan du aktivere denne for at bruge måltemperatur 5°C i stedet",
+          "heating_type": "Varmetype",
+          "warm_floor_max_backoff": "Varm Gulv maks. tilbagetrækning (°C)"
         },
         "data_description": {
           "protect_overheating": "Nogle TRV'er lukker ikke ventilen helt, når temperaturen er nået. Eller radiatoren har meget hvilevarme. Dette kan forårsage overophedning. Denne mulighed kan forhindre dette.",
           "calibration_mode": "Hvordan kalibreringen skal beregnes\n***Normal***: I denne tilstand er TRV's interne temperaturføler fikseret af den eksterne temperaturføler.\n***Aggressiv***: I denne tilstand er TRV's interne temperaturføler fikseret af den eksterne temperaturføler, men indstillet meget lavere/højere for at få et hurtigere løft.\n***AI-tidsbaseret***: I denne tilstand er TRV's interne temperatursensor fastsat af den eksterne temperatursensor, men værdien beregnes af en brugerdefineret algoritme for at forbedre TRV's interne algoritme.",
-          "calibration": "Hvordan kalibreringen skal anvendes på TRV (Target temp or offset)\n***Måltemperaturbaseret***: Anvend kalibreringen til måltemperaturen.\n***Offset-baseret***: Anvend kalibreringen til offset."
+          "calibration": "Hvordan kalibreringen skal anvendes på TRV (Target temp or offset)\n***Måltemperaturbaseret***: Anvend kalibreringen til måltemperaturen.\n***Offset-baseret***: Anvend kalibreringen til offset.",
+          "heating_type": "Radiator: normal TRV-adfærd. Gulvvarme: aktiverer Varm Gulv-tilstand for dette varmelegeme.",
+          "warm_floor_max_backoff": "Hvor langt under måltemperaturen Varm Gulv må lade dette varmelegemes sætpunkt drive i det der ellers ville være en tomgangscyklus. Den faktiske tilbagetrækning skaleres automatisk ned fra dette maksimum baseret på målt varmetab, varmeeffekt og solindstråling, så gulvet kun trækkes så langt tilbage, som rummet trygt kan klare."
         }
       }
     }
@@ -223,6 +235,12 @@
         "small_room": "Lille rum (~10 m², hurtig reaktion)",
         "medium_room": "Mellemstort rum (~20 m², standard)",
         "large_room": "Stort rum (~40 m², langsom klimaskærm)"
+      }
+    },
+    "heating_type": {
+      "options": {
+        "radiator": "Radiator",
+        "underfloor": "Gulvvarme"
       }
     }
   },

@@ -22,10 +22,12 @@
           "outdoor_sensor": "Se hai un sensore esterno, puoi usarlo per ottenere la temperatura esterna",
           "weather": "La tua entità meteo per ottenere la temperatura esterna",
           "target_temp_step": "Passo della temperatura target",
-          "presets": "Preset abilitati"
+          "presets": "Preset abilitati",
+          "underfloor_heating_enabled": "Abilita supporto per riscaldamento a pavimento"
         },
         "data_description": {
-          "presets": "Seleziona i preset che vuoi rendere disponibili per questo termostato."
+          "presets": "Seleziona i preset che vuoi rendere disponibili per questo termostato.",
+          "underfloor_heating_enabled": "Attiva questa opzione se uno dei tuoi elementi riscaldanti è un circuito di riscaldamento a pavimento (UFH). Questo sblocca un'opzione 'Tipo di riscaldamento' per ogni elemento e la modalità Pavimento Caldo, che mantiene un basso livello di calore di fondo nel pavimento invece di lasciarlo raffreddare completamente tra i cicli di riscaldamento."
         }
       },
       "advanced": {
@@ -38,12 +40,16 @@
           "valve_maintenance": "Se il tuo termostato non ha una modalità di manutenzione propria, puoi usare questa",
           "calibration": "Tipo di calibrazione",
           "calibration_mode": "Modalità di calibrazione",
-          "no_off_system_mode": "Se il tuo TRV non può gestire la modalità 'off', puoi abilitare questa opzione per usare 5°C come temperatura target"
+          "no_off_system_mode": "Se il tuo TRV non può gestire la modalità 'off', puoi abilitare questa opzione per usare 5°C come temperatura target",
+          "heating_type": "Tipo di riscaldamento",
+          "warm_floor_max_backoff": "Arretramento massimo Pavimento Caldo (°C)"
         },
         "data_description": {
           "protect_overheating": "Alcuni TRV non chiudono completamente la valvola quando si raggiunge la temperatura. Oppure il radiatore mantiene molto calore residuo. Questa opzione può evitare il surriscaldamento.",
           "calibration_mode": "Modalità di calcolo della calibrazione\n***Normale***: Il sensore interno di temperatura del TRV è corretto da quello esterno.\n***Aggressiva***: Il sensore interno del TRV è corretto da quello esterno ma impostato molto più basso/alto per ottenere una risposta più rapida.\n***Basata sul tempo AI***: Il sensore interno del TRV è corretto da quello esterno, ma un algoritmo personalizzato calcola il valore per migliorare l’algoritmo interno del TRV.\n***MPC Predictive (Beta)***: Utilizza il controllore predittivo MPC per derivare un'apertura della valvola e convertirla in offset o setpoint quando il controllo diretto della valvola non è disponibile.\n***PID Controller***: Utilizza un controllore PID per regolare dinamicamente la posizione della valvola in base all'errore di temperatura, al termine proporzionale, all'accumulo integrale e alla previsione derivata.\n***TPI Controller***: Utilizza un controllore Proporzionale Integrale Temporale per un controllo della temperatura stabile e preciso nel tempo.",
-          "calibration": "Come deve essere applicata la calibrazione sul TRV (temperatura target o offset)\n***Basata sulla temperatura target***: Applica la calibrazione alla temperatura impostata.\n***Basata su offset***: Applica la calibrazione come offset."
+          "calibration": "Come deve essere applicata la calibrazione sul TRV (temperatura target o offset)\n***Basata sulla temperatura target***: Applica la calibrazione alla temperatura impostata.\n***Basata su offset***: Applica la calibrazione come offset.",
+          "heating_type": "Radiatore: comportamento normale della valvola TRV. Pavimento: abilita la modalità Pavimento Caldo per questo elemento riscaldante.",
+          "warm_floor_max_backoff": "Di quanto al di sotto della temperatura target la modalità Pavimento Caldo può far derivare il setpoint di questo elemento durante un ciclo che altrimenti sarebbe inattivo. L'arretramento effettivamente usato viene ridotto automaticamente rispetto a questo massimo in base alla dispersione termica, alla potenza di riscaldamento e all'apporto solare misurati, così il pavimento arretra solo per quanto la stanza può permettersi in sicurezza."
         }
       },
       "confirm": {
@@ -88,10 +94,12 @@
           "calibration": "Tipo di calibrazione",
           "heat_auto_swapped": "Se 'auto' indica riscaldamento per il tuo TRV e vuoi invertirlo",
           "child_lock": "Ignora tutti gli input sul TRV come un blocco bambini",
-          "homematicip": "Se usi HomematicIP, abilita questa opzione per rallentare le richieste e prevenire il ciclo di lavoro"
+          "homematicip": "Se usi HomematicIP, abilita questa opzione per rallentare le richieste e prevenire il ciclo di lavoro",
+          "underfloor_heating_enabled": "Abilita supporto per riscaldamento a pavimento"
         },
         "data_description": {
-          "presets": "Seleziona i preset che vuoi rendere disponibili per questo termostato."
+          "presets": "Seleziona i preset che vuoi rendere disponibili per questo termostato.",
+          "underfloor_heating_enabled": "Attiva questa opzione se uno dei tuoi elementi riscaldanti è un circuito di riscaldamento a pavimento (UFH). Questo sblocca un'opzione 'Tipo di riscaldamento' per ogni elemento e la modalità Pavimento Caldo, che mantiene un basso livello di calore di fondo nel pavimento invece di lasciarlo raffreddare completamente tra i cicli di riscaldamento."
         }
       },
       "advanced": {
@@ -104,12 +112,16 @@
           "valve_maintenance": "Se il tuo termostato non ha una modalità di manutenzione propria, puoi usare questa",
           "calibration": "Tipo di calibrazione che vuoi usare",
           "calibration_mode": "Modalità di calibrazione",
-          "no_off_system_mode": "Se il tuo TRV non può gestire la modalità 'off', puoi abilitare questa opzione per usare 5°C come temperatura target"
+          "no_off_system_mode": "Se il tuo TRV non può gestire la modalità 'off', puoi abilitare questa opzione per usare 5°C come temperatura target",
+          "heating_type": "Tipo di riscaldamento",
+          "warm_floor_max_backoff": "Arretramento massimo Pavimento Caldo (°C)"
         },
         "data_description": {
           "protect_overheating": "Alcuni TRV non chiudono completamente la valvola quando si raggiunge la temperatura. Oppure il radiatore mantiene molto calore residuo. Questa opzione può evitare il surriscaldamento.",
           "calibration_mode": "Modalità di calcolo della calibrazione\n***Normale***: Il sensore interno di temperatura del TRV è corretto da quello esterno.\n***Aggressiva***: Il sensore interno del TRV è corretto da quello esterno ma impostato molto più basso/alto per ottenere una risposta più rapida.\n***Basata sul tempo AI***: Il sensore interno del TRV è corretto da quello esterno, ma un algoritmo personalizzato calcola il valore per migliorare l’algoritmo interno del TRV.\n***MPC Predictive (Beta)***: Utilizza il controllore predittivo MPC per derivare un'apertura della valvola e convertirla in offset o setpoint quando il controllo diretto della valvola non è disponibile.\n***PID Controller***: Utilizza un controllore PID per regolare dinamicamente la posizione della valvola in base all'errore di temperatura, al termine proporzionale, all'accumulo integrale e alla previsione derivata.\n***TPI Controller***: Utilizza un controllore Proporzionale Integrale Temporale per un controllo della temperatura stabile e preciso nel tempo.",
-          "calibration": "Come deve essere applicata la calibrazione sul TRV (temperatura target o offset)\n***Basata sulla temperatura target***: Applica la calibrazione alla temperatura impostata.\n***Basata su offset***: Applica la calibrazione come offset."
+          "calibration": "Come deve essere applicata la calibrazione sul TRV (temperatura target o offset)\n***Basata sulla temperatura target***: Applica la calibrazione alla temperatura impostata.\n***Basata su offset***: Applica la calibrazione come offset.",
+          "heating_type": "Radiatore: comportamento normale della valvola TRV. Pavimento: abilita la modalità Pavimento Caldo per questo elemento riscaldante.",
+          "warm_floor_max_backoff": "Di quanto al di sotto della temperatura target la modalità Pavimento Caldo può far derivare il setpoint di questo elemento durante un ciclo che altrimenti sarebbe inattivo. L'arretramento effettivamente usato viene ridotto automaticamente rispetto a questo massimo in base alla dispersione termica, alla potenza di riscaldamento e all'apporto solare misurati, così il pavimento arretra solo per quanto la stanza può permettersi in sicurezza."
         }
       }
     }
@@ -223,6 +235,12 @@
         "small_room": "Stanza piccola (~10 m², risposta rapida)",
         "medium_room": "Stanza media (~20 m², standard)",
         "large_room": "Stanza grande (~40 m², involucro lento)"
+      }
+    },
+    "heating_type": {
+      "options": {
+        "radiator": "Radiatore",
+        "underfloor": "Riscaldamento a pavimento"
       }
     }
   },

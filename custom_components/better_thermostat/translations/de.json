@@ -22,10 +22,12 @@
           "outdoor_sensor": "Wenn ein Außentemperatursensor vorhanden ist, kann dieser anstelle der Wetter-Entität genutzt werden.",
           "weather": "Die Wetter-Entität für die Außentemperatur.",
           "target_temp_step": "Solltemperatur-Schritt",
-          "presets": "Aktivierte Presets"
+          "presets": "Aktivierte Presets",
+          "underfloor_heating_enabled": "Fußbodenheizung-Unterstützung aktivieren"
         },
         "data_description": {
-          "presets": "Wähle die Presets aus, die für dieses Thermostat verfügbar sein sollen."
+          "presets": "Wähle die Presets aus, die für dieses Thermostat verfügbar sein sollen.",
+          "underfloor_heating_enabled": "Aktivieren Sie dies, wenn eines Ihrer Heizgeräte eine Fußbodenheizungsschleife ist. Dies schaltet eine Option 'Heizungstyp' pro Heizgerät sowie den Warmer-Boden-Modus frei, der ein niedriges Grundwärmeniveau im Boden hält, anstatt ihn zwischen Heizzyklen vollständig abkühlen zu lassen."
         }
       },
       "advanced": {
@@ -38,12 +40,16 @@
           "valve_maintenance": "Soll BT die Wartung des Thermostats übernehmen?",
           "calibration": "Kalibrierungstyp",
           "calibration_mode": "Kalibrierungsmodus",
-          "no_off_system_mode": "Wenn das TRV keinen Aus Modus nutzen kann, kann diese Option aktiviert werden, um das TRV stattdessen auf 5°C zu setzen."
+          "no_off_system_mode": "Wenn das TRV keinen Aus Modus nutzen kann, kann diese Option aktiviert werden, um das TRV stattdessen auf 5°C zu setzen.",
+          "heating_type": "Heizungstyp",
+          "warm_floor_max_backoff": "Warmer Boden max. Rückzug (°C)"
         },
         "data_description": {
           "protect_overheating": "Manche TRVs schließen auch nach Erreichen der Temperatur das Ventil nicht vollständig. Dies kann zu Überhitzungen führen. Ebenso, falls der Radiator viel Restwärme abstrahlt. Diese Option kann dies verhindern.",
           "calibration_mode": "Wie die Kalibrierung berechnet wird\n***Normal***: In diesem Modus wird die interne TRV-Temperatur an die des externen Sensors angeglichen.\n\n***Aggressive***: In diesem Modus wird die interne TRV-Temperatur an die des externen Sensors angeglichen - allerdings mit größeren Werten. Dies ist hilfreich, wenn ein Raum schnell aufgeheizt werden soll oder das TRV träge ist.\n\n***AI Time Based***: In diesem Modus wird ein eigener Algorithmus genutzt, der anhand des externen Temperatursensors die Kalibrierung berechnet. Dieser Modus versucht den TRV internen Algorithmus zu optimieren.\n\n***MPC Predictive (Beta)***: Nutzt den MPC-Prädiktivregler, um eine Ventilöffnung vorherzusagen und wandelt sie bei fehlender Ventilsteuerung in Temperatur- oder Offset-Anpassungen um.\n\n***PID Controller***: Verwendet einen PID-Regler, um die Ventilposition dynamisch basierend auf Temperaturfehler, proportionalem Anteil, integraler Akkumulation und derivativem Vorhersage anzupassen.\n\n***TPI Controller***: Verwendet einen Zeit-Proportional-Integral-Regler für stabile und präzise Temperatursteuerung über die Zeit.",
-          "calibration": "Wie die Kalibrierung auf das TRV angewendet werden soll.\n\n***Target Temperature Based***: Kalibriert das TRV über die Zieltemperatur.\n\n***Offset Based***: Kalibriert das TRV über eine Offset Funktion im TRV selbst. (Empfohlen)"
+          "calibration": "Wie die Kalibrierung auf das TRV angewendet werden soll.\n\n***Target Temperature Based***: Kalibriert das TRV über die Zieltemperatur.\n\n***Offset Based***: Kalibriert das TRV über eine Offset Funktion im TRV selbst. (Empfohlen)",
+          "heating_type": "Heizkörper: normales TRV-Verhalten. Fußbodenheizung: aktiviert den Warmer-Boden-Modus für dieses Heizgerät.",
+          "warm_floor_max_backoff": "Wie weit unter der Zieltemperatur der Warmer-Boden-Modus den Sollwert dieses Heizgeräts während eines sonst inaktiven Zyklus abweichen lassen darf. Der tatsächlich verwendete Rückzug wird automatisch von diesem Maximum abwärts skaliert, basierend auf gemessenem Wärmeverlust, Heizleistung und Sonneneinstrahlung, sodass der Boden nur so weit zurückgefahren wird, wie es der Raum sicher verträgt."
         }
       },
       "confirm": {
@@ -88,10 +94,12 @@
           "calibration": "Die Art der Kalibrierung",
           "heat_auto_swapped": "Wenn das Auto Wärme für Ihr TRV bedeutet und Sie es austauschen möchten.",
           "child_lock": "Ignorieren Sie alle Eingaben am TRV wie eine Kindersicherung.",
-          "homematicip": "Wenn Sie HomematicIP verwenden, sollten Sie dies aktivieren, um die Anfragen zu verlangsamen und den Duty Cycle zu verhindern."
+          "homematicip": "Wenn Sie HomematicIP verwenden, sollten Sie dies aktivieren, um die Anfragen zu verlangsamen und den Duty Cycle zu verhindern.",
+          "underfloor_heating_enabled": "Fußbodenheizung-Unterstützung aktivieren"
         },
         "data_description": {
-          "presets": "Wähle die Presets aus, die für dieses Thermostat verfügbar sein sollen."
+          "presets": "Wähle die Presets aus, die für dieses Thermostat verfügbar sein sollen.",
+          "underfloor_heating_enabled": "Aktivieren Sie dies, wenn eines Ihrer Heizgeräte eine Fußbodenheizungsschleife ist. Dies schaltet eine Option 'Heizungstyp' pro Heizgerät sowie den Warmer-Boden-Modus frei, der ein niedriges Grundwärmeniveau im Boden hält, anstatt ihn zwischen Heizzyklen vollständig abkühlen zu lassen."
         }
       },
       "advanced": {
@@ -104,12 +112,16 @@
           "valve_maintenance": "Soll BT die Wartung des Thermostats übernehmen?",
           "calibration": "Kalibrierungstyp",
           "calibration_mode": "Kalibrierungsmodus",
-          "no_off_system_mode": "Wenn das TRV keinen Aus Modus nutzen kann, kann diese Option aktiviert werden, um das TRV stattdessen auf 5°C zu setzen."
+          "no_off_system_mode": "Wenn das TRV keinen Aus Modus nutzen kann, kann diese Option aktiviert werden, um das TRV stattdessen auf 5°C zu setzen.",
+          "heating_type": "Heizungstyp",
+          "warm_floor_max_backoff": "Warmer Boden max. Rückzug (°C)"
         },
         "data_description": {
           "protect_overheating": "Manche TRVs schließen auch nach Erreichen der Temperatur das Ventil nicht vollständig. Dies kann zu Überhitzungen führen. Ebenso falls der Radiator viel Restwärme abstrahlt. Diese Option kann dies verhindern.",
           "calibration_mode": "Wie die Kalibrierung berechnet wird\n***Normal***: In diesem Modus wird die interne TRV-Temperatur an die des externen Sensors angeglichen.\n\n***Aggressive***: In diesem Modus wird die interne TRV-Temperatur an die des externen Sensors angeglichen - allerdings mit größeren Werten. Dies ist hilfreich, wenn ein Raum schnell aufgeheizt werden soll oder das TRV träge ist.\n\n***AI Time Based***: In diesem Modus wird ein eigener Algorithmus genutzt, der anhand des externen Temperatursensors die Kalibrierung berechnet. Dieser Modus versucht den TRV internen Algorithmus zu optimieren.\n\n***MPC Predictive (Beta)***: Nutzt den MPC-Prädiktivregler, um eine Ventilöffnung vorherzusagen und wandelt sie bei fehlender Ventilsteuerung in Temperatur- oder Offset-Anpassungen um.\n\n***PID Controller***: Verwendet einen PID-Regler, um die Ventilposition dynamisch basierend auf Temperaturfehler, proportionalem Anteil, integraler Akkumulation und derivativem Vorhersage anzupassen.\n\n***TPI Controller***: Verwendet einen Zeit-Proportional-Integral-Regler für stabile und präzise Temperatursteuerung über die Zeit.",
-          "calibration": "Wie die Kalibrierung auf das TRV angewendet werden soll.\n\n***Target Temperature Based***: Kalibriert das TRV über die Zieltemperatur.\n\n***Offset Based***: Kalibriert das TRV über eine Offset Funktion im TRV selbst. (Empfohlen)"
+          "calibration": "Wie die Kalibrierung auf das TRV angewendet werden soll.\n\n***Target Temperature Based***: Kalibriert das TRV über die Zieltemperatur.\n\n***Offset Based***: Kalibriert das TRV über eine Offset Funktion im TRV selbst. (Empfohlen)",
+          "heating_type": "Heizkörper: normales TRV-Verhalten. Fußbodenheizung: aktiviert den Warmer-Boden-Modus für dieses Heizgerät.",
+          "warm_floor_max_backoff": "Wie weit unter der Zieltemperatur der Warmer-Boden-Modus den Sollwert dieses Heizgeräts während eines sonst inaktiven Zyklus abweichen lassen darf. Der tatsächlich verwendete Rückzug wird automatisch von diesem Maximum abwärts skaliert, basierend auf gemessenem Wärmeverlust, Heizleistung und Sonneneinstrahlung, sodass der Boden nur so weit zurückgefahren wird, wie es der Raum sicher verträgt."
         }
       }
     }
@@ -223,6 +235,12 @@
         "small_room": "Kleiner Raum (~10 m², schnelle Reaktion)",
         "medium_room": "Mittlerer Raum (~20 m², Standard)",
         "large_room": "Großer Raum (~40 m², träge Gebäudehülle)"
+      }
+    },
+    "heating_type": {
+      "options": {
+        "radiator": "Heizkörper",
+        "underfloor": "Fußbodenheizung"
       }
     }
   },
