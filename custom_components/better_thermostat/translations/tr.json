@@ -24,10 +24,12 @@
           "target_temp_min": "Minimum hedef sıcaklık",
           "target_temp_max": "Maksimum hedef sıcaklık",
           "target_temp_step": "Hedef sıcaklık adımı",
-          "presets": "Etkin ön ayarlar"
+          "presets": "Etkin ön ayarlar",
+          "underfloor_heating_enabled": "Yerden Isıtma desteğini etkinleştir"
         },
         "data_description": {
-          "presets": "Bu termostat için kullanılabilir olmasını istediğiniz ön ayarları seçin."
+          "presets": "Bu termostat için kullanılabilir olmasını istediğiniz ön ayarları seçin.",
+          "underfloor_heating_enabled": "Isıtıcılarınızdan herhangi biri yerden ısıtma (UFH) devresiyse bunu açın. Bu, her ısıtıcı için bir 'Isıtma türü' seçeneğinin ve zemini ısıtma döngüleri arasında tamamen soğumaya bırakmak yerine düşük bir arka plan ısı seviyesinde tutan Sıcak Zemin modunun kilidini açar."
         }
       },
       "advanced": {
@@ -40,12 +42,16 @@
           "valve_maintenance": "Termostatınızın kendi bakım modu yoksa, bunu kullanabilirsiniz",
           "calibration": "Kalibrasyon Türü",
           "calibration_mode": "Kalibrasyon modu",
-          "no_off_system_mode": "TRV'niz kapalı modu desteklemiyorsa, bunun yerine hedef sıcaklık 5°C kullanmak için bunu etkinleştirebilirsiniz"
+          "no_off_system_mode": "TRV'niz kapalı modu desteklemiyorsa, bunun yerine hedef sıcaklık 5°C kullanmak için bunu etkinleştirebilirsiniz",
+          "heating_type": "Isıtma türü",
+          "warm_floor_max_backoff": "Sıcak Zemin maks. geri çekilme (°C)"
         },
         "data_description": {
           "protect_overheating": "Bazı TRV'ler sıcaklığa ulaşıldığında vanayı tamamen kapatmaz. Veya radyatör çok fazla artık ısıya sahiptir. Bu aşırı ısınmaya neden olabilir. Bu seçenek bunu önleyebilir.",
           "calibration_mode": "Kalibrasyonun nasıl hesaplanacağı\n***Normal***: Bu modda, TRV iç sıcaklık sensörü dış sıcaklık sensörü tarafından düzeltilir.\n***Agresif***: Bu modda, TRV iç sıcaklık sensörü dış sıcaklık sensörü tarafından düzeltilir ancak daha hızlı bir artış için çok daha düşük/yüksek ayarlanır.\n***Yapay Zeka Zaman Tabanlı***: Bu modda, TRV iç sıcaklık sensörü dış sıcaklık sensörü tarafından düzeltilir, ancak özel bir algoritma TRV iç algoritmasını iyileştirmek için değeri hesaplar.\n***MPC Tahminli (Beta)***: Doğrudan vana kontrolü mevcut olmadığında bir vana açıklığı türetmek ve bunu ofsetlere veya ayar noktasına dönüştürmek için MPC tahminli denetleyiciyi kullanır.",
-          "calibration": "Kalibrasyonun TRV'ye nasıl uygulanacağı (Hedef sıcaklık veya ofset)\n***Hedef Sıcaklık Tabanlı***: Kalibrasyonu hedef sıcaklığa uygula.\n***Ofset Tabanlı***: Kalibrasyonu ofsete uygula."
+          "calibration": "Kalibrasyonun TRV'ye nasıl uygulanacağı (Hedef sıcaklık veya ofset)\n***Hedef Sıcaklık Tabanlı***: Kalibrasyonu hedef sıcaklığa uygula.\n***Ofset Tabanlı***: Kalibrasyonu ofsete uygula.",
+          "heating_type": "Radyatör: normal TRV davranışı. Yerden ısıtma: bu ısıtıcı için Sıcak Zemin modunu etkinleştirir.",
+          "warm_floor_max_backoff": "Sıcak Zemin modunun, aksi takdirde boşta kalacak bir döngü sırasında bu ısıtıcının ayar noktasının hedef sıcaklığın ne kadar altına kaymasına izin verdiği. Kullanılan gerçek geri çekilme, ölçülen ısı kaybı, ısıtma gücü ve güneş kazancına göre bu maksimumdan otomatik olarak aşağı ölçeklenir, böylece zemin yalnızca odanın güvenle karşılayabileceği kadar geri çekilir."
         }
       },
       "confirm": {
@@ -94,10 +100,12 @@
           "calibration": "Kalibrasyon türü",
           "heat_auto_swapped": "TRV'nizde otomatik mod ısıtma anlamına geliyorsa ve değiştirmek istiyorsanız",
           "child_lock": "TRV üzerindeki tüm girişleri çocuk kilidi gibi yoksay",
-          "homematicip": "HomematicIP kullanıyorsanız, görev döngüsünü önlemek için istekleri yavaşlatmak amacıyla bunu etkinleştirmelisiniz"
+          "homematicip": "HomematicIP kullanıyorsanız, görev döngüsünü önlemek için istekleri yavaşlatmak amacıyla bunu etkinleştirmelisiniz",
+          "underfloor_heating_enabled": "Yerden Isıtma desteğini etkinleştir"
         },
         "data_description": {
-          "presets": "Bu termostat için kullanılabilir olmasını istediğiniz ön ayarları seçin."
+          "presets": "Bu termostat için kullanılabilir olmasını istediğiniz ön ayarları seçin.",
+          "underfloor_heating_enabled": "Isıtıcılarınızdan herhangi biri yerden ısıtma (UFH) devresiyse bunu açın. Bu, her ısıtıcı için bir 'Isıtma türü' seçeneğinin ve zemini ısıtma döngüleri arasında tamamen soğumaya bırakmak yerine düşük bir arka plan ısı seviyesinde tutan Sıcak Zemin modunun kilidini açar."
         }
       },
       "advanced": {
@@ -110,12 +118,16 @@
           "valve_maintenance": "Termostatınızın kendi bakım modu yoksa, bunu kullanabilirsiniz",
           "calibration": "Kullanmak istediğiniz kalibrasyon türü",
           "calibration_mode": "Kalibrasyon modu",
-          "no_off_system_mode": "TRV'niz kapalı modu desteklemiyorsa, bunun yerine hedef sıcaklık 5°C kullanmak için bunu etkinleştirebilirsiniz"
+          "no_off_system_mode": "TRV'niz kapalı modu desteklemiyorsa, bunun yerine hedef sıcaklık 5°C kullanmak için bunu etkinleştirebilirsiniz",
+          "heating_type": "Isıtma türü",
+          "warm_floor_max_backoff": "Sıcak Zemin maks. geri çekilme (°C)"
         },
         "data_description": {
           "protect_overheating": "Bazı TRV'ler sıcaklığa ulaşıldığında vanayı tamamen kapatmaz. Veya radyatör çok fazla artık ısıya sahiptir. Bu aşırı ısınmaya neden olabilir. Bu seçenek bunu önleyebilir.",
           "calibration_mode": "Kalibrasyonun nasıl hesaplanacağı\n***Normal***: Bu modda, TRV iç sıcaklık sensörü dış sıcaklık sensörü tarafından düzeltilir.\n***Agresif***: Bu modda, TRV iç sıcaklık sensörü dış sıcaklık sensörü tarafından düzeltilir ancak daha hızlı bir artış için çok daha düşük/yüksek ayarlanır.\n***Yapay Zeka Zaman Tabanlı***: Bu modda, TRV iç sıcaklık sensörü dış sıcaklık sensörü tarafından düzeltilir, ancak özel bir algoritma TRV iç algoritmasını iyileştirmek için değeri hesaplar.\n***MPC Tahminli (Beta)***: Doğrudan vana kontrolü mevcut olmadığında bir vana açıklığı türetmek ve bunu ofsetlere veya ayar noktasına dönüştürmek için MPC hidrolik denge algoritmasını kullanır.",
-          "calibration": "Kalibrasyonun TRV'ye nasıl uygulanacağı (Hedef sıcaklık veya ofset)\n***Hedef Sıcaklık Tabanlı***: Kalibrasyonu hedef sıcaklığa uygula.\n***Ofset Tabanlı***: Kalibrasyonu ofsete uygula."
+          "calibration": "Kalibrasyonun TRV'ye nasıl uygulanacağı (Hedef sıcaklık veya ofset)\n***Hedef Sıcaklık Tabanlı***: Kalibrasyonu hedef sıcaklığa uygula.\n***Ofset Tabanlı***: Kalibrasyonu ofsete uygula.",
+          "heating_type": "Radyatör: normal TRV davranışı. Yerden ısıtma: bu ısıtıcı için Sıcak Zemin modunu etkinleştirir.",
+          "warm_floor_max_backoff": "Sıcak Zemin modunun, aksi takdirde boşta kalacak bir döngü sırasında bu ısıtıcının ayar noktasının hedef sıcaklığın ne kadar altına kaymasına izin verdiği. Kullanılan gerçek geri çekilme, ölçülen ısı kaybı, ısıtma gücü ve güneş kazancına göre bu maksimumdan otomatik olarak aşağı ölçeklenir, böylece zemin yalnızca odanın güvenle karşılayabileceği kadar geri çekilir."
         }
       }
     },
@@ -330,6 +342,12 @@
         "small_room": "Küçük oda (~10 m², hızlı tepki)",
         "medium_room": "Orta oda (~20 m², standart)",
         "large_room": "Büyük oda (~40 m², yavaş yapı kabuğu)"
+      }
+    },
+    "heating_type": {
+      "options": {
+        "radiator": "Radyatör",
+        "underfloor": "Yerden ısıtma"
       }
     }
   },

@@ -24,10 +24,12 @@
           "target_temp_min": "Température cible minimale",
           "target_temp_max": "Température cible maximale",
           "target_temp_step": "Pas de la température cible",
-          "presets": "Préréglages activés"
+          "presets": "Préréglages activés",
+          "underfloor_heating_enabled": "Activer la prise en charge du chauffage au sol"
         },
         "data_description": {
-          "presets": "Sélectionnez les préréglages qui doivent être disponibles pour ce thermostat."
+          "presets": "Sélectionnez les préréglages qui doivent être disponibles pour ce thermostat.",
+          "underfloor_heating_enabled": "Activez cette option si l'un de vos radiateurs est une boucle de chauffage au sol. Cela déverrouille une option 'Type de chauffage' par appareil ainsi que le mode Plancher Chaud, qui maintient un faible niveau de chaleur de fond dans le sol au lieu de le laisser refroidir complètement entre les cycles de chauffe."
         }
       },
       "advanced": {
@@ -40,12 +42,16 @@
           "valve_maintenance": "Si votre thermostat n'a pas de mode maintenance propre, vous pouvez utiliser celui-ci",
           "calibration": "Type de calibrage",
           "calibration_mode": "Mode de calibrage",
-          "no_off_system_mode": "Si votre TRV ne peut pas gérer le mode hors tension, vous pouvez activer ceci pour utiliser une température cible de 5°C à la place"
+          "no_off_system_mode": "Si votre TRV ne peut pas gérer le mode hors tension, vous pouvez activer ceci pour utiliser une température cible de 5°C à la place",
+          "heating_type": "Type de chauffage",
+          "warm_floor_max_backoff": "Recul maximal du Plancher Chaud (°C)"
         },
         "data_description": {
           "protect_overheating": "Certains TRVs ne ferment pas complètement la vanne lorsque la température est atteinte. Ou le radiateur a beaucoup de chaleur résiduelle. Cela peut provoquer une surchauffe. Cette option peut prévenir cela.",
           "calibration_mode": "Le type de calcul du calibrage\n***Normal*** : Dans ce mode, le capteur de température interne du TRV est fixé par le capteur de température externe.\n***Aggressif*** : Dans ce mode, le capteur de température interne du TRV est fixé par le capteur de température externe mais réglé beaucoup plus bas/haut pour obtenir un boost plus rapide.\n***AI Time Based*** : Dans ce mode, le capteur de température interne du TRV est fixé par le capteur de température externe, mais la valeur est calculée par un algorithme personnalisé pour améliorer l'algorithme interne du TRV.\n***MPC Predictive (Beta)*** : Utilise le contrôleur prédictif MPC pour dériver une ouverture de vanne et la convertir en décalages ou points de consigne lorsque le contrôle direct de la vanne n'est pas disponible.\n***PID Controller*** : Utilise un contrôleur PID pour ajuster dynamiquement la position de la vanne en fonction de l'erreur de température, du terme proportionnel, de l'accumulation intégrale et de la prédiction dérivée.\n***TPI Controller*** : Utilise un contrôleur Proportionnel Intégral Temporel pour un contrôle de température stable et précis dans le temps.",
-          "calibration": "Comment le calibrage doit être appliqué sur le TRV (Température cible ou décalage)\n***Basé sur la température cible*** : Appliquer le calibrage à la température cible.\n***Basé sur le décalage*** : Appliquer le calibrage au décalage."
+          "calibration": "Comment le calibrage doit être appliqué sur le TRV (Température cible ou décalage)\n***Basé sur la température cible*** : Appliquer le calibrage à la température cible.\n***Basé sur le décalage*** : Appliquer le calibrage au décalage.",
+          "heating_type": "Radiateur : comportement normal de la vanne thermostatique. Chauffage au sol : active le mode Plancher Chaud pour cet appareil.",
+          "warm_floor_max_backoff": "De combien de degrés sous la température cible le mode Plancher Chaud est autorisé à laisser dériver la consigne de cet appareil pendant ce qui serait autrement un cycle inactif. Le recul réellement utilisé est automatiquement réduit par rapport à ce maximum en fonction des pertes de chaleur, de la puissance de chauffe et du gain solaire mesurés, afin que le sol ne recule que dans la limite de ce que la pièce peut supporter sans risque."
         }
       },
       "confirm": {
@@ -94,10 +100,12 @@
           "calibration": "Le type de calibrage",
           "heat_auto_swapped": "Si le mode automatique signifie chauffage pour votre TRV et que vous voulez le permuter",
           "child_lock": "Ignorer toutes les entrées sur le TRV comme une sécurité enfant",
-          "homematicip": "Si vous utilisez HomematicIP, vous devriez l'activer pour ralentir les demandes et éviter le cycle de fonctionnement excessif"
+          "homematicip": "Si vous utilisez HomematicIP, vous devriez l'activer pour ralentir les demandes et éviter le cycle de fonctionnement excessif",
+          "underfloor_heating_enabled": "Activer la prise en charge du chauffage au sol"
         },
         "data_description": {
-          "presets": "Sélectionnez les préréglages qui doivent être disponibles pour ce thermostat."
+          "presets": "Sélectionnez les préréglages qui doivent être disponibles pour ce thermostat.",
+          "underfloor_heating_enabled": "Activez cette option si l'un de vos radiateurs est une boucle de chauffage au sol. Cela déverrouille une option 'Type de chauffage' par appareil ainsi que le mode Plancher Chaud, qui maintient un faible niveau de chaleur de fond dans le sol au lieu de le laisser refroidir complètement entre les cycles de chauffe."
         }
       },
       "advanced": {
@@ -110,12 +118,16 @@
           "valve_maintenance": "Si votre thermostat n'a pas de mode maintenance propre, vous pouvez utiliser celui-ci",
           "calibration": "Le type de calibrage que vous souhaitez utiliser",
           "calibration_mode": "Mode de calibrage",
-          "no_off_system_mode": "Si votre TRV ne peut pas gérer le mode hors tension, vous pouvez activer ceci pour utiliser une température cible de 5°C à la place"
+          "no_off_system_mode": "Si votre TRV ne peut pas gérer le mode hors tension, vous pouvez activer ceci pour utiliser une température cible de 5°C à la place",
+          "heating_type": "Type de chauffage",
+          "warm_floor_max_backoff": "Recul maximal du Plancher Chaud (°C)"
         },
         "data_description": {
           "protect_overheating": "Certains TRVs ne ferment pas complètement la vanne lorsque la température est atteinte. Ou le radiateur a beaucoup de chaleur résiduelle. Cela peut provoquer une surchauffe. Cette option peut prévenir cela.",
           "calibration_mode": "Le type de calcul du calibrage\n***Normal*** : Dans ce mode, le capteur de température interne du TRV est fixé par le capteur de température externe.\n***Aggressif*** : Dans ce mode, le capteur de température interne du TRV est fixé par le capteur de température externe mais réglé beaucoup plus bas/haut pour obtenir un boost plus rapide.\n***AI Time Based*** : Dans ce mode, le capteur de température interne du TRV est fixé par le capteur de température externe, mais la valeur est calculée par un algorithme personnalisé pour améliorer l'algorithme interne du TRV.\n***MPC Predictive (Beta)*** : Utilise le contrôleur prédictif MPC pour dériver une ouverture de vanne et la convertir en décalages ou points de consigne lorsque le contrôle direct de la vanne n'est pas disponible.\n***PID Controller*** : Utilise un contrôleur PID pour ajuster dynamiquement la position de la vanne en fonction de l'erreur de température, du terme proportionnel, de l'accumulation intégrale et de la prédiction dérivée.\n***TPI Controller*** : Utilise un contrôleur Proportionnel Intégral Temporel pour un contrôle de température stable et précis dans le temps.",
-          "calibration": "Comment le calibrage doit être appliqué sur le TRV (Température cible ou décalage)\n***Basé sur la température cible*** : Appliquer le calibrage à la température cible.\n***Basé sur le décalage*** : Appliquer le calibrage au décalage."
+          "calibration": "Comment le calibrage doit être appliqué sur le TRV (Température cible ou décalage)\n***Basé sur la température cible*** : Appliquer le calibrage à la température cible.\n***Basé sur le décalage*** : Appliquer le calibrage au décalage.",
+          "heating_type": "Radiateur : comportement normal de la vanne thermostatique. Chauffage au sol : active le mode Plancher Chaud pour cet appareil.",
+          "warm_floor_max_backoff": "De combien de degrés sous la température cible le mode Plancher Chaud est autorisé à laisser dériver la consigne de cet appareil pendant ce qui serait autrement un cycle inactif. Le recul réellement utilisé est automatiquement réduit par rapport à ce maximum en fonction des pertes de chaleur, de la puissance de chauffe et du gain solaire mesurés, afin que le sol ne recule que dans la limite de ce que la pièce peut supporter sans risque."
         }
       }
     },
@@ -330,6 +342,12 @@
         "small_room": "Petite pièce (~10 m², réponse rapide)",
         "medium_room": "Pièce moyenne (~20 m², standard)",
         "large_room": "Grande pièce (~40 m², enveloppe lente)"
+      }
+    },
+    "heating_type": {
+      "options": {
+        "radiator": "Radiateur",
+        "underfloor": "Chauffage au sol"
       }
     }
   },

@@ -24,10 +24,12 @@
           "target_temp_min": "Minimálna cieľová teplota",
           "target_temp_max": "Maximálna cieľová teplota",
           "target_temp_step": "Krok cieľovej teploty",
-          "presets": "Povolené predvoľby"
+          "presets": "Povolené predvoľby",
+          "underfloor_heating_enabled": "Povoliť podporu podlahového vykurovania"
         },
         "data_description": {
-          "presets": "Vyberte predvoľby, ktoré chcete mať k dispozícii pre tento termostat."
+          "presets": "Vyberte predvoľby, ktoré chcete mať k dispozícii pre tento termostat.",
+          "underfloor_heating_enabled": "Zapnite túto možnosť, ak je niektorý z vašich ohrievačov slúčkou podlahového vykurovania (UFH). Týmto sa odomkne možnosť 'Typ vykurovania' pre každý ohrievač a režim Teplá Podlaha, ktorý udržiava nízku úroveň základného tepla v podlahe namiesto toho, aby ju nechal medzi cyklami vykurovania úplne vychladnúť."
         }
       },
       "advanced": {
@@ -40,12 +42,16 @@
           "valve_maintenance": "Ak váš termostat nemá vlastný režim údržby, môžete použiť tento režim",
           "calibration": "Typ kalibrácie",
           "calibration_mode": "Režim kalibrácie",
-          "no_off_system_mode": "Ak váš TRV nedokáže pracovať v režime vypnutia, môžete namiesto toho povoliť použitie cieľovej teploty 5 °C."
+          "no_off_system_mode": "Ak váš TRV nedokáže pracovať v režime vypnutia, môžete namiesto toho povoliť použitie cieľovej teploty 5 °C.",
+          "heating_type": "Typ vykurovania",
+          "warm_floor_max_backoff": "Max. ústup Teplej Podlahy (°C)"
         },
         "data_description": {
           "protect_overheating": "Niektoré termostatické ventily úplne neuzatvoria ventil po dosiahnutí požadovanej teploty. Alebo má radiátor veľa zvyškového tepla. To môže spôsobiť prehriatie. Táto možnosť tomu môže zabrániť.",
           "calibration_mode": "Druh, akým sa má kalibrácia vypočítať\n***Normálny***: V tomto režime je vnútorný snímač teploty TRV fixovaný externým snímačom teploty.\n***Agresívny***: V tomto režime je vnútorný snímač teploty TRV fixovaný externým snímačom teploty, ale nastavený oveľa nižšie/vyššie, aby sa dosiahlo rýchlejšie zvýšenie teploty.\n***Časovo založený na AI***: V tomto režime je vnútorný snímač teploty TRV fixovaný externým snímačom teploty, ale vlastný algoritmus vypočíta hodnotu na zlepšenie vnútorného algoritmu TRV.\n***Prediktívny MPC (Beta)***: Používa prediktívny regulátor MPC na odvodenie otvorenia ventilu a prevedie ho na posuny alebo požadované hodnoty, keď priame riadenie ventilu nie je k dispozícii.\n***PID regulátor***: Používa PID regulátor na dynamické nastavenie polohy ventilu na základe teplotnej chyby, proporcionálneho člena, integrálnej akumulácie a derivačnej predikcie.\n***TPI regulátor***: Používa časovo proporcionálny integračný regulátor pre stabilnú a presnú reguláciu teploty v priebehu času.",
-          "calibration": "Ako sa má kalibrácia použiť na TRV (cieľová teplota alebo posun)\n***Na základe cieľovej teploty***: Použite kalibráciu na cieľovú teplotu.\n***Na základe ofsetu***: Použite kalibráciu na offset."
+          "calibration": "Ako sa má kalibrácia použiť na TRV (cieľová teplota alebo posun)\n***Na základe cieľovej teploty***: Použite kalibráciu na cieľovú teplotu.\n***Na základe ofsetu***: Použite kalibráciu na offset.",
+          "heating_type": "Radiátor: normálne správanie TRV. Podlahové: povolí režim Teplá Podlaha pre tento ohrievač.",
+          "warm_floor_max_backoff": "Ako ďaleko pod cieľovou teplotou môže režim Teplá Podlaha nechať odchýliť nastavenú hodnotu tohto ohrievača počas cyklu, ktorý by inak bol nečinný. Skutočne použitý ústup sa automaticky znižuje z tohto maxima na základe nameraných tepelných strát, vykurovacieho výkonu a solárneho zisku, takže podlaha ustúpi len natoľko, nakoľko si to miestnosť môže bezpečne dovoliť."
         }
       },
       "confirm": {
@@ -94,10 +100,12 @@
           "calibration": "Druh kalibrácie",
           "heat_auto_swapped": "Ak auto znamená teplo pre váš TRV a chcete ho vymeniť",
           "child_lock": "Ignorovať všetky vstupy na TRV ako detský zámok",
-          "homematicip": "Ak používate HomematicIP, mali by ste túto funkciu povoliť, aby ste spomalili požiadavky a zabránili tak pracovnému cyklu"
+          "homematicip": "Ak používate HomematicIP, mali by ste túto funkciu povoliť, aby ste spomalili požiadavky a zabránili tak pracovnému cyklu",
+          "underfloor_heating_enabled": "Povoliť podporu podlahového vykurovania"
         },
         "data_description": {
-          "presets": "Vyberte predvoľby, ktoré chcete mať k dispozícii pre tento termostat."
+          "presets": "Vyberte predvoľby, ktoré chcete mať k dispozícii pre tento termostat.",
+          "underfloor_heating_enabled": "Zapnite túto možnosť, ak je niektorý z vašich ohrievačov slúčkou podlahového vykurovania (UFH). Týmto sa odomkne možnosť 'Typ vykurovania' pre každý ohrievač a režim Teplá Podlaha, ktorý udržiava nízku úroveň základného tepla v podlahe namiesto toho, aby ju nechal medzi cyklami vykurovania úplne vychladnúť."
         }
       },
       "advanced": {
@@ -110,12 +118,16 @@
           "valve_maintenance": "Ak váš termostat nemá vlastný režim údržby, môžete použiť tento režim",
           "calibration": "Druh kalibrácie, ktorý chcete použiť",
           "calibration_mode": "Režim kalibrácie",
-          "no_off_system_mode": "Ak váš TRV nedokáže pracovať v režime vypnutia, môžete namiesto toho povoliť použitie cieľovej teploty 5 °C."
+          "no_off_system_mode": "Ak váš TRV nedokáže pracovať v režime vypnutia, môžete namiesto toho povoliť použitie cieľovej teploty 5 °C.",
+          "heating_type": "Typ vykurovania",
+          "warm_floor_max_backoff": "Max. ústup Teplej Podlahy (°C)"
         },
         "data_description": {
           "protect_overheating": "Niektoré TRV nezatvárajú ventil úplne, keď sa dosiahne požadovaná teplota. Alebo je v radiátore veľa zvyškového tepla. To môže spôsobiť prehriatie. Táto možnosť tomu môže zabrániť.",
           "calibration_mode": "Druh výpočtu kalibrácie\n***Normálny***: V tomto režime je vnútorný snímač teploty TRV fixovaný externým snímačom teploty.\n***Agresívny***: V tomto režime je vnútorný snímač teploty TRV fixovaný externým snímačom teploty, ale nastavený oveľa nižšie/vyššie, aby sa dosiahlo rýchlejšie zvýšenie teploty.\n***Časovo riadený AI***: V tomto režime je vnútorný snímač teploty TRV fixovaný externým snímačom teploty, ale vlastný algoritmus vypočíta hodnotu na zlepšenie vnútorného algoritmu TRV.\n***Prediktívny MPC (Beta)***: Používa algoritmus hydraulického vyváženia MPC na odvodenie otvorenia ventilu a prevádza ho na posuny alebo požadované hodnoty, keď priame riadenie ventilu nie je k dispozícii.\n***PID regulátor***: Používa PID regulátor na dynamické nastavenie polohy ventilu na základe teplotnej chyby, proporcionálneho člena, integrálnej akumulácie a derivačnej predikcie.\n***TPI regulátor***: Používa časovo proporcionálny integračný regulátor pre stabilnú a presnú reguláciu teploty v priebehu času.",
-          "calibration": "Ako sa má kalibrácia použiť na TRV (cieľová teplota alebo ofset)\n***Na základe cieľovej teploty***: Použite kalibráciu na cieľovú teplotu.\n***Na základe ofsetu***: Použite kalibráciu na offset."
+          "calibration": "Ako sa má kalibrácia použiť na TRV (cieľová teplota alebo ofset)\n***Na základe cieľovej teploty***: Použite kalibráciu na cieľovú teplotu.\n***Na základe ofsetu***: Použite kalibráciu na offset.",
+          "heating_type": "Radiátor: normálne správanie TRV. Podlahové: povolí režim Teplá Podlaha pre tento ohrievač.",
+          "warm_floor_max_backoff": "Ako ďaleko pod cieľovou teplotou môže režim Teplá Podlaha nechať odchýliť nastavenú hodnotu tohto ohrievača počas cyklu, ktorý by inak bol nečinný. Skutočne použitý ústup sa automaticky znižuje z tohto maxima na základe nameraných tepelných strát, vykurovacieho výkonu a solárneho zisku, takže podlaha ustúpi len natoľko, nakoľko si to miestnosť môže bezpečne dovoliť."
         }
       }
     },
@@ -330,6 +342,12 @@
         "small_room": "Malá miestnosť (~10 m², rýchla odozva)",
         "medium_room": "Stredná miestnosť (~20 m², štandard)",
         "large_room": "Veľká miestnosť (~40 m², pomalý obvodový plášť)"
+      }
+    },
+    "heating_type": {
+      "options": {
+        "radiator": "Radiátor",
+        "underfloor": "Podlahové vykurovanie"
       }
     }
   },

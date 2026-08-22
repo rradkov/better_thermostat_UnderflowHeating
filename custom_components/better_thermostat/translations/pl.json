@@ -24,10 +24,12 @@
           "target_temp_min": "Minimalna temperatura docelowa",
           "target_temp_max": "Maksymalna temperatura docelowa",
           "target_temp_step": "Krok temperatury docelowej",
-          "presets": "Włączone ustawienia predefiniowane"
+          "presets": "Włączone ustawienia predefiniowane",
+          "underfloor_heating_enabled": "Włącz obsługę ogrzewania podłogowego"
         },
         "data_description": {
-          "presets": "Wybierz ustawienia predefiniowane, które mają być dostępne dla tego termostatu."
+          "presets": "Wybierz ustawienia predefiniowane, które mają być dostępne dla tego termostatu.",
+          "underfloor_heating_enabled": "Włącz tę opcję, jeśli którekolwiek z Twoich grzejników to pętla ogrzewania podłogowego (UFH). Odblokowuje to opcję 'Typ ogrzewania' dla każdego grzejnika oraz tryb Ciepłej Podłogi, który utrzymuje niski poziom ciepła w tle w podłodze zamiast pozwalać jej całkowicie ostygnąć między cyklami grzania."
         }
       },
       "advanced": {
@@ -40,12 +42,16 @@
           "valve_maintenance": "Jeżeli Twój termostat nie ma trybu konserwacji, możesz użyć tej opcji.",
           "calibration": "Rodzaj kalibracji, której chcesz użyć",
           "calibration_mode": "Tryb kalibracji",
-          "no_off_system_mode": "Jeśli Twój TRV nie obsługuje trybu wyłączenia, możesz go włączyć, aby zamiast tego używać temperatury docelowej 5°C"
+          "no_off_system_mode": "Jeśli Twój TRV nie obsługuje trybu wyłączenia, możesz go włączyć, aby zamiast tego używać temperatury docelowej 5°C",
+          "heating_type": "Typ ogrzewania",
+          "warm_floor_max_backoff": "Maksymalne cofnięcie Ciepłej Podłogi (°C)"
         },
         "data_description": {
           "protect_overheating": "Niektóre TRV całkowicie zamykają zawór po osiągnięciu temperatury. Lub grzejnik ma dużo ciepła resztkowego. Może to spowodować przegrzanie. Ta opcja może temu zapobiec.",
           "calibration_mode": "Rodzaj sposobu obliczania kalibracji\n***Normalny***: W tym trybie wewnętrzny czujnik temperatury TRV jest zależny od zewnętrznego czujnika temperatury.\n***Agresywny***: W tym trybie wewnętrzny czujnik temperatury TRV jest ustalany przez zewnętrzny czujnik temperatury, ale jest ustawiony znacznie niżej/wyżej, aby uzyskać szybsze przyspieszenie.\n***AI Time Based***: W tym trybie wewnętrzny czujnik temperatury TRV jest ustalany przez zewnętrzny czujnik temperatury, ale wartość jest obliczana przez niestandardowy algorytm w celu ulepszenia wewnętrznego algorytmu TRV.",
-          "calibration": "Jak kalibracja powinna być zastosowana w TRV (temperatura docelowa lub przesunięcie)\n***Target Temperature Based***: Zastosuj kalibrację do temperatury docelowej.\n***Oparte na przesunięciu***: Zastosuj kalibrację do przesunięcia."
+          "calibration": "Jak kalibracja powinna być zastosowana w TRV (temperatura docelowa lub przesunięcie)\n***Target Temperature Based***: Zastosuj kalibrację do temperatury docelowej.\n***Oparte na przesunięciu***: Zastosuj kalibrację do przesunięcia.",
+          "heating_type": "Grzejnik: normalne zachowanie zaworu TRV. Podłogowe: włącza tryb Ciepłej Podłogi dla tego grzejnika.",
+          "warm_floor_max_backoff": "Jak daleko poniżej temperatury docelowej tryb Ciepłej Podłogi może pozwolić na odchylenie nastawy tego grzejnika podczas cyklu, który w innym przypadku byłby bezczynny. Rzeczywiście używane cofnięcie jest automatycznie skalowane w dół od tego maksimum na podstawie zmierzonej utraty ciepła, mocy grzewczej i zysku słonecznego, dzięki czemu podłoga cofa się tylko tak daleko, jak pomieszczenie może bezpiecznie na to pozwolić."
         }
       },
       "confirm": {
@@ -94,10 +100,12 @@
           "calibration": "Rodzaje kalibracji",
           "heat_auto_swapped": "Jeżeli tryb auto oznacza grzanie dla Twojego TRV i chcesz to zmienić",
           "child_lock": "Ignoruj wszystkie wejścia w TRV jak np. Blokada dziecięca",
-          "homematicip": "Jeżeli używasz HomematicIP, powinienieś włączyć tę opcję żeby spowolnić żądania"
+          "homematicip": "Jeżeli używasz HomematicIP, powinienieś włączyć tę opcję żeby spowolnić żądania",
+          "underfloor_heating_enabled": "Włącz obsługę ogrzewania podłogowego"
         },
         "data_description": {
-          "presets": "Wybierz ustawienia predefiniowane, które mają być dostępne dla tego termostatu."
+          "presets": "Wybierz ustawienia predefiniowane, które mają być dostępne dla tego termostatu.",
+          "underfloor_heating_enabled": "Włącz tę opcję, jeśli którekolwiek z Twoich grzejników to pętla ogrzewania podłogowego (UFH). Odblokowuje to opcję 'Typ ogrzewania' dla każdego grzejnika oraz tryb Ciepłej Podłogi, który utrzymuje niski poziom ciepła w tle w podłodze zamiast pozwalać jej całkowicie ostygnąć między cyklami grzania."
         }
       },
       "advanced": {
@@ -110,12 +118,16 @@
           "valve_maintenance": "Jeżeli Twój termostat nie ma trybu konserwacji, możesz użyć tej opcji.",
           "calibration": "Rodzaj kalibracji, której chcesz użyć",
           "calibration_mode": "Tryb kalibracji",
-          "no_off_system_mode": "Jeśli Twój TRV nie obsługuje trybu wyłączenia, możesz go włączyć, aby zamiast tego używać temperatury docelowej 5°C"
+          "no_off_system_mode": "Jeśli Twój TRV nie obsługuje trybu wyłączenia, możesz go włączyć, aby zamiast tego używać temperatury docelowej 5°C",
+          "heating_type": "Typ ogrzewania",
+          "warm_floor_max_backoff": "Maksymalne cofnięcie Ciepłej Podłogi (°C)"
         },
         "data_description": {
           "protect_overheating": "Niektóre TRV całkowicie zamykają zawór po osiągnięciu temperatury. Lub grzejnik ma dużo ciepła resztkowego. Może to spowodować przegrzanie. Ta opcja może temu zapobiec.",
           "calibration_mode": "Rodzaj sposobu obliczania kalibracji\n***Normalny***: W tym trybie wewnętrzny czujnik temperatury TRV jest zależny od zewnętrznego czujnika temperatury.\n***Agresywny***: W tym trybie wewnętrzny czujnik temperatury TRV jest ustalany przez zewnętrzny czujnik temperatury, ale jest ustawiony znacznie niżej/wyżej, aby uzyskać szybsze przyspieszenie.\n***AI Time Based***: W tym trybie wewnętrzny czujnik temperatury TRV jest ustalany przez zewnętrzny czujnik temperatury, ale wartość jest obliczana przez niestandardowy algorytm w celu ulepszenia wewnętrznego algorytmu TRV.",
-          "calibration": "Jak kalibracja powinna być zastosowana w TRV (temperatura docelowa lub przesunięcie)\n***Target Temperature Based***: Zastosuj kalibrację do temperatury docelowej.\n***Oparte na przesunięciu***: Zastosuj kalibrację do przesunięcia."
+          "calibration": "Jak kalibracja powinna być zastosowana w TRV (temperatura docelowa lub przesunięcie)\n***Target Temperature Based***: Zastosuj kalibrację do temperatury docelowej.\n***Oparte na przesunięciu***: Zastosuj kalibrację do przesunięcia.",
+          "heating_type": "Grzejnik: normalne zachowanie zaworu TRV. Podłogowe: włącza tryb Ciepłej Podłogi dla tego grzejnika.",
+          "warm_floor_max_backoff": "Jak daleko poniżej temperatury docelowej tryb Ciepłej Podłogi może pozwolić na odchylenie nastawy tego grzejnika podczas cyklu, który w innym przypadku byłby bezczynny. Rzeczywiście używane cofnięcie jest automatycznie skalowane w dół od tego maksimum na podstawie zmierzonej utraty ciepła, mocy grzewczej i zysku słonecznego, dzięki czemu podłoga cofa się tylko tak daleko, jak pomieszczenie może bezpiecznie na to pozwolić."
         }
       }
     },
@@ -330,6 +342,12 @@
         "small_room": "Małe pomieszczenie (~10 m², szybka reakcja)",
         "medium_room": "Średnie pomieszczenie (~20 m², standard)",
         "large_room": "Duże pomieszczenie (~40 m², wolna przegroda)"
+      }
+    },
+    "heating_type": {
+      "options": {
+        "radiator": "Grzejnik",
+        "underfloor": "Ogrzewanie podłogowe"
       }
     }
   },
