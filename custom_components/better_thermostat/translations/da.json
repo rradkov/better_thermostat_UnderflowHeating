@@ -7,7 +7,7 @@
         "data": {
           "name": "Navn",
           "thermostat": "Den rigtige termostat",
-          "cooler": "Køleenhed (valgfri)",
+          "cooler": "Kølings-/Boost-enhed (valgfrit)",
           "min_cooler_resend_interval": "Minimum sekunder mellem gentagne kølekommandoer (0 = deaktiveret)",
           "temperature_sensor": "Temperatur måler",
           "humidity_sensor": "Fugtighedssensor",
@@ -25,11 +25,22 @@
           "target_temp_max": "Mål maksimum temperatur",
           "target_temp_step": "Trin for måltemperatur",
           "presets": "Aktiverede forudindstillinger",
-          "underfloor_heating_enabled": "Aktivér understøttelse af gulvvarme"
+          "underfloor_heating_enabled": "Aktivér understøttelse af gulvvarme",
+          "boost_heater_enabled": "Aktivér Boost ved genåbning af vindue",
+          "boost_threshold": "Boost temperaturafvigelse-grænse (°C)",
+          "boost_fan_mode": "Boost ventilatorhastighed",
+          "boost_lag_minutes": "Boost-foregribelse (minutter)",
+          "boost_max_runtime": "Boost sikkerhedstimeout (minutter)"
         },
         "data_description": {
           "presets": "Vælg de forudindstillinger, der skal være tilgængelige for denne termostat.",
-          "underfloor_heating_enabled": "Slå dette til, hvis nogen af dine varmelegemer er gulvvarmeslynger. Dette låser en varmelegeme-indstilling for 'Varmetype' op samt Varm Gulv-tilstand, som holder et lavt baggrundsvarmeniveau i gulvet i stedet for at lade det køle helt af mellem varmecyklusser."
+          "underfloor_heating_enabled": "Slå dette til, hvis nogen af dine varmelegemer er gulvvarmeslynger. Dette låser en varmelegeme-indstilling for 'Varmetype' op samt Varm Gulv-tilstand, som holder et lavt baggrundsvarmeniveau i gulvet i stedet for at lade det køle helt af mellem varmecyklusser.",
+          "boost_heater_enabled": "Slå dette til for også at bruge Kølings-/Boost-enheden ovenfor til hurtig temperaturgenopretning, efter et vindue genåbnes. Hvis rummet blev koldere end tærsklen nedenfor, mens vinduet var åbent, booster lukning af vinduet enheden til opvarmning; hvis det blev varmere (f.eks. en varm dag med køling undertrykt), booster lukning enheden til køling. Under alle omstændigheder sigter den mod din normale måltemperatur og slukker derefter automatisk. Kræver at en Kølings-/Boost-enhed er konfigureret ovenfor.",
+          "boost_threshold": "Hvis rumtemperaturen afviger (i begge retninger) mere end dette, mens et vindue er åbent, aktiverer lukning af vinduet boostet.",
+          "boost_fan_mode": "Angiv eventuelt enhedens ventilatorhastighed (f.eks. til maksimum) under boost; gendannes automatisk, når boostet slutter. Lad stå som 'Skift ikke ventilatorhastighed' for at springe dette over.",
+          "boost_lag_minutes": "Hvor mange minutters resterende varme/køling enheden fortsat leverer til rummet, efter den er blevet bedt om at stoppe, brugt til at undgå at overskyde målet.",
+          "boost_max_runtime": "Maksimal tid boostet må køre, før det tvinges fra, uanset temperatur.",
+          "cooler": "Valgfrit. En enhed der bruges til køling (i varme+køl-opsætninger) og/eller, når Boost er aktiveret nedenfor, som den enhed der hurtigt genopretter rumtemperaturen, efter et vindue genåbnes - mange fan-coils, varmepumper og aircondition-enheder udfører allerede begge opgaver, så én enhed kan varetage begge roller."
         }
       },
       "advanced": {
@@ -101,11 +112,21 @@
           "heat_auto_swapped": "Hvis auto betyder varme til din TRV, og du ønsker at bytte den",
           "child_lock": "Ignorer alle input på TRV som en børnesikring",
           "homematicip": "Hvis du bruger HomematicIP, bør du aktivere dette for at bremse anmodningerne for at forhindre arbejdscyklus",
-          "underfloor_heating_enabled": "Aktivér understøttelse af gulvvarme"
+          "underfloor_heating_enabled": "Aktivér understøttelse af gulvvarme",
+          "boost_heater_enabled": "Aktivér Boost ved genåbning af vindue",
+          "boost_threshold": "Boost temperaturafvigelse-grænse (°C)",
+          "boost_fan_mode": "Boost ventilatorhastighed",
+          "boost_lag_minutes": "Boost-foregribelse (minutter)",
+          "boost_max_runtime": "Boost sikkerhedstimeout (minutter)"
         },
         "data_description": {
           "presets": "Vælg de forudindstillinger, der skal være tilgængelige for denne termostat.",
-          "underfloor_heating_enabled": "Slå dette til, hvis nogen af dine varmelegemer er gulvvarmeslynger. Dette låser en varmelegeme-indstilling for 'Varmetype' op samt Varm Gulv-tilstand, som holder et lavt baggrundsvarmeniveau i gulvet i stedet for at lade det køle helt af mellem varmecyklusser."
+          "underfloor_heating_enabled": "Slå dette til, hvis nogen af dine varmelegemer er gulvvarmeslynger. Dette låser en varmelegeme-indstilling for 'Varmetype' op samt Varm Gulv-tilstand, som holder et lavt baggrundsvarmeniveau i gulvet i stedet for at lade det køle helt af mellem varmecyklusser.",
+          "boost_heater_enabled": "Slå dette til for også at bruge Kølings-/Boost-enheden ovenfor til hurtig temperaturgenopretning, efter et vindue genåbnes. Hvis rummet blev koldere end tærsklen nedenfor, mens vinduet var åbent, booster lukning af vinduet enheden til opvarmning; hvis det blev varmere (f.eks. en varm dag med køling undertrykt), booster lukning enheden til køling. Under alle omstændigheder sigter den mod din normale måltemperatur og slukker derefter automatisk. Kræver at en Kølings-/Boost-enhed er konfigureret ovenfor.",
+          "boost_threshold": "Hvis rumtemperaturen afviger (i begge retninger) mere end dette, mens et vindue er åbent, aktiverer lukning af vinduet boostet.",
+          "boost_fan_mode": "Angiv eventuelt enhedens ventilatorhastighed (f.eks. til maksimum) under boost; gendannes automatisk, når boostet slutter. Lad stå som 'Skift ikke ventilatorhastighed' for at springe dette over.",
+          "boost_lag_minutes": "Hvor mange minutters resterende varme/køling enheden fortsat leverer til rummet, efter den er blevet bedt om at stoppe, brugt til at undgå at overskyde målet.",
+          "boost_max_runtime": "Maksimal tid boostet må køre, før det tvinges fra, uanset temperatur."
         }
       },
       "advanced": {
@@ -348,6 +369,11 @@
       "options": {
         "radiator": "Radiator",
         "underfloor": "Gulvvarme"
+      }
+    },
+    "boost_fan_mode": {
+      "options": {
+        "__no_change__": "Skift ikke ventilatorhastighed"
       }
     }
   },

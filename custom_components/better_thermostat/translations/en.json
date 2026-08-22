@@ -7,7 +7,7 @@
         "data": {
           "name": "Name",
           "thermostat": "The real thermostat",
-          "cooler": "The cooling device (optional)",
+          "cooler": "Cooling / Boost device (optional)",
           "min_cooler_resend_interval": "Minimum seconds between repeated cooler commands (0 = disabled)",
           "temperature_sensor": "Temperature sensor",
           "humidity_sensor": "Humidity sensor",
@@ -25,11 +25,22 @@
           "target_temp_max": "Target maximum temperature",
           "target_temp_step": "Target temperature step",
           "presets": "Enabled Presets",
-          "underfloor_heating_enabled": "Enable Underfloor Heating support"
+          "underfloor_heating_enabled": "Enable Underfloor Heating support",
+          "boost_heater_enabled": "Enable Boost on window reopen",
+          "boost_threshold": "Boost temperature-drift threshold (°C)",
+          "boost_fan_mode": "Boost fan speed",
+          "boost_lag_minutes": "Boost anticipation (minutes)",
+          "boost_max_runtime": "Boost safety timeout (minutes)"
         },
         "data_description": {
           "presets": "Select the presets you want to be available for this thermostat.",
-          "underfloor_heating_enabled": "Turn this on if any of your heaters are underfloor heating (UFH) loops. This unlocks a per-heater 'Heating type' option and Warm Floor mode, which keeps a low background heat level in the floor instead of letting it fully cool between heat calls."
+          "underfloor_heating_enabled": "Turn this on if any of your heaters are underfloor heating (UFH) loops. This unlocks a per-heater 'Heating type' option and Warm Floor mode, which keeps a low background heat level in the floor instead of letting it fully cool between heat calls.",
+          "cooler": "Optional. A device used for cooling (in heat+cool setups) and/or, once Boost is enabled below, as the device that quickly recovers room temperature after a window reopens - many fan-coils, heat pumps, and AC units already do both jobs, so one entity can serve both roles.",
+          "boost_heater_enabled": "Turn this on to also use the Cooling / Boost device above for fast temperature recovery after a window reopens. If the room drifted colder than the threshold below while the window was open, closing it boosts the device to heat; if it drifted warmer (e.g. a hot day with cooling suppressed), closing it boosts the device to cool. Either way it targets your normal target temperature, then switches off automatically. Requires a Cooling / Boost device to be configured above.",
+          "boost_threshold": "If the room temperature drifts (in either direction) by more than this while a window is open, closing the window arms the boost.",
+          "boost_fan_mode": "Optionally set the device's fan speed (e.g. to maximum) while boosting; restored automatically once the boost ends. Leave as 'Don't change fan mode' to skip this.",
+          "boost_lag_minutes": "How many minutes of residual heating/cooling the device keeps delivering into the room after being told to stop, used to avoid overshooting the target.",
+          "boost_max_runtime": "Maximum time the boost is allowed to run before forcing it off regardless of temperature."
         }
       },
       "advanced": {
@@ -101,11 +112,21 @@
           "heat_auto_swapped": "If 'auto' means 'heat' for your TRV and you want to swap it",
           "child_lock": "Ignore all inputs on the TRV like a child lock",
           "homematicip": "If you use HomematicIP, you should enable this to slow down the requests to prevent the duty cycle",
-          "underfloor_heating_enabled": "Enable Underfloor Heating support"
+          "underfloor_heating_enabled": "Enable Underfloor Heating support",
+          "boost_heater_enabled": "Enable Boost on window reopen",
+          "boost_threshold": "Boost temperature-drift threshold (°C)",
+          "boost_fan_mode": "Boost fan speed",
+          "boost_lag_minutes": "Boost anticipation (minutes)",
+          "boost_max_runtime": "Boost safety timeout (minutes)"
         },
         "data_description": {
           "presets": "Select the presets you want to be available for this thermostat.",
-          "underfloor_heating_enabled": "Turn this on if any of your heaters are underfloor heating (UFH) loops. This unlocks a per-heater 'Heating type' option and Warm Floor mode, which keeps a low background heat level in the floor instead of letting it fully cool between heat calls."
+          "underfloor_heating_enabled": "Turn this on if any of your heaters are underfloor heating (UFH) loops. This unlocks a per-heater 'Heating type' option and Warm Floor mode, which keeps a low background heat level in the floor instead of letting it fully cool between heat calls.",
+          "boost_heater_enabled": "Turn this on to also use the Cooling / Boost device above for fast temperature recovery after a window reopens. If the room drifted colder than the threshold below while the window was open, closing it boosts the device to heat; if it drifted warmer (e.g. a hot day with cooling suppressed), closing it boosts the device to cool. Either way it targets your normal target temperature, then switches off automatically. Requires a Cooling / Boost device to be configured above.",
+          "boost_threshold": "If the room temperature drifts (in either direction) by more than this while a window is open, closing the window arms the boost.",
+          "boost_fan_mode": "Optionally set the device's fan speed (e.g. to maximum) while boosting; restored automatically once the boost ends. Leave as 'Don't change fan mode' to skip this.",
+          "boost_lag_minutes": "How many minutes of residual heating/cooling the device keeps delivering into the room after being told to stop, used to avoid overshooting the target.",
+          "boost_max_runtime": "Maximum time the boost is allowed to run before forcing it off regardless of temperature."
         }
       },
       "advanced": {
@@ -340,6 +361,11 @@
       "options": {
         "radiator": "Radiator",
         "underfloor": "Underfloor Heating"
+      }
+    },
+    "boost_fan_mode": {
+      "options": {
+        "__no_change__": "Don't change fan mode"
       }
     },
     "mpc_v2_plant_preset": {

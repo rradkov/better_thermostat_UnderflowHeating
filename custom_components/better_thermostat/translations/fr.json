@@ -7,7 +7,7 @@
         "data": {
           "name": "Nom",
           "thermostat": "Le vrai thermostat",
-          "cooler": "Le dispositif de refroidissement (optionnel)",
+          "cooler": "Appareil de refroidissement / boost (optionnel)",
           "min_cooler_resend_interval": "Secondes minimales entre commandes répétées du refroidisseur (0 = désactivé)",
           "temperature_sensor": "Capteur de température",
           "humidity_sensor": "Capteur d'humidité",
@@ -25,11 +25,22 @@
           "target_temp_max": "Température cible maximale",
           "target_temp_step": "Pas de la température cible",
           "presets": "Préréglages activés",
-          "underfloor_heating_enabled": "Activer la prise en charge du chauffage au sol"
+          "underfloor_heating_enabled": "Activer la prise en charge du chauffage au sol",
+          "boost_heater_enabled": "Activer le Boost à la fermeture de la fenêtre",
+          "boost_threshold": "Seuil d'écart de température pour le boost (°C)",
+          "boost_fan_mode": "Vitesse de ventilateur du boost",
+          "boost_lag_minutes": "Anticipation du boost (minutes)",
+          "boost_max_runtime": "Délai de sécurité du boost (minutes)"
         },
         "data_description": {
           "presets": "Sélectionnez les préréglages qui doivent être disponibles pour ce thermostat.",
-          "underfloor_heating_enabled": "Activez cette option si l'un de vos radiateurs est une boucle de chauffage au sol. Cela déverrouille une option 'Type de chauffage' par appareil ainsi que le mode Plancher Chaud, qui maintient un faible niveau de chaleur de fond dans le sol au lieu de le laisser refroidir complètement entre les cycles de chauffe."
+          "underfloor_heating_enabled": "Activez cette option si l'un de vos radiateurs est une boucle de chauffage au sol. Cela déverrouille une option 'Type de chauffage' par appareil ainsi que le mode Plancher Chaud, qui maintient un faible niveau de chaleur de fond dans le sol au lieu de le laisser refroidir complètement entre les cycles de chauffe.",
+          "boost_heater_enabled": "Activez cette option pour utiliser également l'appareil de refroidissement/boost ci-dessus pour une récupération rapide de la température après la réouverture d'une fenêtre. Si la pièce s'est refroidie de plus que le seuil ci-dessous pendant que la fenêtre était ouverte, la fermeture déclenche le boost en chauffage ; si elle s'est réchauffée (par ex. une journée chaude avec le refroidissement suspendu), la fermeture déclenche le boost en refroidissement. Dans les deux cas, l'appareil vise votre température cible normale puis s'éteint automatiquement. Nécessite qu'un appareil de refroidissement/boost soit configuré ci-dessus.",
+          "boost_threshold": "Si la température de la pièce s'écarte (dans un sens ou l'autre) de plus que cette valeur pendant qu'une fenêtre est ouverte, la fermeture de la fenêtre active le boost.",
+          "boost_fan_mode": "Réglez éventuellement la vitesse du ventilateur de l'appareil (par ex. au maximum) pendant le boost ; restaurée automatiquement une fois le boost terminé. Laissez sur 'Ne pas changer la vitesse du ventilateur' pour ignorer cette option.",
+          "boost_lag_minutes": "Combien de minutes de chaleur/froid résiduel l'appareil continue de délivrer dans la pièce après avoir reçu l'ordre de s'arrêter, utilisé pour éviter de dépasser la consigne.",
+          "boost_max_runtime": "Durée maximale pendant laquelle le boost est autorisé à fonctionner avant d'être arrêté de force, quelle que soit la température.",
+          "cooler": "Optionnel. Un appareil utilisé pour le refroidissement (dans les installations chauffage+climatisation) et/ou, une fois le Boost activé ci-dessous, comme appareil qui rétablit rapidement la température de la pièce après la réouverture d'une fenêtre - de nombreux ventilo-convecteurs, pompes à chaleur et climatiseurs remplissent déjà les deux rôles, un seul appareil peut donc suffire."
         }
       },
       "advanced": {
@@ -101,11 +112,21 @@
           "heat_auto_swapped": "Si le mode automatique signifie chauffage pour votre TRV et que vous voulez le permuter",
           "child_lock": "Ignorer toutes les entrées sur le TRV comme une sécurité enfant",
           "homematicip": "Si vous utilisez HomematicIP, vous devriez l'activer pour ralentir les demandes et éviter le cycle de fonctionnement excessif",
-          "underfloor_heating_enabled": "Activer la prise en charge du chauffage au sol"
+          "underfloor_heating_enabled": "Activer la prise en charge du chauffage au sol",
+          "boost_heater_enabled": "Activer le Boost à la fermeture de la fenêtre",
+          "boost_threshold": "Seuil d'écart de température pour le boost (°C)",
+          "boost_fan_mode": "Vitesse de ventilateur du boost",
+          "boost_lag_minutes": "Anticipation du boost (minutes)",
+          "boost_max_runtime": "Délai de sécurité du boost (minutes)"
         },
         "data_description": {
           "presets": "Sélectionnez les préréglages qui doivent être disponibles pour ce thermostat.",
-          "underfloor_heating_enabled": "Activez cette option si l'un de vos radiateurs est une boucle de chauffage au sol. Cela déverrouille une option 'Type de chauffage' par appareil ainsi que le mode Plancher Chaud, qui maintient un faible niveau de chaleur de fond dans le sol au lieu de le laisser refroidir complètement entre les cycles de chauffe."
+          "underfloor_heating_enabled": "Activez cette option si l'un de vos radiateurs est une boucle de chauffage au sol. Cela déverrouille une option 'Type de chauffage' par appareil ainsi que le mode Plancher Chaud, qui maintient un faible niveau de chaleur de fond dans le sol au lieu de le laisser refroidir complètement entre les cycles de chauffe.",
+          "boost_heater_enabled": "Activez cette option pour utiliser également l'appareil de refroidissement/boost ci-dessus pour une récupération rapide de la température après la réouverture d'une fenêtre. Si la pièce s'est refroidie de plus que le seuil ci-dessous pendant que la fenêtre était ouverte, la fermeture déclenche le boost en chauffage ; si elle s'est réchauffée (par ex. une journée chaude avec le refroidissement suspendu), la fermeture déclenche le boost en refroidissement. Dans les deux cas, l'appareil vise votre température cible normale puis s'éteint automatiquement. Nécessite qu'un appareil de refroidissement/boost soit configuré ci-dessus.",
+          "boost_threshold": "Si la température de la pièce s'écarte (dans un sens ou l'autre) de plus que cette valeur pendant qu'une fenêtre est ouverte, la fermeture de la fenêtre active le boost.",
+          "boost_fan_mode": "Réglez éventuellement la vitesse du ventilateur de l'appareil (par ex. au maximum) pendant le boost ; restaurée automatiquement une fois le boost terminé. Laissez sur 'Ne pas changer la vitesse du ventilateur' pour ignorer cette option.",
+          "boost_lag_minutes": "Combien de minutes de chaleur/froid résiduel l'appareil continue de délivrer dans la pièce après avoir reçu l'ordre de s'arrêter, utilisé pour éviter de dépasser la consigne.",
+          "boost_max_runtime": "Durée maximale pendant laquelle le boost est autorisé à fonctionner avant d'être arrêté de force, quelle que soit la température."
         }
       },
       "advanced": {
@@ -348,6 +369,11 @@
       "options": {
         "radiator": "Radiateur",
         "underfloor": "Chauffage au sol"
+      }
+    },
+    "boost_fan_mode": {
+      "options": {
+        "__no_change__": "Ne pas changer la vitesse du ventilateur"
       }
     }
   },
