@@ -87,6 +87,8 @@ class BoostHeaterTracker:
     open_temp: float | None = None
     boost_direction: HVACMode | None = None  # None | HVACMode.HEAT | HVACMode.COOL
     previous_fan_mode: str | None = None
+    previous_hvac_mode: str | None = None
+    previous_temperature: float | None = None
     boost_started_ts: float | None = None
     last_action: HVACAction = field(default=HVACAction.IDLE)
     slow_ema: float | None = None
@@ -170,6 +172,8 @@ class BoostHeaterTracker:
             self.last_boost_end_ts = now_ts
         self.boost_direction = None
         self.previous_fan_mode = None
+        self.previous_hvac_mode = None
+        self.previous_temperature = None
         self.boost_started_ts = None
         self.last_action = HVACAction.IDLE
         # open_temp/slow_ema deliberately survive: a fresh window-open still
@@ -420,8 +424,8 @@ async def _restore_fan_mode(bt, entity_id: str, tracker: BoostHeaterTracker) -> 
         tracker.previous_fan_mode = None
 
 
-async def _ensure_off(bt, entity_id: str, state) -> None:
-    if state.state == HVACMode.OFF:
+async def _ensure_off(bt, entity_id: str, current_mode: str) -> None:
+    if current_mode == HVACMode.OFF:
         return
     await bt.hass.services.async_call(
         "climate",
@@ -429,6 +433,56 @@ async def _ensure_off(bt, entity_id: str, state) -> None:
         {"entity_id": entity_id, "hvac_mode": HVACMode.OFF},
         blocking=False,
     )
+
+
+async def _restore_previous_state(
+    bt, entity_id: str, tracker: BoostHeaterTracker, current_mode: str
+) -> None:
+    """Put the Cooler entity back exactly how it was before this boost cycle.
+
+    Restores the mode, temperature, and fan mode captured the moment the
+    boost first started actuating - not a fresh decision from
+    control_cooler(), a literal snapshot-and-restore. Falls back to forcing
+    the device off when nothing was captured (a boost that never got past
+    the direction-None guard in control_boost() has nothing to restore).
+
+    ``current_mode`` must be the caller's own up-to-date belief of the
+    device's mode - not necessarily the mode a stale ``state`` snapshot
+    fetched at the top of the cycle reports, since a boost that arms and
+    stops within the same cycle has already issued its own mode command by
+    the time this runs. Comparing against the original snapshot there would
+    wrongly conclude no restore command is needed.
+
+    A restored mode of OFF skips the temperature write - matches
+    _ensure_off()'s own behavior, and several integrations reject a
+    set_temperature call while off.
+    """
+    await _restore_fan_mode(bt, entity_id, tracker)
+
+    previous_hvac_mode = tracker.previous_hvac_mode
+    previous_temperature = tracker.previous_temperature
+    tracker.previous_hvac_mode = None
+    tracker.previous_temperature = None
+
+    if previous_hvac_mode is None:
+        await _ensure_off(bt, entity_id, current_mode)
+        return
+
+    if current_mode != previous_hvac_mode:
+        await bt.hass.services.async_call(
+            "climate",
+            "set_hvac_mode",
+            {"entity_id": entity_id, "hvac_mode": previous_hvac_mode},
+            blocking=False,
+        )
+
+    if previous_hvac_mode != HVACMode.OFF and previous_temperature is not None:
+        await bt.hass.services.async_call(
+            "climate",
+            "set_temperature",
+            {"entity_id": entity_id, "temperature": previous_temperature},
+            blocking=False,
+        )
 
 
 def _room_solar_gain_rate(bt) -> float | None:
@@ -620,14 +674,19 @@ async def control_boost(self) -> None:
     state = self.hass.states.get(self.cooler_entity_id)
     if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
         return
+    # Our own up-to-date belief of the device's mode - updated below whenever
+    # this cycle issues its own set_hvac_mode command, since `state` itself
+    # is a snapshot fetched once and never refreshed mid-cycle.
+    current_mode = state.state
 
     if (
         self.bt_hvac_mode == HVACMode.OFF
         or self.contact_open
         or self.call_for_heat is False
     ):
-        await _restore_fan_mode(self, self.cooler_entity_id, tracker)
-        await _ensure_off(self, self.cooler_entity_id, state)
+        await _restore_previous_state(
+            self, self.cooler_entity_id, tracker, current_mode
+        )
         tracker.clear(now_ts=now_ts)
         self.last_cooler_mode_decided = HVACMode.OFF
         _record_boost_status(self, tracker, now_ts)
@@ -637,11 +696,18 @@ async def control_boost(self) -> None:
     if direction is None:
         # Should not normally be reached (the caller only routes here while a
         # boost is armed), but ensure the device isn't left mid-boost.
-        await _ensure_off(self, self.cooler_entity_id, state)
+        await _ensure_off(self, self.cooler_entity_id, current_mode)
         return
 
     if tracker.boost_started_ts is None:
         tracker.boost_started_ts = now_ts
+        # Snapshot the device's mode/temperature before this cycle changes
+        # anything, so ending the boost can restore them verbatim rather
+        # than handing off to a fresh (and possibly different) decision.
+        tracker.previous_hvac_mode = current_mode
+        tracker.previous_temperature = read_setpoint_celsius(
+            self, state, SETPOINT_KEYS, "control_boost() snapshot"
+        )
         boost_fan_mode = getattr(self, "boost_fan_mode", None)
         fan_modes = state.attributes.get("fan_modes")
         if (
@@ -654,13 +720,14 @@ async def control_boost(self) -> None:
                 tracker.previous_fan_mode = str(current_fan_mode)
             await _set_fan_mode(self, self.cooler_entity_id, boost_fan_mode)
 
-    if state.state != direction:
+    if current_mode != direction:
         await self.hass.services.async_call(
             "climate",
             "set_hvac_mode",
             {"entity_id": self.cooler_entity_id, "hvac_mode": direction},
             blocking=False,
         )
+        current_mode = direction
 
     current_setpoint = read_setpoint_celsius(
         self, state, SETPOINT_KEYS, "control_boost()"
@@ -684,8 +751,9 @@ async def control_boost(self) -> None:
     if not isinstance(cur_temp, (int, float)):
         return
     if _boost_should_stop(self, tracker, float(cur_temp), now_ts, direction):
-        await _restore_fan_mode(self, self.cooler_entity_id, tracker)
-        await _ensure_off(self, self.cooler_entity_id, state)
+        await _restore_previous_state(
+            self, self.cooler_entity_id, tracker, current_mode
+        )
         tracker.clear(now_ts=now_ts)
         _record_boost_status(self, tracker, now_ts)
 

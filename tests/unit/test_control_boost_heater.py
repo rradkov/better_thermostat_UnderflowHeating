@@ -177,10 +177,12 @@ async def test_cool_boost_does_not_stop_while_meaningfully_above_target():
 
 @pytest.mark.asyncio
 async def test_heat_boost_stops_once_target_reached_without_slope_data():
+    """Device was off before boost armed (the common case) - stopping
+    restores it to off, the snapshot taken when boost started."""
     bt = _make_bt(
         cur_temp=22.0, bt_target_temp=22.0, tolerance=0.5, boost_direction=HVACMode.HEAT
     )
-    bt.hass.states.get.return_value = _state(hvac_mode=HVACMode.HEAT, temperature=22.0)
+    bt.hass.states.get.return_value = _state(hvac_mode=HVACMode.OFF, temperature=None)
     await control_boost(bt)
     assert bt._boost_heater_tracker.boost_active is False
     mode_calls = _calls_for(bt, "set_hvac_mode")
@@ -189,10 +191,12 @@ async def test_heat_boost_stops_once_target_reached_without_slope_data():
 
 @pytest.mark.asyncio
 async def test_cool_boost_stops_once_target_reached_without_slope_data():
+    """Device was off before boost armed (the common case) - stopping
+    restores it to off, the snapshot taken when boost started."""
     bt = _make_bt(
         cur_temp=22.0, bt_target_temp=22.0, tolerance=0.5, boost_direction=HVACMode.COOL
     )
-    bt.hass.states.get.return_value = _state(hvac_mode=HVACMode.COOL, temperature=22.0)
+    bt.hass.states.get.return_value = _state(hvac_mode=HVACMode.OFF, temperature=None)
     await control_boost(bt)
     assert bt._boost_heater_tracker.boost_active is False
     mode_calls = _calls_for(bt, "set_hvac_mode")
