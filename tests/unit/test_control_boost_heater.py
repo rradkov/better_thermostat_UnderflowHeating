@@ -310,3 +310,50 @@ async def test_no_boost_fan_mode_configured_never_calls_set_fan_mode():
         if call.args[0] == "climate" and call.args[1] == "set_fan_mode"
     ]
     assert not fan_calls
+
+
+class TestBoostStatusReflectsTheSameCycleItStops:
+    """Regression: found via live-HA testing, not the mocked unit tests.
+
+    ``_record_boost_status()`` used to run only from ``update_boost_trend()``
+    (once per cycle, *before* control_boost() decides to stop) - so the
+    diagnostic sensor stayed on "heating"/"cooling" for however long it took
+    some *other* trigger (a TRV state change, the 5-minute tick) to run
+    another cycle and correct it, which in a live instance with no other
+    activity could be minutes, not "the next cycle". control_boost() now
+    also records status at every point it changes the tracker, so the
+    snapshot is correct within the same cycle the stop happens.
+    """
+
+    @pytest.mark.asyncio
+    async def test_status_reflects_off_the_same_cycle_a_guard_force_stops_it(self):
+        bt = _make_bt(bt_hvac_mode=HVACMode.OFF, boost_direction=HVACMode.HEAT)
+        bt.hass.states.get.return_value = _state(hvac_mode=HVACMode.HEAT)
+        await control_boost(bt)
+        assert bt._boost_status["active"] is False
+        assert bt._boost_status["direction"] is None
+
+    @pytest.mark.asyncio
+    async def test_status_reflects_off_the_same_cycle_target_is_reached(self):
+        bt = _make_bt(
+            cur_temp=22.0,
+            bt_target_temp=22.0,
+            tolerance=0.5,
+            boost_direction=HVACMode.HEAT,
+        )
+        bt.hass.states.get.return_value = _state(
+            hvac_mode=HVACMode.HEAT, temperature=22.0
+        )
+        await control_boost(bt)
+        assert bt._boost_status["active"] is False
+        assert bt._boost_status["direction"] is None
+
+    @pytest.mark.asyncio
+    async def test_status_reflects_heating_while_still_active(self):
+        bt = _make_bt(cur_temp=18.0, bt_target_temp=22.0, boost_direction=HVACMode.HEAT)
+        bt.hass.states.get.return_value = _state(
+            hvac_mode=HVACMode.HEAT, temperature=22.0
+        )
+        await control_boost(bt)
+        assert bt._boost_status["active"] is True
+        assert bt._boost_status["direction"] == HVACMode.HEAT

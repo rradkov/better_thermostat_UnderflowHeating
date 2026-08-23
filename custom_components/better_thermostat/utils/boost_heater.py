@@ -630,6 +630,7 @@ async def control_boost(self) -> None:
         await _ensure_off(self, self.cooler_entity_id, state)
         tracker.clear(now_ts=now_ts)
         self.last_cooler_mode_decided = HVACMode.OFF
+        _record_boost_status(self, tracker, now_ts)
         return
 
     direction = tracker.boost_direction
@@ -677,6 +678,7 @@ async def control_boost(self) -> None:
     # Lets the same dual-role-device stand-down logic control_cooler() drives
     # (cooling_owns_dual_role_device()) recognize this cycle's owner.
     self.last_cooler_mode_decided = direction
+    _record_boost_status(self, tracker, now_ts)
 
     cur_temp = getattr(self, "cur_temp", None)
     if not isinstance(cur_temp, (int, float)):
@@ -685,6 +687,7 @@ async def control_boost(self) -> None:
         await _restore_fan_mode(self, self.cooler_entity_id, tracker)
         await _ensure_off(self, self.cooler_entity_id, state)
         tracker.clear(now_ts=now_ts)
+        _record_boost_status(self, tracker, now_ts)
 
 
 # ---------------------------------------------------------------------------
