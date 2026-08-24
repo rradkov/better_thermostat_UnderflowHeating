@@ -1,4 +1,12 @@
-# Better Thermostat
+# Better Thermostat (Underfloor Heating & HVAC Fork)
+
+> **This is a fork** of [KartoffelToby/better_thermostat](https://github.com/KartoffelToby/better_thermostat), the original, actively maintained project — full credit to it and its contributors for everything this fork builds on.
+>
+> This fork is aimed at people running **underfloor heating together with a fan-coil, HVAC unit, or air conditioner** in the same room or home — a combination the original project isn't specifically built around. Underfloor heating has high thermal inertia (slow to recover once it's let go cold), and pairing it with a fast-reacting secondary device for quick recovery, or for cooling, needs behavior the upstream project doesn't have out of the box.
+>
+> **Where this fork is headed:** broadening the range of heat/cool sources Better Thermostat can drive as secondary devices alongside your primary TRVs — heat pumps, air conditioners, other HVAC units, gas boilers, and similar — not just the single fan-coil-style Cooler entity it supports today.
+>
+> If you don't run underfloor heating or a secondary fan-coil/HVAC/AC device, you likely want the upstream project instead — it has the wider install base, active community, and official support channels.
 
 [![Active installations](https://badge.t-haber.de/badge/better_thermostat?kill_cache=1)](https://github.com/KartoffelToby/better_thermostat/)
 [![GitHub issues](https://img.shields.io/github/issues/KartoffelToby/better_thermostat?style=for-the-badge)](https://github.com/KartoffelToby/better_thermostat/issues)
@@ -23,7 +31,7 @@ We've created a companion UI element which can display more information than the
 
 ### Features
 
-This integration brings some smartness to your connected radiator thermostats setup:
+This integration brings some smartness to your connected radiator (and, in this fork, underfloor heating) setup:
 
 - Uses a temperature sensor far away from the radiators to measure the real room temperature
 - Makes your TRVs fully compatible with Google Home
@@ -36,8 +44,8 @@ This integration brings some smartness to your connected radiator thermostats se
 - Dynamic preset temperature learning & persistence (baseline/"no preset" remembers the last temperature you set and survives restarts)
 - **Advanced Control Algorithms**: Choose between MPC, PID, TPI, AI Time Based or simple target temperature matching for precise control.
 - **Selectable Presets**: Configure which preset modes are available for your thermostat during setup.
-- **Warm Floor mode**: Keeps underfloor heating from fully idling between heat calls, using the same heat-loss/heating-power/solar telemetry BT already tracks — no new thermal model, no fully-cold slab to recover from.
-- **Boost on window reopen**: Reuses your configured Cooler entity (a fan-coil, heat pump, or similar) to actively recover the room after a window closes, symmetrically in either direction — a heat boost if the room got too cold, a cool boost if it got too warm.
+- **Warm Floor mode** *(fork-only)*: Keeps underfloor heating from fully idling between heat calls, using the same heat-loss/heating-power/solar telemetry BT already tracks — no new thermal model, no fully-cold slab to recover from.
+- **Boost on window reopen** *(fork-only)*: Reuses your configured Cooler entity (a fan-coil, heat pump, or similar) to actively recover the room after a window closes, symmetrically in either direction — a heat boost if the room got too cold, a cool boost if it got too warm.
 
 See [Underfloor heating (Warm Floor) & Boost](docs/Configuration/configuration.md#underfloor-heating-warm-floor-mode) in the configuration guide for details.
 
