@@ -126,13 +126,6 @@ group:
 No worry, Better Thermostat supports grouping out of the box
 
 ---
-
-## Contributing?
-
-checkout the [CONTRIBUTING.md](CONTRIBUTING.md) file
-
-## ☕ Support
-
 If you want to support this project, you can ☕ [**buy a coffee here**](https://www.buymeacoffee.com/kartoffeltoby).
 
 [![Buy me a coffee](https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=kartoffeltoby&button_colour=0ac982&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff)](https://www.buymeacoffee.com/kartoffeltoby)
