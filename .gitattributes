@@ -1,0 +1,7 @@
+# This fork keeps a customized README.md (Warm Floor / Boost mentions).
+# When merging updates in from the upstream mirror branch, always keep our
+# version instead of taking upstream's - never overwrite it, never leave a
+# conflict to resolve here. Requires the "ours" driver to be registered
+# locally (see CONTRIBUTING.md / git config merge.ours.driver true) - this
+# is a per-clone git config setting that .gitattributes alone can't carry.
+README.md merge=ours
