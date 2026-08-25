@@ -25,7 +25,7 @@
           "target_temp_max": "Sollmaximumtemperatur",
           "target_temp_step": "Solltemperatur-Schritt",
           "presets": "Aktivierte Presets",
-          "underfloor_heating_enabled": "Fußbodenheizung-Unterstützung aktivieren",
+          "underfloor_heating_enabled": "Fußbodenheizung aktivieren",
           "boost_heater_enabled": "Boost beim erneuten Schließen des Fensters aktivieren",
           "boost_threshold": "Boost-Temperaturabweichung-Schwelle (°C)",
           "boost_fan_mode": "Boost-Lüfterstufe",
@@ -33,7 +33,8 @@
           "boost_max_runtime": "Boost-Sicherheits-Timeout (Minuten)",
           "boost_asymmetric_threshold": "Für Kühlung einen anderen Schwellenwert verwenden",
           "boost_threshold_cool": "Boost-Kühlschwellenwert (°C)",
-          "boost_cooldown_minutes": "Boost-Abklingzeit (Minuten)"
+          "boost_cooldown_minutes": "Boost-Abklingzeit (Minuten)",
+          "show_all_calibration_modes": "Alle Kalibrierungsmodi anzeigen"
         },
         "data_description": {
           "presets": "Wähle die Presets aus, die für dieses Thermostat verfügbar sein sollen.",
@@ -46,7 +47,8 @@
           "cooler": "Optional. Ein Gerät, das zum Kühlen (bei Heiz+Kühl-Setups) und/oder, sobald Boost unten aktiviert ist, als Gerät zur schnellen Wiederherstellung der Raumtemperatur nach dem erneuten Öffnen eines Fensters verwendet wird - viele Fan-Coils, Wärmepumpen und Klimageräte erledigen bereits beide Aufgaben, sodass ein Gerät beide Rollen übernehmen kann.",
           "boost_asymmetric_threshold": "Aktivieren, um für das Auslösen eines Kühl-Boosts (z. B. an einem heißen Sommertag) einen anderen Temperaturabweichungs-Schwellenwert als für einen Heiz-Boost festzulegen. Lassen Sie dies deaktiviert, um denselben Schwellenwert für beide Richtungen zu verwenden.",
           "boost_threshold_cool": "Wenn die Raumtemperatur bei geöffnetem Fenster um mehr als diesen Wert gestiegen ist, löst das Schließen einen Kühl-Boost aus. Wird nur verwendet, wenn der Schalter oben aktiviert ist.",
-          "boost_cooldown_minutes": "Mindestzeit nach Ende eines Boosts, bevor ein weiterer ausgelöst werden kann, damit ein Raum, der wiederholt über den Schwellenwert driftet (z. B. wiederholtes Öffnen/Schließen des Fensters), das gemeinsam genutzte Gerät nicht zu häufig schaltet."
+          "boost_cooldown_minutes": "Mindestzeit nach Ende eines Boosts, bevor ein weiterer ausgelöst werden kann, damit ein Raum, der wiederholt über den Schwellenwert driftet (z. B. wiederholtes Öffnen/Schließen des Fensters), das gemeinsam genutzte Gerät nicht zu häufig schaltet.",
+          "show_all_calibration_modes": "Standardmäßig bietet ein als 'Fußboden' markiertes Heizgerät nur die Kalibrierungsmodi an, die dafür korrekt funktionieren (MPC Predictive, (AI) MPC v2, TPI-Controller, PID-Controller). Aktivieren Sie dies, um stattdessen alle 8 Modi zu sehen - nützlich, wenn Ihre Fußbodenheizungsschleife von einem ventilfähigen Aktuator gesteuert wird."
         }
       },
       "advanced": {
@@ -61,14 +63,18 @@
           "calibration_mode": "Kalibrierungsmodus",
           "no_off_system_mode": "Wenn das TRV keinen Aus Modus nutzen kann, kann diese Option aktiviert werden, um das TRV stattdessen auf 5°C zu setzen.",
           "heating_type": "Heizungstyp",
-          "warm_floor_max_backoff": "Warmer Boden max. Rückzug (°C)"
+          "warm_floor_max_backoff": "Warmer Boden max. Rückzug (°C)",
+          "warm_floor_level": "Warmer-Boden-Stufe",
+          "warm_floor_sustain_push": "Warmer Boden Halte-Push (°C)"
         },
         "data_description": {
           "protect_overheating": "Manche TRVs schließen auch nach Erreichen der Temperatur das Ventil nicht vollständig. Dies kann zu Überhitzungen führen. Ebenso, falls der Radiator viel Restwärme abstrahlt. Diese Option kann dies verhindern.",
           "calibration_mode": "Wie die Kalibrierung berechnet wird\n***Normal***: In diesem Modus wird die interne TRV-Temperatur an die des externen Sensors angeglichen.\n\n***Aggressive***: In diesem Modus wird die interne TRV-Temperatur an die des externen Sensors angeglichen - allerdings mit größeren Werten. Dies ist hilfreich, wenn ein Raum schnell aufgeheizt werden soll oder das TRV träge ist.\n\n***AI Time Based***: In diesem Modus wird ein eigener Algorithmus genutzt, der anhand des externen Temperatursensors die Kalibrierung berechnet. Dieser Modus versucht den TRV internen Algorithmus zu optimieren.\n\n***MPC Predictive (Beta)***: Nutzt den MPC-Prädiktivregler, um eine Ventilöffnung vorherzusagen und wandelt sie bei fehlender Ventilsteuerung in Temperatur- oder Offset-Anpassungen um.\n\n***PID Controller***: Verwendet einen PID-Regler, um die Ventilposition dynamisch basierend auf Temperaturfehler, proportionalem Anteil, integraler Akkumulation und derivativem Vorhersage anzupassen.\n\n***TPI Controller***: Verwendet einen Zeit-Proportional-Integral-Regler für stabile und präzise Temperatursteuerung über die Zeit.",
           "calibration": "Wie die Kalibrierung auf das TRV angewendet werden soll.\n\n***Target Temperature Based***: Kalibriert das TRV über die Zieltemperatur.\n\n***Offset Based***: Kalibriert das TRV über eine Offset Funktion im TRV selbst. (Empfohlen)",
-          "heating_type": "Heizkörper: normales TRV-Verhalten. Fußbodenheizung: aktiviert den Warmer-Boden-Modus für dieses Heizgerät.",
-          "warm_floor_max_backoff": "Wie weit unter der Zieltemperatur der Warmer-Boden-Modus den Sollwert dieses Heizgeräts während eines sonst inaktiven Zyklus abweichen lassen darf. Der tatsächlich verwendete Rückzug wird automatisch von diesem Maximum abwärts skaliert, basierend auf gemessenem Wärmeverlust, Heizleistung und Sonneneinstrahlung, sodass der Boden nur so weit zurückgefahren wird, wie es der Raum sicher verträgt."
+          "heating_type": "Fußboden: aktiviert den Warmer-Boden-Modus für dieses Heizgerät. Heizkörper/Fan-Coil-Konvektor/Klima-HVAC: derzeit normales TRV-Verhalten - diese Bezeichnungen existieren, damit eine gemischte Fußbodenheizung+Zweitgerät-Konfiguration jedes Heizgerät korrekt identifizieren kann.",
+          "warm_floor_max_backoff": "Wie weit unter der Zieltemperatur der Warmer-Boden-Modus den Sollwert dieses Heizgeräts während eines sonst inaktiven Zyklus abweichen lassen darf. Der tatsächlich verwendete Rückzug wird automatisch von diesem Maximum abwärts skaliert, basierend auf gemessenem Wärmeverlust, Heizleistung und Sonneneinstrahlung, sodass der Boden nur so weit zurückgefahren wird, wie es der Raum sicher verträgt.",
+          "warm_floor_level": "Wie stark der Warmer-Boden-Modus daran arbeitet, dieses Heizgerät vor vollständigem Leerlauf zu bewahren. Steuert beide Felder unten gemeinsam - wählen Sie 'Benutzerdefiniert', um sie stattdessen direkt einzustellen.\n***1 · Öko***: Sanft, minimaler zusätzlicher Energieverbrauch.\n***2 · Ausgewogen***: Der Standard - ein angemessener Rückzugsspielraum, kein Halte-Push.\n***3 · Warm halten***: Engster Rückzug plus ein kleiner Halte-Push, für Böden, die sich niemals kalt anfühlen dürfen.",
+          "warm_floor_sustain_push": "Bei Kalibrierungsmodi, die den Sollwert im Leerlauf exakt auf die Zieltemperatur festnageln (sodass der obige Rückzug nichts anzuheben hat), wird stattdessen der an das Heizgerät gesendete Sollwert um diesen Betrag über die Zieltemperatur angehoben - nur solange der Raum die Zieltemperatur bereits erreicht hat und dort geblieben ist. Ändert nie die auf der Karte angezeigte Zieltemperatur. 0 (Standard) deaktiviert dies."
         }
       },
       "confirm": {
@@ -118,7 +124,7 @@
           "heat_auto_swapped": "Wenn das Auto Wärme für Ihr TRV bedeutet und Sie es austauschen möchten.",
           "child_lock": "Ignorieren Sie alle Eingaben am TRV wie eine Kindersicherung.",
           "homematicip": "Wenn Sie HomematicIP verwenden, sollten Sie dies aktivieren, um die Anfragen zu verlangsamen und den Duty Cycle zu verhindern.",
-          "underfloor_heating_enabled": "Fußbodenheizung-Unterstützung aktivieren",
+          "underfloor_heating_enabled": "Fußbodenheizung aktivieren",
           "boost_heater_enabled": "Boost beim erneuten Schließen des Fensters aktivieren",
           "boost_threshold": "Boost-Temperaturabweichung-Schwelle (°C)",
           "boost_fan_mode": "Boost-Lüfterstufe",
@@ -126,7 +132,8 @@
           "boost_max_runtime": "Boost-Sicherheits-Timeout (Minuten)",
           "boost_asymmetric_threshold": "Für Kühlung einen anderen Schwellenwert verwenden",
           "boost_threshold_cool": "Boost-Kühlschwellenwert (°C)",
-          "boost_cooldown_minutes": "Boost-Abklingzeit (Minuten)"
+          "boost_cooldown_minutes": "Boost-Abklingzeit (Minuten)",
+          "show_all_calibration_modes": "Alle Kalibrierungsmodi anzeigen"
         },
         "data_description": {
           "presets": "Wähle die Presets aus, die für dieses Thermostat verfügbar sein sollen.",
@@ -138,7 +145,8 @@
           "boost_max_runtime": "Maximale Laufzeit des Boosts, bevor er unabhängig von der Temperatur zwangsweise abgeschaltet wird.",
           "boost_asymmetric_threshold": "Aktivieren, um für das Auslösen eines Kühl-Boosts (z. B. an einem heißen Sommertag) einen anderen Temperaturabweichungs-Schwellenwert als für einen Heiz-Boost festzulegen. Lassen Sie dies deaktiviert, um denselben Schwellenwert für beide Richtungen zu verwenden.",
           "boost_threshold_cool": "Wenn die Raumtemperatur bei geöffnetem Fenster um mehr als diesen Wert gestiegen ist, löst das Schließen einen Kühl-Boost aus. Wird nur verwendet, wenn der Schalter oben aktiviert ist.",
-          "boost_cooldown_minutes": "Mindestzeit nach Ende eines Boosts, bevor ein weiterer ausgelöst werden kann, damit ein Raum, der wiederholt über den Schwellenwert driftet (z. B. wiederholtes Öffnen/Schließen des Fensters), das gemeinsam genutzte Gerät nicht zu häufig schaltet."
+          "boost_cooldown_minutes": "Mindestzeit nach Ende eines Boosts, bevor ein weiterer ausgelöst werden kann, damit ein Raum, der wiederholt über den Schwellenwert driftet (z. B. wiederholtes Öffnen/Schließen des Fensters), das gemeinsam genutzte Gerät nicht zu häufig schaltet.",
+          "show_all_calibration_modes": "Standardmäßig bietet ein als 'Fußboden' markiertes Heizgerät nur die Kalibrierungsmodi an, die dafür korrekt funktionieren (MPC Predictive, (AI) MPC v2, TPI-Controller, PID-Controller). Aktivieren Sie dies, um stattdessen alle 8 Modi zu sehen - nützlich, wenn Ihre Fußbodenheizungsschleife von einem ventilfähigen Aktuator gesteuert wird."
         }
       },
       "advanced": {
@@ -153,14 +161,18 @@
           "calibration_mode": "Kalibrierungsmodus",
           "no_off_system_mode": "Wenn das TRV keinen Aus Modus nutzen kann, kann diese Option aktiviert werden, um das TRV stattdessen auf 5°C zu setzen.",
           "heating_type": "Heizungstyp",
-          "warm_floor_max_backoff": "Warmer Boden max. Rückzug (°C)"
+          "warm_floor_max_backoff": "Warmer Boden max. Rückzug (°C)",
+          "warm_floor_level": "Warmer-Boden-Stufe",
+          "warm_floor_sustain_push": "Warmer Boden Halte-Push (°C)"
         },
         "data_description": {
           "protect_overheating": "Manche TRVs schließen auch nach Erreichen der Temperatur das Ventil nicht vollständig. Dies kann zu Überhitzungen führen. Ebenso falls der Radiator viel Restwärme abstrahlt. Diese Option kann dies verhindern.",
           "calibration_mode": "Wie die Kalibrierung berechnet wird\n***Normal***: In diesem Modus wird die interne TRV-Temperatur an die des externen Sensors angeglichen.\n\n***Aggressive***: In diesem Modus wird die interne TRV-Temperatur an die des externen Sensors angeglichen - allerdings mit größeren Werten. Dies ist hilfreich, wenn ein Raum schnell aufgeheizt werden soll oder das TRV träge ist.\n\n***AI Time Based***: In diesem Modus wird ein eigener Algorithmus genutzt, der anhand des externen Temperatursensors die Kalibrierung berechnet. Dieser Modus versucht den TRV internen Algorithmus zu optimieren.\n\n***MPC Predictive (Beta)***: Nutzt den MPC-Prädiktivregler, um eine Ventilöffnung vorherzusagen und wandelt sie bei fehlender Ventilsteuerung in Temperatur- oder Offset-Anpassungen um.\n\n***PID Controller***: Verwendet einen PID-Regler, um die Ventilposition dynamisch basierend auf Temperaturfehler, proportionalem Anteil, integraler Akkumulation und derivativem Vorhersage anzupassen.\n\n***TPI Controller***: Verwendet einen Zeit-Proportional-Integral-Regler für stabile und präzise Temperatursteuerung über die Zeit.",
           "calibration": "Wie die Kalibrierung auf das TRV angewendet werden soll.\n\n***Target Temperature Based***: Kalibriert das TRV über die Zieltemperatur.\n\n***Offset Based***: Kalibriert das TRV über eine Offset Funktion im TRV selbst. (Empfohlen)",
-          "heating_type": "Heizkörper: normales TRV-Verhalten. Fußbodenheizung: aktiviert den Warmer-Boden-Modus für dieses Heizgerät.",
-          "warm_floor_max_backoff": "Wie weit unter der Zieltemperatur der Warmer-Boden-Modus den Sollwert dieses Heizgeräts während eines sonst inaktiven Zyklus abweichen lassen darf. Der tatsächlich verwendete Rückzug wird automatisch von diesem Maximum abwärts skaliert, basierend auf gemessenem Wärmeverlust, Heizleistung und Sonneneinstrahlung, sodass der Boden nur so weit zurückgefahren wird, wie es der Raum sicher verträgt."
+          "heating_type": "Fußboden: aktiviert den Warmer-Boden-Modus für dieses Heizgerät. Heizkörper/Fan-Coil-Konvektor/Klima-HVAC: derzeit normales TRV-Verhalten - diese Bezeichnungen existieren, damit eine gemischte Fußbodenheizung+Zweitgerät-Konfiguration jedes Heizgerät korrekt identifizieren kann.",
+          "warm_floor_max_backoff": "Wie weit unter der Zieltemperatur der Warmer-Boden-Modus den Sollwert dieses Heizgeräts während eines sonst inaktiven Zyklus abweichen lassen darf. Der tatsächlich verwendete Rückzug wird automatisch von diesem Maximum abwärts skaliert, basierend auf gemessenem Wärmeverlust, Heizleistung und Sonneneinstrahlung, sodass der Boden nur so weit zurückgefahren wird, wie es der Raum sicher verträgt.",
+          "warm_floor_level": "Wie stark der Warmer-Boden-Modus daran arbeitet, dieses Heizgerät vor vollständigem Leerlauf zu bewahren. Steuert beide Felder unten gemeinsam - wählen Sie 'Benutzerdefiniert', um sie stattdessen direkt einzustellen.\n***1 · Öko***: Sanft, minimaler zusätzlicher Energieverbrauch.\n***2 · Ausgewogen***: Der Standard - ein angemessener Rückzugsspielraum, kein Halte-Push.\n***3 · Warm halten***: Engster Rückzug plus ein kleiner Halte-Push, für Böden, die sich niemals kalt anfühlen dürfen.",
+          "warm_floor_sustain_push": "Bei Kalibrierungsmodi, die den Sollwert im Leerlauf exakt auf die Zieltemperatur festnageln (sodass der obige Rückzug nichts anzuheben hat), wird stattdessen der an das Heizgerät gesendete Sollwert um diesen Betrag über die Zieltemperatur angehoben - nur solange der Raum die Zieltemperatur bereits erreicht hat und dort geblieben ist. Ändert nie die auf der Karte angezeigte Zieltemperatur. 0 (Standard) deaktiviert dies."
         }
       }
     },
@@ -390,12 +402,22 @@
     "heating_type": {
       "options": {
         "radiator": "Heizkörper",
-        "underfloor": "Fußbodenheizung"
+        "underfloor": "Fußbodenheizung",
+        "convector": "Fan-Coil / Konvektor",
+        "ac_hvac": "Klimaanlage / HVAC"
       }
     },
     "boost_fan_mode": {
       "options": {
         "__no_change__": "Lüfterstufe nicht ändern"
+      }
+    },
+    "warm_floor_level": {
+      "options": {
+        "level_1": "1 · Öko",
+        "level_2": "2 · Ausgewogen",
+        "level_3": "3 · Warm halten",
+        "custom": "Benutzerdefiniert"
       }
     }
   },

@@ -168,7 +168,12 @@ def test_only_the_real_default_is_labelled_default():
 
 
 def test_every_mode_is_offered_exactly_once():
-    """The selector stays a faithful listing of the enum."""
-    values = list(config_flow_module.CALIBRATION_MODE_SELECTOR.config["options"])
+    """The full-list selector (show_all=True, or a non-underfloor heater)
+    stays a faithful listing of the enum - the soft UFH filter only narrows
+    what's offered by default, it never drops a mode from the catalog."""
+    selector_ = config_flow_module._calibration_mode_selector(
+        heating_type=None, show_all=True
+    )
+    values = list(selector_.config["options"])
     assert len(values) == len(set(values))
     assert set(values) == set(CalibrationMode)

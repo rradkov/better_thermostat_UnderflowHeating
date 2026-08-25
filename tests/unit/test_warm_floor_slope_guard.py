@@ -12,6 +12,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from homeassistant.components.climate.const import HVACMode
+from homeassistant.util import dt as dt_util
 
 from custom_components.better_thermostat.trv import Trv
 from custom_components.better_thermostat.utils.const import (
@@ -42,6 +43,8 @@ def _make_bt(*, temp_slope, **overrides) -> MagicMock:
     bt.heat_loss_rate = MAX_HEAT_LOSS * 0.01
     bt.heating_power = MAX_HEATING_POWER
     bt.state_mgr = None
+    bt.sensor_entity_id = "sensor.room_temp"
+    bt.hass.states.get.return_value = MagicMock(last_updated=dt_util.utcnow())
     bt.real_trvs = {
         "climate.trv": Trv.from_legacy_dict(
             "climate.trv",

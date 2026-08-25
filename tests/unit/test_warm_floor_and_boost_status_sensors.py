@@ -59,6 +59,39 @@ def test_active_status_reads_active_with_attributes():
     assert sensor._attr_extra_state_attributes["backoff_c"] == 0.8
 
 
+def test_active_status_surfaces_sustain_push_c():
+    """The opt-in sustain push amount is its own attribute, separate from
+    (and never negative like) backoff_c."""
+    bt = _make_bt_climate(
+        _warm_floor_status={
+            "active": True,
+            "entity_id": "climate.ufh_living_room",
+            "sustaining_setpoint_c": 22.0,
+            "backoff_c": 0.0,
+            "sustain_push_c": 0.3,
+        }
+    )
+    sensor = BetterThermostatWarmFloorStatusSensor(bt)
+    sensor._update_state()
+    assert sensor._attr_extra_state_attributes["sustain_push_c"] == 0.3
+
+
+def test_active_status_without_sustain_push_reads_none():
+    """A status dict from before this feature (or a cycle where it didn't
+    engage) must not crash - missing/absent reads as None."""
+    bt = _make_bt_climate(
+        _warm_floor_status={
+            "active": True,
+            "entity_id": "climate.ufh_living_room",
+            "sustaining_setpoint_c": 21.2,
+            "backoff_c": 0.8,
+        }
+    )
+    sensor = BetterThermostatWarmFloorStatusSensor(bt)
+    sensor._update_state()
+    assert sensor._attr_extra_state_attributes["sustain_push_c"] is None
+
+
 def test_idle_status_reads_idle():
     bt = _make_bt_climate(
         _warm_floor_status={

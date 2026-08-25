@@ -54,6 +54,7 @@ from .utils.const import (
     CONF_SENSOR,
     CONF_SENSOR_DOOR,
     CONF_SENSOR_WINDOW,
+    CONF_SHOW_ALL_CALIBRATION_MODES,
     CONF_TARGET_TEMP_MAX,
     CONF_TARGET_TEMP_MIN,
     CONF_TARGET_TEMP_STEP,
@@ -72,7 +73,10 @@ from .utils.preset_manager import DEFAULT_ENABLED_PRESETS
 from .utils.underfloor import (
     CONF_HEATING_TYPE,
     CONF_UNDERFLOOR_HEATING_ENABLED,
+    CONF_WARM_FLOOR_LEVEL,
     CONF_WARM_FLOOR_MAX_BACKOFF,
+    CONF_WARM_FLOOR_SUSTAIN_PUSH,
+    HeatingType,
     build_underfloor_advanced_fields,
     build_underfloor_user_fields,
     normalize_underfloor_advanced_submission,
@@ -196,22 +200,53 @@ TEMP_STEP_SELECTOR = selector.SelectSelector(
 )
 
 
-CALIBRATION_MODE_SELECTOR = selector.SelectSelector(
-    selector.SelectSelectorConfig(
-        options=[
-            CalibrationMode.HEATING_POWER_CALIBRATION,
-            CalibrationMode.DEFAULT,
-            CalibrationMode.MPC_CALIBRATION,
-            CalibrationMode.MPC_V2_CALIBRATION,
-            CalibrationMode.AGGRESIVE_CALIBRATION,
-            CalibrationMode.TPI_CALIBRATION,
-            CalibrationMode.PID_CALIBRATION,
-            CalibrationMode.NO_CALIBRATION,
-        ],
-        mode=selector.SelectSelectorMode.DROPDOWN,
-        translation_key="calibration_mode",
-    )
+# All 8 modes, in the order they've always been offered.
+_ALL_CALIBRATION_MODES = (
+    CalibrationMode.HEATING_POWER_CALIBRATION,
+    CalibrationMode.DEFAULT,
+    CalibrationMode.MPC_CALIBRATION,
+    CalibrationMode.MPC_V2_CALIBRATION,
+    CalibrationMode.AGGRESIVE_CALIBRATION,
+    CalibrationMode.TPI_CALIBRATION,
+    CalibrationMode.PID_CALIBRATION,
+    CalibrationMode.NO_CALIBRATION,
 )
+# The 4 modes that already compute a graduated (non-pinned) setpoint on a
+# non-valve device - see custom_components/better_thermostat/calibration.py.
+# The other 4 pin the setpoint at exactly target once idle, which makes
+# Warm Floor's passive floor a structural no-op on a Generic Thermostat-style
+# heater.
+_UFH_RECOMMENDED_CALIBRATION_MODES = (
+    CalibrationMode.MPC_CALIBRATION,
+    CalibrationMode.MPC_V2_CALIBRATION,
+    CalibrationMode.TPI_CALIBRATION,
+    CalibrationMode.PID_CALIBRATION,
+)
+
+
+def _calibration_mode_selector(
+    *, heating_type: str | None, show_all: bool
+) -> selector.SelectSelector:
+    """Build the calibration_mode dropdown, soft-filtered for UFH heaters.
+
+    A heater already saved as ``HeatingType.UNDERFLOOR`` defaults to
+    offering only the four modes above - the instance-level "Show all
+    calibration modes" toggle is the escape hatch back to the full list.
+    Whatever is already stored keeps working regardless of what the dropdown
+    currently offers; this only changes what's presented, never what's
+    accepted.
+    """
+    if heating_type == HeatingType.UNDERFLOOR and not show_all:
+        options = list(_UFH_RECOMMENDED_CALIBRATION_MODES)
+    else:
+        options = list(_ALL_CALIBRATION_MODES)
+    return selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=options,
+            mode=selector.SelectSelectorMode.DROPDOWN,
+            translation_key="calibration_mode",
+        )
+    )
 
 
 MPC_V2_PLANT_PRESET_SELECTOR = selector.SelectSelector(
@@ -326,6 +361,7 @@ def _build_advanced_fields(
     support_valve: bool = False,
     support_offset: bool = False,
     underfloor_enabled: bool = False,
+    show_all_calibration_modes: bool = False,
 ) -> OrderedDict:
     # Migrate old balance_mode to calibration_mode
     sources_list = list(sources)
@@ -386,7 +422,19 @@ def _build_advanced_fields(
             CONF_CALIBRATION_MODE,
             default=get_value(CONF_CALIBRATION_MODE, DEFAULT_CALIBRATION_MODE),
         )
-    ] = CALIBRATION_MODE_SELECTOR
+    ] = _calibration_mode_selector(
+        # The UNDERFLOOR fallback only applies once underfloor heating is
+        # actually enabled for this instance - otherwise this heater's
+        # missing heating_type must resolve to "not underfloor", same as
+        # DEFAULT_HEATING_TYPE's own runtime-safe fallback, or every
+        # non-UFH instance's dropdown would get silently filtered too.
+        heating_type=(
+            get_value(CONF_HEATING_TYPE, HeatingType.UNDERFLOOR.value)
+            if underfloor_enabled
+            else HeatingType.RADIATOR.value
+        ),
+        show_all=show_all_calibration_modes,
+    )
 
     ordered[
         vol.Optional(
@@ -467,6 +515,8 @@ def _normalize_advanced_submission(
         # off again - `dict(data)` above would otherwise carry it through.
         normalized.pop(CONF_HEATING_TYPE, None)
         normalized.pop(CONF_WARM_FLOOR_MAX_BACKOFF, None)
+        normalized.pop(CONF_WARM_FLOOR_SUSTAIN_PUSH, None)
+        normalized.pop(CONF_WARM_FLOOR_LEVEL, None)
 
     _LOGGER.debug("Normalized advanced submission: %s", normalized)
 
@@ -716,6 +766,16 @@ def _build_user_fields(
     for key, field_type in build_underfloor_user_fields(resolve).items():
         fields[vol.Optional(key, default=resolve(key, False))] = field_type
 
+    # Only meaningful once at least one heater can be flagged UNDERFLOOR -
+    # mirrors the same reveal-once-the-parent-toggle-is-on pattern as Boost's
+    # own fields just below.
+    if _as_bool(resolve(CONF_UNDERFLOOR_HEATING_ENABLED, False)):
+        add_field(
+            CONF_SHOW_ALL_CALIBRATION_MODES,
+            bool,
+            default=_as_bool(resolve(CONF_SHOW_ALL_CALIBRATION_MODES, False)),
+        )
+
     # Boost reuses the Cooler entity, so it's only offered once one is
     # configured - there's nothing for it to boost otherwise.
     if resolve(CONF_COOLER):
@@ -911,6 +971,12 @@ def _normalize_user_submission(
             ]
 
     normalized.update(normalize_underfloor_user_submission(user_input))
+    # Only meaningful while underfloor heating is on - a submission made
+    # while it was off (the field wasn't even shown) must not carry a stale
+    # value through from a prior `base`.
+    normalized[CONF_SHOW_ALL_CALIBRATION_MODES] = normalized.get(
+        CONF_UNDERFLOOR_HEATING_ENABLED, False
+    ) and _as_bool(user_input.get(CONF_SHOW_ALL_CALIBRATION_MODES), False)
 
     # Boost can only be enabled while a Cooler is configured - it has
     # nothing to boost otherwise, and a submission where the Cooler was
@@ -948,6 +1014,9 @@ async def _prepare_advanced_context(
         getattr(flow, "data", None) or getattr(flow, "updated_config", None) or {}
     )
     underfloor_enabled = _as_bool(top_level_data.get(CONF_UNDERFLOOR_HEATING_ENABLED))
+    show_all_calibration_modes = _as_bool(
+        top_level_data.get(CONF_SHOW_ALL_CALIBRATION_MODES)
+    )
 
     return {
         "adapter": adapter,
@@ -958,6 +1027,7 @@ async def _prepare_advanced_context(
         "integration": integration,
         "trv_id": trv_id,
         "underfloor_enabled": underfloor_enabled,
+        "show_all_calibration_modes": show_all_calibration_modes,
     }
 
 
@@ -1099,6 +1169,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             support_valve=info.get("support_valve", False),
             support_offset=info.get("support_offset", False),
             underfloor_enabled=ctx.get("underfloor_enabled", False),
+            show_all_calibration_modes=ctx.get("show_all_calibration_modes", False),
         )
         _LOGGER.debug(
             "ConfigFlow advanced step showing form for trv=%s with defaults=%s",
@@ -1278,6 +1349,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             support_valve=info.get("support_valve", False),
             support_offset=info.get("support_offset", False),
             underfloor_enabled=ctx.get("underfloor_enabled", False),
+            show_all_calibration_modes=ctx.get("show_all_calibration_modes", False),
         )
         _LOGGER.debug(
             "OptionsFlow advanced step showing form for trv=%s with defaults=%s",

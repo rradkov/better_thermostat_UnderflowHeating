@@ -946,8 +946,10 @@ class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
     climate entity as ``_warm_floor_status``. ``"disabled"`` means no heater
     on this instance is configured for underfloor heating (or none has run a
     calibration cycle yet); ``"idle"`` means Warm Floor evaluated a cycle but
-    a guard (open contact, no call for heat, HVAC off, still gaining) held it
-    off; ``"active"`` means it actually raised the floor this cycle.
+    a guard (open contact, no call for heat, HVAC off, still gaining, or a
+    stale external sensor) held it off; ``"active"`` means it actually raised
+    the floor this cycle - either the passive backoff floor, or, when
+    ``sustain_push_c`` is set, the opt-in sustain push above target.
     """
 
     _attr_translation_key = "warm_floor_status"
@@ -970,6 +972,7 @@ class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
             "entity_id": status.get("entity_id"),
             "sustaining_setpoint_c": status.get("sustaining_setpoint_c"),
             "backoff_c": status.get("backoff_c"),
+            "sustain_push_c": status.get("sustain_push_c"),
         }
 
 

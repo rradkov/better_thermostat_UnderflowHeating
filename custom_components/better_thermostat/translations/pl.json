@@ -25,7 +25,7 @@
           "target_temp_max": "Maksymalna temperatura docelowa",
           "target_temp_step": "Krok temperatury docelowej",
           "presets": "Włączone ustawienia predefiniowane",
-          "underfloor_heating_enabled": "Włącz obsługę ogrzewania podłogowego",
+          "underfloor_heating_enabled": "Włącz ogrzewanie podłogowe",
           "boost_heater_enabled": "Włącz Doładowanie po ponownym zamknięciu okna",
           "boost_threshold": "Próg odchylenia temperatury doładowania (°C)",
           "boost_fan_mode": "Prędkość wentylatora doładowania",
@@ -33,7 +33,8 @@
           "boost_max_runtime": "Limit bezpieczeństwa doładowania (minuty)",
           "boost_asymmetric_threshold": "Użyj innego progu dla chłodzenia",
           "boost_threshold_cool": "Próg boostu chłodzenia (°C)",
-          "boost_cooldown_minutes": "Czas odnowienia boostu (minuty)"
+          "boost_cooldown_minutes": "Czas odnowienia boostu (minuty)",
+          "show_all_calibration_modes": "Pokaż wszystkie tryby kalibracji"
         },
         "data_description": {
           "presets": "Wybierz ustawienia predefiniowane, które mają być dostępne dla tego termostatu.",
@@ -46,7 +47,8 @@
           "cooler": "Opcjonalnie. Urządzenie używane do chłodzenia (w konfiguracjach grzanie+chłodzenie) i/lub, po włączeniu Doładowania poniżej, jako urządzenie szybko przywracające temperaturę pomieszczenia po ponownym otwarciu okna - wiele klimakonwektorów, pomp ciepła i klimatyzatorów pełni już obie funkcje, więc jedno urządzenie może obsłużyć obie role.",
           "boost_asymmetric_threshold": "Włącz, aby ustawić inny próg dryfu temperatury dla uzbrojenia boostu chłodzenia (np. w gorący letni dzień) niż dla boostu grzania. Pozostaw wyłączone, aby używać tego samego progu w obu kierunkach.",
           "boost_threshold_cool": "Jeśli temperatura w pomieszczeniu wzrosła o więcej niż ta wartość, gdy okno było otwarte, zamknięcie go uzbraja boost chłodzenia. Używane tylko, gdy powyższy przełącznik jest włączony.",
-          "boost_cooldown_minutes": "Minimalny czas po zakończeniu boostu, zanim będzie mógł się uzbroić kolejny, aby pomieszczenie, które wielokrotnie przekracza próg (np. powtarzane otwieranie/zamykanie okna), nie powodowało zbyt częstego przełączania współdzielonego urządzenia."
+          "boost_cooldown_minutes": "Minimalny czas po zakończeniu boostu, zanim będzie mógł się uzbroić kolejny, aby pomieszczenie, które wielokrotnie przekracza próg (np. powtarzane otwieranie/zamykanie okna), nie powodowało zbyt częstego przełączania współdzielonego urządzenia.",
+          "show_all_calibration_modes": "Domyślnie grzejnik oznaczony jako 'Podłoga' oferuje tylko tryby kalibracji, które działają dla niego poprawnie (MPC Predictive, (AI) MPC v2, Kontroler TPI, Kontroler PID). Włącz tę opcję, aby zamiast tego zobaczyć wszystkie 8 trybów - przydatne, jeśli pętla ogrzewania podłogowego jest sterowana siłownikiem z zaworem."
         }
       },
       "advanced": {
@@ -61,14 +63,18 @@
           "calibration_mode": "Tryb kalibracji",
           "no_off_system_mode": "Jeśli Twój TRV nie obsługuje trybu wyłączenia, możesz go włączyć, aby zamiast tego używać temperatury docelowej 5°C",
           "heating_type": "Typ ogrzewania",
-          "warm_floor_max_backoff": "Maksymalne cofnięcie Ciepłej Podłogi (°C)"
+          "warm_floor_max_backoff": "Maksymalne cofnięcie Ciepłej Podłogi (°C)",
+          "warm_floor_level": "Poziom Ciepłej Podłogi",
+          "warm_floor_sustain_push": "Ciepła Podłoga - podbicie podtrzymujące (°C)"
         },
         "data_description": {
           "protect_overheating": "Niektóre TRV całkowicie zamykają zawór po osiągnięciu temperatury. Lub grzejnik ma dużo ciepła resztkowego. Może to spowodować przegrzanie. Ta opcja może temu zapobiec.",
           "calibration_mode": "Rodzaj sposobu obliczania kalibracji\n***Normalny***: W tym trybie wewnętrzny czujnik temperatury TRV jest zależny od zewnętrznego czujnika temperatury.\n***Agresywny***: W tym trybie wewnętrzny czujnik temperatury TRV jest ustalany przez zewnętrzny czujnik temperatury, ale jest ustawiony znacznie niżej/wyżej, aby uzyskać szybsze przyspieszenie.\n***AI Time Based***: W tym trybie wewnętrzny czujnik temperatury TRV jest ustalany przez zewnętrzny czujnik temperatury, ale wartość jest obliczana przez niestandardowy algorytm w celu ulepszenia wewnętrznego algorytmu TRV.",
           "calibration": "Jak kalibracja powinna być zastosowana w TRV (temperatura docelowa lub przesunięcie)\n***Target Temperature Based***: Zastosuj kalibrację do temperatury docelowej.\n***Oparte na przesunięciu***: Zastosuj kalibrację do przesunięcia.",
-          "heating_type": "Grzejnik: normalne zachowanie zaworu TRV. Podłogowe: włącza tryb Ciepłej Podłogi dla tego grzejnika.",
-          "warm_floor_max_backoff": "Jak daleko poniżej temperatury docelowej tryb Ciepłej Podłogi może pozwolić na odchylenie nastawy tego grzejnika podczas cyklu, który w innym przypadku byłby bezczynny. Rzeczywiście używane cofnięcie jest automatycznie skalowane w dół od tego maksimum na podstawie zmierzonej utraty ciepła, mocy grzewczej i zysku słonecznego, dzięki czemu podłoga cofa się tylko tak daleko, jak pomieszczenie może bezpiecznie na to pozwolić."
+          "heating_type": "Podłoga: włącza tryb Ciepła Podłoga dla tego grzejnika. Grzejnik/Konwektor fan-coil/Klimatyzacja-HVAC: na razie normalne zachowanie TRV - te etykiety istnieją, aby mieszana instalacja podłogowa + urządzenie dodatkowe mogła poprawnie identyfikować każdy grzejnik.",
+          "warm_floor_max_backoff": "Jak daleko poniżej temperatury docelowej tryb Ciepłej Podłogi może pozwolić na odchylenie nastawy tego grzejnika podczas cyklu, który w innym przypadku byłby bezczynny. Rzeczywiście używane cofnięcie jest automatycznie skalowane w dół od tego maksimum na podstawie zmierzonej utraty ciepła, mocy grzewczej i zysku słonecznego, dzięki czemu podłoga cofa się tylko tak daleko, jak pomieszczenie może bezpiecznie na to pozwolić.",
+          "warm_floor_level": "Jak mocno Ciepła Podłoga pracuje, aby ten grzejnik nie przeszedł całkowicie w bezczynność. Steruje oboma poniższymi polami razem - wybierz 'Niestandardowy', aby ustawić je bezpośrednio.\n***1 · Eco***: Delikatnie, minimalne dodatkowe zużycie energii.\n***2 · Zbalansowany***: Wartość domyślna - rozsądny margines cofnięcia, bez podbicia podtrzymującego.\n***3 · Utrzymuj ciepło***: Najciaśniejsze cofnięcie plus małe podbicie podtrzymujące, dla podłóg, które nigdy nie mogą być odczuwane jako zimne.",
+          "warm_floor_sustain_push": "Dla trybów kalibracji, które w bezczynności usztywniają nastawę dokładnie na wartości docelowej (więc cofnięcie powyżej nie ma czego podnieść), zamiast tego podbija nastawę wysyłaną do grzejnika o tę wartość powyżej celu - tylko wtedy, gdy pomieszczenie już osiągnęło cel i w nim pozostało. Nigdy nie zmienia temperatury docelowej widocznej na karcie. 0 (domyślnie) wyłącza tę funkcję."
         }
       },
       "confirm": {
@@ -118,7 +124,7 @@
           "heat_auto_swapped": "Jeżeli tryb auto oznacza grzanie dla Twojego TRV i chcesz to zmienić",
           "child_lock": "Ignoruj wszystkie wejścia w TRV jak np. Blokada dziecięca",
           "homematicip": "Jeżeli używasz HomematicIP, powinienieś włączyć tę opcję żeby spowolnić żądania",
-          "underfloor_heating_enabled": "Włącz obsługę ogrzewania podłogowego",
+          "underfloor_heating_enabled": "Włącz ogrzewanie podłogowe",
           "boost_heater_enabled": "Włącz Doładowanie po ponownym zamknięciu okna",
           "boost_threshold": "Próg odchylenia temperatury doładowania (°C)",
           "boost_fan_mode": "Prędkość wentylatora doładowania",
@@ -126,7 +132,8 @@
           "boost_max_runtime": "Limit bezpieczeństwa doładowania (minuty)",
           "boost_asymmetric_threshold": "Użyj innego progu dla chłodzenia",
           "boost_threshold_cool": "Próg boostu chłodzenia (°C)",
-          "boost_cooldown_minutes": "Czas odnowienia boostu (minuty)"
+          "boost_cooldown_minutes": "Czas odnowienia boostu (minuty)",
+          "show_all_calibration_modes": "Pokaż wszystkie tryby kalibracji"
         },
         "data_description": {
           "presets": "Wybierz ustawienia predefiniowane, które mają być dostępne dla tego termostatu.",
@@ -138,7 +145,8 @@
           "boost_max_runtime": "Maksymalny czas, przez jaki doładowanie może działać, zanim zostanie wymuszone wyłączenie niezależnie od temperatury.",
           "boost_asymmetric_threshold": "Włącz, aby ustawić inny próg dryfu temperatury dla uzbrojenia boostu chłodzenia (np. w gorący letni dzień) niż dla boostu grzania. Pozostaw wyłączone, aby używać tego samego progu w obu kierunkach.",
           "boost_threshold_cool": "Jeśli temperatura w pomieszczeniu wzrosła o więcej niż ta wartość, gdy okno było otwarte, zamknięcie go uzbraja boost chłodzenia. Używane tylko, gdy powyższy przełącznik jest włączony.",
-          "boost_cooldown_minutes": "Minimalny czas po zakończeniu boostu, zanim będzie mógł się uzbroić kolejny, aby pomieszczenie, które wielokrotnie przekracza próg (np. powtarzane otwieranie/zamykanie okna), nie powodowało zbyt częstego przełączania współdzielonego urządzenia."
+          "boost_cooldown_minutes": "Minimalny czas po zakończeniu boostu, zanim będzie mógł się uzbroić kolejny, aby pomieszczenie, które wielokrotnie przekracza próg (np. powtarzane otwieranie/zamykanie okna), nie powodowało zbyt częstego przełączania współdzielonego urządzenia.",
+          "show_all_calibration_modes": "Domyślnie grzejnik oznaczony jako 'Podłoga' oferuje tylko tryby kalibracji, które działają dla niego poprawnie (MPC Predictive, (AI) MPC v2, Kontroler TPI, Kontroler PID). Włącz tę opcję, aby zamiast tego zobaczyć wszystkie 8 trybów - przydatne, jeśli pętla ogrzewania podłogowego jest sterowana siłownikiem z zaworem."
         }
       },
       "advanced": {
@@ -153,14 +161,18 @@
           "calibration_mode": "Tryb kalibracji",
           "no_off_system_mode": "Jeśli Twój TRV nie obsługuje trybu wyłączenia, możesz go włączyć, aby zamiast tego używać temperatury docelowej 5°C",
           "heating_type": "Typ ogrzewania",
-          "warm_floor_max_backoff": "Maksymalne cofnięcie Ciepłej Podłogi (°C)"
+          "warm_floor_max_backoff": "Maksymalne cofnięcie Ciepłej Podłogi (°C)",
+          "warm_floor_level": "Poziom Ciepłej Podłogi",
+          "warm_floor_sustain_push": "Ciepła Podłoga - podbicie podtrzymujące (°C)"
         },
         "data_description": {
           "protect_overheating": "Niektóre TRV całkowicie zamykają zawór po osiągnięciu temperatury. Lub grzejnik ma dużo ciepła resztkowego. Może to spowodować przegrzanie. Ta opcja może temu zapobiec.",
           "calibration_mode": "Rodzaj sposobu obliczania kalibracji\n***Normalny***: W tym trybie wewnętrzny czujnik temperatury TRV jest zależny od zewnętrznego czujnika temperatury.\n***Agresywny***: W tym trybie wewnętrzny czujnik temperatury TRV jest ustalany przez zewnętrzny czujnik temperatury, ale jest ustawiony znacznie niżej/wyżej, aby uzyskać szybsze przyspieszenie.\n***AI Time Based***: W tym trybie wewnętrzny czujnik temperatury TRV jest ustalany przez zewnętrzny czujnik temperatury, ale wartość jest obliczana przez niestandardowy algorytm w celu ulepszenia wewnętrznego algorytmu TRV.",
           "calibration": "Jak kalibracja powinna być zastosowana w TRV (temperatura docelowa lub przesunięcie)\n***Target Temperature Based***: Zastosuj kalibrację do temperatury docelowej.\n***Oparte na przesunięciu***: Zastosuj kalibrację do przesunięcia.",
-          "heating_type": "Grzejnik: normalne zachowanie zaworu TRV. Podłogowe: włącza tryb Ciepłej Podłogi dla tego grzejnika.",
-          "warm_floor_max_backoff": "Jak daleko poniżej temperatury docelowej tryb Ciepłej Podłogi może pozwolić na odchylenie nastawy tego grzejnika podczas cyklu, który w innym przypadku byłby bezczynny. Rzeczywiście używane cofnięcie jest automatycznie skalowane w dół od tego maksimum na podstawie zmierzonej utraty ciepła, mocy grzewczej i zysku słonecznego, dzięki czemu podłoga cofa się tylko tak daleko, jak pomieszczenie może bezpiecznie na to pozwolić."
+          "heating_type": "Podłoga: włącza tryb Ciepła Podłoga dla tego grzejnika. Grzejnik/Konwektor fan-coil/Klimatyzacja-HVAC: na razie normalne zachowanie TRV - te etykiety istnieją, aby mieszana instalacja podłogowa + urządzenie dodatkowe mogła poprawnie identyfikować każdy grzejnik.",
+          "warm_floor_max_backoff": "Jak daleko poniżej temperatury docelowej tryb Ciepłej Podłogi może pozwolić na odchylenie nastawy tego grzejnika podczas cyklu, który w innym przypadku byłby bezczynny. Rzeczywiście używane cofnięcie jest automatycznie skalowane w dół od tego maksimum na podstawie zmierzonej utraty ciepła, mocy grzewczej i zysku słonecznego, dzięki czemu podłoga cofa się tylko tak daleko, jak pomieszczenie może bezpiecznie na to pozwolić.",
+          "warm_floor_level": "Jak mocno Ciepła Podłoga pracuje, aby ten grzejnik nie przeszedł całkowicie w bezczynność. Steruje oboma poniższymi polami razem - wybierz 'Niestandardowy', aby ustawić je bezpośrednio.\n***1 · Eco***: Delikatnie, minimalne dodatkowe zużycie energii.\n***2 · Zbalansowany***: Wartość domyślna - rozsądny margines cofnięcia, bez podbicia podtrzymującego.\n***3 · Utrzymuj ciepło***: Najciaśniejsze cofnięcie plus małe podbicie podtrzymujące, dla podłóg, które nigdy nie mogą być odczuwane jako zimne.",
+          "warm_floor_sustain_push": "Dla trybów kalibracji, które w bezczynności usztywniają nastawę dokładnie na wartości docelowej (więc cofnięcie powyżej nie ma czego podnieść), zamiast tego podbija nastawę wysyłaną do grzejnika o tę wartość powyżej celu - tylko wtedy, gdy pomieszczenie już osiągnęło cel i w nim pozostało. Nigdy nie zmienia temperatury docelowej widocznej na karcie. 0 (domyślnie) wyłącza tę funkcję."
         }
       }
     },
@@ -390,12 +402,22 @@
     "heating_type": {
       "options": {
         "radiator": "Grzejnik",
-        "underfloor": "Ogrzewanie podłogowe"
+        "underfloor": "Ogrzewanie podłogowe",
+        "convector": "Fan-coil / Konwektor",
+        "ac_hvac": "Klimatyzacja / HVAC"
       }
     },
     "boost_fan_mode": {
       "options": {
         "__no_change__": "Nie zmieniaj prędkości wentylatora"
+      }
+    },
+    "warm_floor_level": {
+      "options": {
+        "level_1": "1 · Eco",
+        "level_2": "2 · Zbalansowany",
+        "level_3": "3 · Utrzymuj ciepło",
+        "custom": "Niestandardowy"
       }
     }
   },

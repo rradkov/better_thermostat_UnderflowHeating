@@ -25,7 +25,8 @@
           "target_temp_max": "Target maximum temperature",
           "target_temp_step": "Target temperature step",
           "presets": "Enabled Presets",
-          "underfloor_heating_enabled": "Enable Underfloor Heating support",
+          "underfloor_heating_enabled": "Enable Underfloor Heating",
+          "show_all_calibration_modes": "Show all calibration modes",
           "boost_heater_enabled": "Enable Boost on window reopen",
           "boost_threshold": "Boost temperature-drift threshold (°C)",
           "boost_fan_mode": "Boost fan speed",
@@ -38,6 +39,7 @@
         "data_description": {
           "presets": "Select the presets you want to be available for this thermostat.",
           "underfloor_heating_enabled": "Turn this on if any of your heaters are underfloor heating (UFH) loops. This unlocks a per-heater 'Heating type' option and Warm Floor mode, which keeps a low background heat level in the floor instead of letting it fully cool between heat calls.",
+          "show_all_calibration_modes": "By default, a heater flagged 'Underfloor' only offers the calibration modes that work correctly for it (MPC Predictive, (AI) MPC v2, TPI Controller, PID Controller). Turn this on to see all 8 modes instead - useful if your underfloor loop is driven by a valve-capable actuator.",
           "cooler": "Optional. A device used for cooling (in heat+cool setups) and/or, once Boost is enabled below, as the device that quickly recovers room temperature after a window reopens - many fan-coils, heat pumps, and AC units already do both jobs, so one entity can serve both roles.",
           "boost_heater_enabled": "Turn this on to also use the Cooling / Boost device above for fast temperature recovery after a window reopens. If the room drifted colder than the threshold below while the window was open, closing it boosts the device to heat; if it drifted warmer (e.g. a hot day with cooling suppressed), closing it boosts the device to cool. Either way it targets your normal target temperature; once it ends, the device is restored to exactly what it was doing before the boost took over. Requires a Cooling / Boost device to be configured above.",
           "boost_threshold": "If the room temperature drifts (in either direction) by more than this while a window is open, closing the window arms the boost.",
@@ -61,14 +63,18 @@
           "calibration_mode": "Calibration mode",
           "no_off_system_mode": "If your TRV doesn't support the 'off' mode, enable this to use target temperature 5°C instead",
           "heating_type": "Heating type",
-          "warm_floor_max_backoff": "Warm Floor max backoff (°C)"
+          "warm_floor_level": "Warm Floor level",
+          "warm_floor_max_backoff": "Warm Floor max backoff (°C)",
+          "warm_floor_sustain_push": "Warm Floor sustain push (°C)"
         },
         "data_description": {
           "protect_overheating": "Some TRVs don't close the valve completely when the temperature is reached. Or the radiator has a lot of rest heat. This can cause overheating. This option can prevent this.",
           "calibration_mode": "How the calibration is calculated\n***Normal***: Uses your external temperature sensor to correct the TRV's internal sensor. Simple and reliable for most setups.\n***Aggressive***: Similar to Normal, but pushes the TRV harder to reach temperature faster. Good if your room heats slowly.\n***AI Time Based***: Learns your room's heating patterns over time and adjusts automatically. Balances comfort and efficiency.\n***MPC Predictive***: Advanced algorithm that predicts temperature changes and optimizes valve position. Best for stable, efficient heating with minimal overshooting. Learns your room's thermal behavior.\n***PID Controller***: Classic control method that responds to temperature errors. Good for systems with varying heating power or external disturbances.\n***TPI Controller***: Calculates heating duty cycles based on temperature difference. Simple and effective for consistent heating patterns.",
           "calibration": "How the calibration is applied on the TRV\n***Target Temperature Based***: Apply the calibration to the target temperature.\n***Offset Based***: Apply the calibration to the temperature offset.",
-          "heating_type": "Radiator: normal TRV behavior. Underfloor: enables Warm Floor mode for this heater.",
-          "warm_floor_max_backoff": "How far below target temperature Warm Floor is allowed to let this heater's setpoint drift during what would otherwise be an idle cycle. The actual backoff used is automatically scaled down from this maximum based on measured heat loss, heating power, and solar gain, so the floor is only ever backed off as far as the room can safely afford."
+          "heating_type": "Under: enables Warm Floor mode for this heater. Radiator/Fan-coil-Convector/AC-HVAC: normal TRV behavior for now - these labels exist so a mixed underfloor+secondary-device setup can identify each heater correctly.",
+          "warm_floor_level": "How hard Warm Floor works to keep this heater from fully idling. Controls both fields below together - pick 'Custom' to set them directly instead.\n***1 · Eco***: Gentle, minimal extra energy use.\n***2 · Balanced***: The default - a reasonable backoff allowance, no sustain push.\n***3 · Keep it Hot***: Tightest backoff plus a small sustain push, for floors that must never feel cold.",
+          "warm_floor_max_backoff": "How far below target temperature Warm Floor is allowed to let this heater's setpoint drift during what would otherwise be an idle cycle. The actual backoff used is automatically scaled down from this maximum based on measured heat loss, heating power, and solar gain, so the floor is only ever backed off as far as the room can safely afford.",
+          "warm_floor_sustain_push": "For calibration modes that pin the setpoint at exactly target once idle (so the backoff above has nothing to raise), push the setpoint sent to the heater this much above target instead - only while the room has already reached target and stayed there. Never changes the target temperature you see on the card. 0 (default) disables this."
         }
       },
       "confirm": {
@@ -81,8 +87,8 @@
       "no_name": "Please enter a name.",
       "no_heater": "Please select at least one real thermostat.",
       "no_off_mode": "Your device is special and has no off mode :(\nBetter Thermostat will use the minimal target temp instead.",
-      "target_temp_min_above_max": "The target minimum temperature must not exceed the target maximum temperature.",
       "no_outside_temp": "You have no outside temperature sensor. Better Thermostat will use the weather entity instead.",
+      "target_temp_min_above_max": "The target minimum temperature must not exceed the target maximum temperature.",
       "no_data": "No data was received. Please try again."
     },
     "abort": {
@@ -118,7 +124,8 @@
           "heat_auto_swapped": "If 'auto' means 'heat' for your TRV and you want to swap it",
           "child_lock": "Ignore all inputs on the TRV like a child lock",
           "homematicip": "If you use HomematicIP, you should enable this to slow down the requests to prevent the duty cycle",
-          "underfloor_heating_enabled": "Enable Underfloor Heating support",
+          "underfloor_heating_enabled": "Enable Underfloor Heating",
+          "show_all_calibration_modes": "Show all calibration modes",
           "boost_heater_enabled": "Enable Boost on window reopen",
           "boost_threshold": "Boost temperature-drift threshold (°C)",
           "boost_fan_mode": "Boost fan speed",
@@ -131,6 +138,7 @@
         "data_description": {
           "presets": "Select the presets you want to be available for this thermostat.",
           "underfloor_heating_enabled": "Turn this on if any of your heaters are underfloor heating (UFH) loops. This unlocks a per-heater 'Heating type' option and Warm Floor mode, which keeps a low background heat level in the floor instead of letting it fully cool between heat calls.",
+          "show_all_calibration_modes": "By default, a heater flagged 'Underfloor' only offers the calibration modes that work correctly for it (MPC Predictive, (AI) MPC v2, TPI Controller, PID Controller). Turn this on to see all 8 modes instead - useful if your underfloor loop is driven by a valve-capable actuator.",
           "boost_heater_enabled": "Turn this on to also use the Cooling / Boost device above for fast temperature recovery after a window reopens. If the room drifted colder than the threshold below while the window was open, closing it boosts the device to heat; if it drifted warmer (e.g. a hot day with cooling suppressed), closing it boosts the device to cool. Either way it targets your normal target temperature; once it ends, the device is restored to exactly what it was doing before the boost took over. Requires a Cooling / Boost device to be configured above.",
           "boost_threshold": "If the room temperature drifts (in either direction) by more than this while a window is open, closing the window arms the boost.",
           "boost_fan_mode": "Optionally set the device's fan speed (e.g. to maximum) while boosting; restored automatically once the boost ends. Leave as 'Don't change fan mode' to skip this.",
@@ -153,14 +161,18 @@
           "calibration_mode": "Calibration mode",
           "no_off_system_mode": "If your TRV doesn't support the 'off' mode, enable this to use target temperature 5°C instead",
           "heating_type": "Heating type",
-          "warm_floor_max_backoff": "Warm Floor max backoff (°C)"
+          "warm_floor_level": "Warm Floor level",
+          "warm_floor_max_backoff": "Warm Floor max backoff (°C)",
+          "warm_floor_sustain_push": "Warm Floor sustain push (°C)"
         },
         "data_description": {
           "protect_overheating": "Some TRVs don't close the valve completely when the temperature is reached. Or the radiator has a lot of rest heat. This can cause overheating. This option can prevent this.",
           "calibration_mode": "How the calibration is calculated\n***Normal***: Uses your external temperature sensor to correct the TRV's internal sensor. Simple and reliable for most setups.\n***Aggressive***: Similar to Normal, but pushes the TRV harder to reach temperature faster. Good if your room heats slowly.\n***AI Time Based***: Learns your room's heating patterns over time and adjusts automatically. Balances comfort and efficiency.\n***MPC Predictive***: Advanced algorithm that predicts temperature changes and optimizes valve position. Best for stable, efficient heating with minimal overshooting. Learns your room's thermal behavior.\n***PID Controller***: Classic control method that responds to temperature errors. Good for systems with varying heating power or external disturbances.\n***TPI Controller***: Calculates heating duty cycles based on temperature difference. Simple and effective for consistent heating patterns.",
           "calibration": "How the calibration is applied on the TRV\n***Target Temperature Based***: Apply the calibration to the target temperature.\n***Offset Based***: Apply the calibration to the temperature offset.",
-          "heating_type": "Radiator: normal TRV behavior. Underfloor: enables Warm Floor mode for this heater.",
-          "warm_floor_max_backoff": "How far below target temperature Warm Floor is allowed to let this heater's setpoint drift during what would otherwise be an idle cycle. The actual backoff used is automatically scaled down from this maximum based on measured heat loss, heating power, and solar gain, so the floor is only ever backed off as far as the room can safely afford."
+          "heating_type": "Under: enables Warm Floor mode for this heater. Radiator/Fan-coil-Convector/AC-HVAC: normal TRV behavior for now - these labels exist so a mixed underfloor+secondary-device setup can identify each heater correctly.",
+          "warm_floor_level": "How hard Warm Floor works to keep this heater from fully idling. Controls both fields below together - pick 'Custom' to set them directly instead.\n***1 · Eco***: Gentle, minimal extra energy use.\n***2 · Balanced***: The default - a reasonable backoff allowance, no sustain push.\n***3 · Keep it Hot***: Tightest backoff plus a small sustain push, for floors that must never feel cold.",
+          "warm_floor_max_backoff": "How far below target temperature Warm Floor is allowed to let this heater's setpoint drift during what would otherwise be an idle cycle. The actual backoff used is automatically scaled down from this maximum based on measured heat loss, heating power, and solar gain, so the floor is only ever backed off as far as the room can safely afford.",
+          "warm_floor_sustain_push": "For calibration modes that pin the setpoint at exactly target once idle (so the backoff above has nothing to raise), push the setpoint sent to the heater this much above target instead - only while the room has already reached target and stayed there. Never changes the target temperature you see on the card. 0 (default) disables this."
         }
       }
     },
@@ -169,8 +181,8 @@
       "no_name": "Please enter a name.",
       "no_heater": "Please select at least one real thermostat.",
       "no_off_mode": "Your device is special and has no off mode :(\nBetter Thermostat will use the minimal target temp instead.",
-      "target_temp_min_above_max": "The target minimum temperature must not exceed the target maximum temperature.",
       "no_outside_temp": "You have no outside temperature sensor. Better Thermostat will use the weather entity instead.",
+      "target_temp_min_above_max": "The target minimum temperature must not exceed the target maximum temperature.",
       "no_data": "No data was received. Please try again."
     }
   },
@@ -381,8 +393,18 @@
     },
     "heating_type": {
       "options": {
+        "underfloor": "Under (Underfloor)",
         "radiator": "Radiator",
-        "underfloor": "Underfloor Heating"
+        "convector": "Fan-coil / Convector",
+        "ac_hvac": "Air Conditioner / HVAC"
+      }
+    },
+    "warm_floor_level": {
+      "options": {
+        "level_1": "1 · Eco",
+        "level_2": "2 · Balanced",
+        "level_3": "3 · Keep it Hot",
+        "custom": "Custom"
       }
     },
     "boost_fan_mode": {

@@ -11,6 +11,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from homeassistant.components.climate.const import HVACMode
+from homeassistant.util import dt as dt_util
 
 from custom_components.better_thermostat.calibration import (
     calculate_calibration_setpoint,
@@ -41,6 +42,14 @@ def _make_bt(
     bt.heat_loss_rate = 0.01
     bt.heating_power = 0.05
     bt.state_mgr = None
+    bt.cur_temp = 20.0
+    bt.hvac_action = "idle"
+    # Fresh by default - a stale external sensor is its own dedicated test
+    # file (test_warm_floor_sustain_push.py); every existing case here
+    # exercises the *other* guards and must not be short-circuited by this
+    # one.
+    bt.sensor_entity_id = "sensor.room_temp"
+    bt.hass.states.get.return_value = MagicMock(last_updated=dt_util.utcnow())
 
     quirks = MagicMock()
     quirks.fix_local_calibration.side_effect = lambda _self, _eid, offset: float(offset)

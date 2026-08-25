@@ -119,25 +119,39 @@ Better Thermostat offers several algorithms to control your heating:
 
 ## Underfloor heating (Warm Floor mode)
 
-Underfloor heating (UFH) has much higher thermal inertia than a radiator TRV: once the room is satisfied and BT backs a heater fully off, the slab keeps cooling for a long time, so recovering from a fully-cold floor is slow and energy-costly. Warm Floor mode keeps a low, continuous background heat level in UFH-flagged heaters instead of letting them fully idle, without ever pushing the room air above target.
+Underfloor heating (UFH) has much higher thermal inertia than a radiator TRV: once the room is satisfied and BT backs a heater fully off, the slab keeps cooling for a long time, so recovering from a fully-cold floor is slow and energy-costly. Warm Floor mode keeps a low, continuous background heat level in UFH-flagged heaters instead of letting them fully idle. The passive backoff floor never pushes the room air above target; the opt-in sustain push (see below, off by default) pushes only the setpoint sent to the physical heater a small amount above target — the target temperature shown on the card never changes.
 
 This works with any `climate.*` heater, including Home Assistant's own **Generic Thermostat** helper (external sensor + on/off relay) — the most common way to wire up UFH — with no extra plumbing.
 
-**Enable underfloor heating** (first step, top-level toggle) — turn this on if any heater in this Better Thermostat instance is underfloor heating. Leave it off if every heater is a radiator; it changes nothing until at least one heater is flagged below.
+**Enable Underfloor Heating** (first step, top-level toggle) — turn this on if any heater in this Better Thermostat instance is underfloor heating. Leave it off if every heater is a radiator; it changes nothing until at least one heater is flagged below. Also reveals **Show all calibration modes** (see below).
 
-Once enabled, each heater gets two extra fields on the advanced (second) step:
+Once enabled, each heater gets extra fields on the advanced (second) step:
 
-**Heating type** — `Radiator` (default) or `Underfloor Heating`. Only heaters explicitly set to `Underfloor Heating` get the sustaining-floor behavior; everything else is unaffected.
+**Heating type** — `Under` (default, once this field is shown), `Radiator`, `Fan-coil / Convector`, or `Air Conditioner / HVAC`. Only heaters set to `Under` get the sustaining-floor behavior described here; the other three labels exist so a room that mixes underfloor heating with a secondary device can identify each heater correctly, and today behave identically to `Radiator` (no Warm Floor effect).
 
-**Warm Floor max backoff (°C)** — how far below the target temperature the sustaining floor is allowed to drift during an idle cycle. Default `1.5°C`, range `0.2–5.0°C`. The *actual* backoff used each cycle is automatically scaled down (never up) from this configured maximum based on:
+**Warm Floor level** — `1 · Eco`, `2 · Balanced` (default), `3 · Keep it Hot`, or `Custom`. A single dial that sets both **Warm Floor max backoff** and **Warm Floor sustain push** together:
+
+| Level | Max backoff | Sustain push |
+|---|---|---|
+| 1 · Eco | 3.0°C | 0.0°C (off) |
+| 2 · Balanced | 1.5°C | 0.0°C (off) |
+| 3 · Keep it Hot | 0.5°C | 0.3°C |
+
+Choosing `Custom` reveals both raw °C fields below so you can set them directly instead of using a preset.
+
+**Warm Floor max backoff (°C)** — how far below the target temperature the sustaining floor is allowed to drift during an idle cycle. Range `0.2–5.0°C`. The *actual* backoff used each cycle is automatically scaled down (never up) from this configured maximum based on:
 
 - **Heat loss / heating power** (or, for MPC-calibrated heaters, the learned MPC Loss/Gain and MPC Insulation coefficients) — a leaky room or a weak emitter gets a *tighter* floor, since it can't afford to drift far without a slow, costly recovery.
 - **Solar gain** (MPC-calibrated heaters only, once learned) — if the room's current comfort is being propped up by sunlight rather than delivered heat, the floor stays close to target so it doesn't need to catch up once the sun's contribution fades.
 - **The room's real-time trend** — the floor never raises while the room is still actively gaining, and tightens immediately if the room is falling faster than expected.
 
+**Warm Floor sustain push (°C)** — off (`0.0`) by default. On four of the eight calibration modes (**AI Time Based**, **External Sensor Offset Only**, **Aggressive**, **No Calibration**), a non-valve heater's setpoint is already pinned at exactly target once idle, so the backoff floor above never has anything to raise — it's a structural no-op. Sustain push closes that gap: once the room has actually reached target and the heater is idle, it pushes the setpoint *sent to the heater* up to this much above target, scaled down the same way as the backoff amount. Range `0.0–1.5°C`. Never fires while the room is still gaining, while another heater on this entity is under active direct-valve control, or while the external temperature sensor's last update is more than ~20 minutes old (a stale sensor is treated the same as "still gaining," not as "safe to push"). **MPC Predictive**, **(AI) MPC v2**, **TPI Controller**, and **PID Controller** already compute a graduated setpoint and were never affected by this gap — sustain push can still engage there too on the rare cycle where they land exactly on target, but has nothing to do most of the time.
+
+**Show all calibration modes** (top-level toggle, shown once Underfloor Heating is enabled) — off by default. While off, a heater flagged `Under` only offers **MPC Predictive**, **(AI) MPC v2**, **TPI Controller**, and **PID Controller** in its **Calibration mode** dropdown — the four modes proven to work correctly on a non-valve UFH heater without relying on sustain push. Turn this on to see all 8 modes again; a valve-capable UFH actuator (e.g. a TRV head on a manifold) works correctly on any of them regardless of this setting.
+
 This never overrides an open window/door, a `call_for_heat=false` weather/outdoor gate, or BT being switched off — Warm Floor only ever raises what would otherwise be a fully-idle cycle, it never fights the normal heating computation or forces heat the room doesn't need.
 
-A **Warm Floor Status** diagnostic sensor is created per instance, showing `active`/`idle`/`disabled` plus the current sustaining setpoint and backoff amount.
+A **Warm Floor Status** diagnostic sensor is created per instance, showing `active`/`idle`/`disabled` plus the current sustaining setpoint, backoff amount, and sustain push amount.
 
 ## Boost on window reopen
 

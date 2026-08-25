@@ -70,6 +70,12 @@ CONF_TOLERANCE: Final = "tolerance"
 CONF_TARGET_TEMP_MIN: Final = "target_temp_min"
 CONF_TARGET_TEMP_MAX: Final = "target_temp_max"
 CONF_TARGET_TEMP_STEP: Final = "target_temp_step"
+# Instance-level toggle: when off, the per-heater calibration_mode dropdown
+# defaults to only the four modes proven to compute a graduated setpoint on
+# an underfloor heater (see utils/underfloor.py); "Show all" reveals every
+# mode. A soft nudge, not a hard restriction - it never filters what's
+# actually stored.
+CONF_SHOW_ALL_CALIBRATION_MODES: Final = "show_all_calibration_modes"
 
 SUPPORT_FLAGS: Final = (
     ClimateEntityFeature.TARGET_TEMPERATURE

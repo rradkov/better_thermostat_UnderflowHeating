@@ -25,7 +25,7 @@
           "target_temp_max": "Maksimum hedef sıcaklık",
           "target_temp_step": "Hedef sıcaklık adımı",
           "presets": "Etkin ön ayarlar",
-          "underfloor_heating_enabled": "Yerden Isıtma desteğini etkinleştir",
+          "underfloor_heating_enabled": "Yerden Isıtmayı Etkinleştir",
           "boost_heater_enabled": "Pencere yeniden kapatıldığında Takviyeyi etkinleştir",
           "boost_threshold": "Takviye sıcaklık sapma eşiği (°C)",
           "boost_fan_mode": "Takviye fan hızı",
@@ -33,7 +33,8 @@
           "boost_max_runtime": "Takviye güvenlik zaman aşımı (dakika)",
           "boost_asymmetric_threshold": "Soğutma için farklı bir eşik kullan",
           "boost_threshold_cool": "Boost soğutma eşiği (°C)",
-          "boost_cooldown_minutes": "Boost soğuma süresi (dakika)"
+          "boost_cooldown_minutes": "Boost soğuma süresi (dakika)",
+          "show_all_calibration_modes": "Tüm kalibrasyon modlarını göster"
         },
         "data_description": {
           "presets": "Bu termostat için kullanılabilir olmasını istediğiniz ön ayarları seçin.",
@@ -46,7 +47,8 @@
           "cooler": "İsteğe bağlı. Soğutma için (ısıtma+soğutma kurulumlarında) ve/veya aşağıda Takviye etkinleştirildiğinde, bir pencere yeniden açıldıktan sonra oda sıcaklığını hızla geri kazandıran cihaz olarak kullanılan bir cihaz - birçok fan-coil, ısı pompası ve klima zaten her iki görevi de yapıyor, bu nedenle tek bir cihaz her iki rolü de üstlenebilir.",
           "boost_asymmetric_threshold": "Bir soğutma boost'unu (örneğin sıcak bir yaz günü) tetiklemek için ısıtma boost'undan farklı bir sapma eşiği ayarlamak için bunu açın. Her iki yön için de aynı eşiği kullanmak için kapalı bırakın.",
           "boost_threshold_cool": "Pencere açıkken oda sıcaklığı bu değerden fazla yükseldiyse, pencereyi kapatmak bir soğutma boost'unu devreye sokar. Yalnızca yukarıdaki anahtar açıkken kullanılır.",
-          "boost_cooldown_minutes": "Bir boost bittikten sonra başka birinin devreye girebilmesi için gereken minimum süre, böylece eşiği tekrar tekrar aşan bir oda (örneğin tekrar tekrar pencere açma/kapama) paylaşılan cihazın çok sık geçiş yapmasına neden olmaz."
+          "boost_cooldown_minutes": "Bir boost bittikten sonra başka birinin devreye girebilmesi için gereken minimum süre, böylece eşiği tekrar tekrar aşan bir oda (örneğin tekrar tekrar pencere açma/kapama) paylaşılan cihazın çok sık geçiş yapmasına neden olmaz.",
+          "show_all_calibration_modes": "Varsayılan olarak 'Yerden' olarak işaretlenmiş bir ısıtıcı yalnızca kendisi için doğru çalışan kalibrasyon modlarını sunar (MPC Predictive, (AI) MPC v2, TPI Denetleyici, PID Denetleyici). Bunun yerine tüm 8 modu görmek için bunu açın - yerden ısıtma devreniz valf kontrollü bir aktüatör tarafından yönetiliyorsa kullanışlıdır."
         }
       },
       "advanced": {
@@ -61,14 +63,18 @@
           "calibration_mode": "Kalibrasyon modu",
           "no_off_system_mode": "TRV'niz kapalı modu desteklemiyorsa, bunun yerine hedef sıcaklık 5°C kullanmak için bunu etkinleştirebilirsiniz",
           "heating_type": "Isıtma türü",
-          "warm_floor_max_backoff": "Sıcak Zemin maks. geri çekilme (°C)"
+          "warm_floor_max_backoff": "Sıcak Zemin maks. geri çekilme (°C)",
+          "warm_floor_level": "Sıcak Zemin seviyesi",
+          "warm_floor_sustain_push": "Sıcak Zemin - sürdürme itmesi (°C)"
         },
         "data_description": {
           "protect_overheating": "Bazı TRV'ler sıcaklığa ulaşıldığında vanayı tamamen kapatmaz. Veya radyatör çok fazla artık ısıya sahiptir. Bu aşırı ısınmaya neden olabilir. Bu seçenek bunu önleyebilir.",
           "calibration_mode": "Kalibrasyonun nasıl hesaplanacağı\n***Normal***: Bu modda, TRV iç sıcaklık sensörü dış sıcaklık sensörü tarafından düzeltilir.\n***Agresif***: Bu modda, TRV iç sıcaklık sensörü dış sıcaklık sensörü tarafından düzeltilir ancak daha hızlı bir artış için çok daha düşük/yüksek ayarlanır.\n***Yapay Zeka Zaman Tabanlı***: Bu modda, TRV iç sıcaklık sensörü dış sıcaklık sensörü tarafından düzeltilir, ancak özel bir algoritma TRV iç algoritmasını iyileştirmek için değeri hesaplar.\n***MPC Tahminli (Beta)***: Doğrudan vana kontrolü mevcut olmadığında bir vana açıklığı türetmek ve bunu ofsetlere veya ayar noktasına dönüştürmek için MPC tahminli denetleyiciyi kullanır.",
           "calibration": "Kalibrasyonun TRV'ye nasıl uygulanacağı (Hedef sıcaklık veya ofset)\n***Hedef Sıcaklık Tabanlı***: Kalibrasyonu hedef sıcaklığa uygula.\n***Ofset Tabanlı***: Kalibrasyonu ofsete uygula.",
-          "heating_type": "Radyatör: normal TRV davranışı. Yerden ısıtma: bu ısıtıcı için Sıcak Zemin modunu etkinleştirir.",
-          "warm_floor_max_backoff": "Sıcak Zemin modunun, aksi takdirde boşta kalacak bir döngü sırasında bu ısıtıcının ayar noktasının hedef sıcaklığın ne kadar altına kaymasına izin verdiği. Kullanılan gerçek geri çekilme, ölçülen ısı kaybı, ısıtma gücü ve güneş kazancına göre bu maksimumdan otomatik olarak aşağı ölçeklenir, böylece zemin yalnızca odanın güvenle karşılayabileceği kadar geri çekilir."
+          "heating_type": "Yerden: bu ısıtıcı için Sıcak Zemin modunu etkinleştirir. Radyatör/Fan-coil Konvektör/Klima-HVAC: şimdilik normal TRV davranışı - bu etiketler, karışık yerden ısıtma + ikincil cihaz kurulumunun her ısıtıcıyı doğru şekilde tanımlayabilmesi için mevcuttur.",
+          "warm_floor_max_backoff": "Sıcak Zemin modunun, aksi takdirde boşta kalacak bir döngü sırasında bu ısıtıcının ayar noktasının hedef sıcaklığın ne kadar altına kaymasına izin verdiği. Kullanılan gerçek geri çekilme, ölçülen ısı kaybı, ısıtma gücü ve güneş kazancına göre bu maksimumdan otomatik olarak aşağı ölçeklenir, böylece zemin yalnızca odanın güvenle karşılayabileceği kadar geri çekilir.",
+          "warm_floor_level": "Sıcak Zemin'in bu ısıtıcının tamamen boşta kalmasını önlemek için ne kadar yoğun çalıştığı. Aşağıdaki her iki alanı birlikte kontrol eder - bunları doğrudan ayarlamak için 'Özel' seçin.\n***1 · Eko***: Hafif, minimum ek enerji tüketimi.\n***2 · Dengeli***: Varsayılan - makul bir geri çekilme payı, sürdürme itmesi yok.\n***3 · Sıcak Tut***: En sıkı geri çekilme artı asla soğuk hissettirmemesi gereken zeminler için küçük bir sürdürme itmesi.",
+          "warm_floor_sustain_push": "Boşta kaldığında ayar noktasını tam olarak hedefte sabitleyen kalibrasyon modları için (böylece yukarıdaki geri çekilmenin yükseltecek bir şeyi kalmaz), bunun yerine ısıtıcıya gönderilen ayar noktasını hedefin bu kadar üzerine iter - yalnızca oda hedefe zaten ulaşmışken ve orada kalmışken. Kartta gördüğünüz hedef sıcaklığı asla değiştirmez. 0 (varsayılan) bunu devre dışı bırakır."
         }
       },
       "confirm": {
@@ -118,7 +124,7 @@
           "heat_auto_swapped": "TRV'nizde otomatik mod ısıtma anlamına geliyorsa ve değiştirmek istiyorsanız",
           "child_lock": "TRV üzerindeki tüm girişleri çocuk kilidi gibi yoksay",
           "homematicip": "HomematicIP kullanıyorsanız, görev döngüsünü önlemek için istekleri yavaşlatmak amacıyla bunu etkinleştirmelisiniz",
-          "underfloor_heating_enabled": "Yerden Isıtma desteğini etkinleştir",
+          "underfloor_heating_enabled": "Yerden Isıtmayı Etkinleştir",
           "boost_heater_enabled": "Pencere yeniden kapatıldığında Takviyeyi etkinleştir",
           "boost_threshold": "Takviye sıcaklık sapma eşiği (°C)",
           "boost_fan_mode": "Takviye fan hızı",
@@ -126,7 +132,8 @@
           "boost_max_runtime": "Takviye güvenlik zaman aşımı (dakika)",
           "boost_asymmetric_threshold": "Soğutma için farklı bir eşik kullan",
           "boost_threshold_cool": "Boost soğutma eşiği (°C)",
-          "boost_cooldown_minutes": "Boost soğuma süresi (dakika)"
+          "boost_cooldown_minutes": "Boost soğuma süresi (dakika)",
+          "show_all_calibration_modes": "Tüm kalibrasyon modlarını göster"
         },
         "data_description": {
           "presets": "Bu termostat için kullanılabilir olmasını istediğiniz ön ayarları seçin.",
@@ -138,7 +145,8 @@
           "boost_max_runtime": "Sıcaklığa bakılmaksızın takviyenin zorla kapatılmadan önce ne kadar süre çalışmasına izin verildiği.",
           "boost_asymmetric_threshold": "Bir soğutma boost'unu (örneğin sıcak bir yaz günü) tetiklemek için ısıtma boost'undan farklı bir sapma eşiği ayarlamak için bunu açın. Her iki yön için de aynı eşiği kullanmak için kapalı bırakın.",
           "boost_threshold_cool": "Pencere açıkken oda sıcaklığı bu değerden fazla yükseldiyse, pencereyi kapatmak bir soğutma boost'unu devreye sokar. Yalnızca yukarıdaki anahtar açıkken kullanılır.",
-          "boost_cooldown_minutes": "Bir boost bittikten sonra başka birinin devreye girebilmesi için gereken minimum süre, böylece eşiği tekrar tekrar aşan bir oda (örneğin tekrar tekrar pencere açma/kapama) paylaşılan cihazın çok sık geçiş yapmasına neden olmaz."
+          "boost_cooldown_minutes": "Bir boost bittikten sonra başka birinin devreye girebilmesi için gereken minimum süre, böylece eşiği tekrar tekrar aşan bir oda (örneğin tekrar tekrar pencere açma/kapama) paylaşılan cihazın çok sık geçiş yapmasına neden olmaz.",
+          "show_all_calibration_modes": "Varsayılan olarak 'Yerden' olarak işaretlenmiş bir ısıtıcı yalnızca kendisi için doğru çalışan kalibrasyon modlarını sunar (MPC Predictive, (AI) MPC v2, TPI Denetleyici, PID Denetleyici). Bunun yerine tüm 8 modu görmek için bunu açın - yerden ısıtma devreniz valf kontrollü bir aktüatör tarafından yönetiliyorsa kullanışlıdır."
         }
       },
       "advanced": {
@@ -153,14 +161,18 @@
           "calibration_mode": "Kalibrasyon modu",
           "no_off_system_mode": "TRV'niz kapalı modu desteklemiyorsa, bunun yerine hedef sıcaklık 5°C kullanmak için bunu etkinleştirebilirsiniz",
           "heating_type": "Isıtma türü",
-          "warm_floor_max_backoff": "Sıcak Zemin maks. geri çekilme (°C)"
+          "warm_floor_max_backoff": "Sıcak Zemin maks. geri çekilme (°C)",
+          "warm_floor_level": "Sıcak Zemin seviyesi",
+          "warm_floor_sustain_push": "Sıcak Zemin - sürdürme itmesi (°C)"
         },
         "data_description": {
           "protect_overheating": "Bazı TRV'ler sıcaklığa ulaşıldığında vanayı tamamen kapatmaz. Veya radyatör çok fazla artık ısıya sahiptir. Bu aşırı ısınmaya neden olabilir. Bu seçenek bunu önleyebilir.",
           "calibration_mode": "Kalibrasyonun nasıl hesaplanacağı\n***Normal***: Bu modda, TRV iç sıcaklık sensörü dış sıcaklık sensörü tarafından düzeltilir.\n***Agresif***: Bu modda, TRV iç sıcaklık sensörü dış sıcaklık sensörü tarafından düzeltilir ancak daha hızlı bir artış için çok daha düşük/yüksek ayarlanır.\n***Yapay Zeka Zaman Tabanlı***: Bu modda, TRV iç sıcaklık sensörü dış sıcaklık sensörü tarafından düzeltilir, ancak özel bir algoritma TRV iç algoritmasını iyileştirmek için değeri hesaplar.\n***MPC Tahminli (Beta)***: Doğrudan vana kontrolü mevcut olmadığında bir vana açıklığı türetmek ve bunu ofsetlere veya ayar noktasına dönüştürmek için MPC hidrolik denge algoritmasını kullanır.",
           "calibration": "Kalibrasyonun TRV'ye nasıl uygulanacağı (Hedef sıcaklık veya ofset)\n***Hedef Sıcaklık Tabanlı***: Kalibrasyonu hedef sıcaklığa uygula.\n***Ofset Tabanlı***: Kalibrasyonu ofsete uygula.",
-          "heating_type": "Radyatör: normal TRV davranışı. Yerden ısıtma: bu ısıtıcı için Sıcak Zemin modunu etkinleştirir.",
-          "warm_floor_max_backoff": "Sıcak Zemin modunun, aksi takdirde boşta kalacak bir döngü sırasında bu ısıtıcının ayar noktasının hedef sıcaklığın ne kadar altına kaymasına izin verdiği. Kullanılan gerçek geri çekilme, ölçülen ısı kaybı, ısıtma gücü ve güneş kazancına göre bu maksimumdan otomatik olarak aşağı ölçeklenir, böylece zemin yalnızca odanın güvenle karşılayabileceği kadar geri çekilir."
+          "heating_type": "Yerden: bu ısıtıcı için Sıcak Zemin modunu etkinleştirir. Radyatör/Fan-coil Konvektör/Klima-HVAC: şimdilik normal TRV davranışı - bu etiketler, karışık yerden ısıtma + ikincil cihaz kurulumunun her ısıtıcıyı doğru şekilde tanımlayabilmesi için mevcuttur.",
+          "warm_floor_max_backoff": "Sıcak Zemin modunun, aksi takdirde boşta kalacak bir döngü sırasında bu ısıtıcının ayar noktasının hedef sıcaklığın ne kadar altına kaymasına izin verdiği. Kullanılan gerçek geri çekilme, ölçülen ısı kaybı, ısıtma gücü ve güneş kazancına göre bu maksimumdan otomatik olarak aşağı ölçeklenir, böylece zemin yalnızca odanın güvenle karşılayabileceği kadar geri çekilir.",
+          "warm_floor_level": "Sıcak Zemin'in bu ısıtıcının tamamen boşta kalmasını önlemek için ne kadar yoğun çalıştığı. Aşağıdaki her iki alanı birlikte kontrol eder - bunları doğrudan ayarlamak için 'Özel' seçin.\n***1 · Eko***: Hafif, minimum ek enerji tüketimi.\n***2 · Dengeli***: Varsayılan - makul bir geri çekilme payı, sürdürme itmesi yok.\n***3 · Sıcak Tut***: En sıkı geri çekilme artı asla soğuk hissettirmemesi gereken zeminler için küçük bir sürdürme itmesi.",
+          "warm_floor_sustain_push": "Boşta kaldığında ayar noktasını tam olarak hedefte sabitleyen kalibrasyon modları için (böylece yukarıdaki geri çekilmenin yükseltecek bir şeyi kalmaz), bunun yerine ısıtıcıya gönderilen ayar noktasını hedefin bu kadar üzerine iter - yalnızca oda hedefe zaten ulaşmışken ve orada kalmışken. Kartta gördüğünüz hedef sıcaklığı asla değiştirmez. 0 (varsayılan) bunu devre dışı bırakır."
         }
       }
     },
@@ -390,12 +402,22 @@
     "heating_type": {
       "options": {
         "radiator": "Radyatör",
-        "underfloor": "Yerden ısıtma"
+        "underfloor": "Yerden ısıtma",
+        "convector": "Fan-coil / Konvektör",
+        "ac_hvac": "Klima / HVAC"
       }
     },
     "boost_fan_mode": {
       "options": {
         "__no_change__": "Fan modunu değiştirme"
+      }
+    },
+    "warm_floor_level": {
+      "options": {
+        "level_1": "1 · Eko",
+        "level_2": "2 · Dengeli",
+        "level_3": "3 · Sıcak Tut",
+        "custom": "Özel"
       }
     }
   },

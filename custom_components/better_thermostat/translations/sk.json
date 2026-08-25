@@ -25,7 +25,7 @@
           "target_temp_max": "Maximálna cieľová teplota",
           "target_temp_step": "Krok cieľovej teploty",
           "presets": "Povolené predvoľby",
-          "underfloor_heating_enabled": "Povoliť podporu podlahového vykurovania",
+          "underfloor_heating_enabled": "Zapnúť podlahové kúrenie",
           "boost_heater_enabled": "Povoliť Boost pri opätovnom zatvorení okna",
           "boost_threshold": "Prah odchýlky teploty pre boost (°C)",
           "boost_fan_mode": "Rýchlosť ventilátora boostu",
@@ -33,7 +33,8 @@
           "boost_max_runtime": "Bezpečnostný časový limit boostu (minúty)",
           "boost_asymmetric_threshold": "Použiť iný prah pre chladenie",
           "boost_threshold_cool": "Prah boostu chladenia (°C)",
-          "boost_cooldown_minutes": "Čas obnovy boostu (minúty)"
+          "boost_cooldown_minutes": "Čas obnovy boostu (minúty)",
+          "show_all_calibration_modes": "Zobraziť všetky režimy kalibrácie"
         },
         "data_description": {
           "presets": "Vyberte predvoľby, ktoré chcete mať k dispozícii pre tento termostat.",
@@ -46,7 +47,8 @@
           "cooler": "Voliteľné. Zariadenie používané na chladenie (v konfiguráciách vykurovanie+chladenie) a/alebo, po zapnutí Boostu nižšie, ako zariadenie, ktoré rýchlo obnoví teplotu miestnosti po opätovnom otvorení okna - mnohé fan-coily, tepelné čerpadlá a klimatizácie už plnia obe úlohy, takže jedno zariadenie môže zastávať obe roly.",
           "boost_asymmetric_threshold": "Zapnutím nastavíte iný prah odchýlky teploty na aktiváciu boostu chladenia (napr. horúci letný deň) ako pre boost kúrenia. Ponechajte vypnuté, ak chcete použiť rovnaký prah pre oba smery.",
           "boost_threshold_cool": "Ak teplota v miestnosti stúpla o viac ako túto hodnotu, kým bolo okno otvorené, jeho zatvorenie aktivuje boost chladenia. Používa sa iba vtedy, keď je vyššie uvedený prepínač zapnutý.",
-          "boost_cooldown_minutes": "Minimálny čas po skončení boostu, kým sa môže aktivovať ďalší, aby miestnosť, ktorá opakovane prekračuje prah (napr. opakované otváranie/zatváranie okna), nespôsobovala príliš časté prepínanie zdieľaného zariadenia."
+          "boost_cooldown_minutes": "Minimálny čas po skončení boostu, kým sa môže aktivovať ďalší, aby miestnosť, ktorá opakovane prekračuje prah (napr. opakované otváranie/zatváranie okna), nespôsobovala príliš časté prepínanie zdieľaného zariadenia.",
+          "show_all_calibration_modes": "V predvolenom nastavení ohrievač označený ako 'Podlaha' ponúka iba režimy kalibrácie, ktoré preň fungujú správne (MPC Predictive, (AI) MPC v2, TPI regulátor, PID regulátor). Zapnutím tejto možnosti zobrazíte namiesto toho všetkých 8 režimov - užitočné, ak je váš okruh podlahového kúrenia riadený pohonom s ventilom."
         }
       },
       "advanced": {
@@ -61,14 +63,18 @@
           "calibration_mode": "Režim kalibrácie",
           "no_off_system_mode": "Ak váš TRV nedokáže pracovať v režime vypnutia, môžete namiesto toho povoliť použitie cieľovej teploty 5 °C.",
           "heating_type": "Typ vykurovania",
-          "warm_floor_max_backoff": "Max. ústup Teplej Podlahy (°C)"
+          "warm_floor_max_backoff": "Max. ústup Teplej Podlahy (°C)",
+          "warm_floor_level": "Úroveň Teplej podlahy",
+          "warm_floor_sustain_push": "Teplá podlaha - udržiavací posun (°C)"
         },
         "data_description": {
           "protect_overheating": "Niektoré termostatické ventily úplne neuzatvoria ventil po dosiahnutí požadovanej teploty. Alebo má radiátor veľa zvyškového tepla. To môže spôsobiť prehriatie. Táto možnosť tomu môže zabrániť.",
           "calibration_mode": "Druh, akým sa má kalibrácia vypočítať\n***Normálny***: V tomto režime je vnútorný snímač teploty TRV fixovaný externým snímačom teploty.\n***Agresívny***: V tomto režime je vnútorný snímač teploty TRV fixovaný externým snímačom teploty, ale nastavený oveľa nižšie/vyššie, aby sa dosiahlo rýchlejšie zvýšenie teploty.\n***Časovo založený na AI***: V tomto režime je vnútorný snímač teploty TRV fixovaný externým snímačom teploty, ale vlastný algoritmus vypočíta hodnotu na zlepšenie vnútorného algoritmu TRV.\n***Prediktívny MPC (Beta)***: Používa prediktívny regulátor MPC na odvodenie otvorenia ventilu a prevedie ho na posuny alebo požadované hodnoty, keď priame riadenie ventilu nie je k dispozícii.\n***PID regulátor***: Používa PID regulátor na dynamické nastavenie polohy ventilu na základe teplotnej chyby, proporcionálneho člena, integrálnej akumulácie a derivačnej predikcie.\n***TPI regulátor***: Používa časovo proporcionálny integračný regulátor pre stabilnú a presnú reguláciu teploty v priebehu času.",
           "calibration": "Ako sa má kalibrácia použiť na TRV (cieľová teplota alebo posun)\n***Na základe cieľovej teploty***: Použite kalibráciu na cieľovú teplotu.\n***Na základe ofsetu***: Použite kalibráciu na offset.",
-          "heating_type": "Radiátor: normálne správanie TRV. Podlahové: povolí režim Teplá Podlaha pre tento ohrievač.",
-          "warm_floor_max_backoff": "Ako ďaleko pod cieľovou teplotou môže režim Teplá Podlaha nechať odchýliť nastavenú hodnotu tohto ohrievača počas cyklu, ktorý by inak bol nečinný. Skutočne použitý ústup sa automaticky znižuje z tohto maxima na základe nameraných tepelných strát, vykurovacieho výkonu a solárneho zisku, takže podlaha ustúpi len natoľko, nakoľko si to miestnosť môže bezpečne dovoliť."
+          "heating_type": "Podlaha: aktivuje režim Teplá podlaha pre tento ohrievač. Radiátor/Fan-coil konvektor/Klimatizácia-HVAC: zatiaľ bežné správanie TRV - tieto štítky existujú, aby zmiešaná zostava podlahového kúrenia a sekundárneho zariadenia dokázala správne identifikovať každý ohrievač.",
+          "warm_floor_max_backoff": "Ako ďaleko pod cieľovou teplotou môže režim Teplá Podlaha nechať odchýliť nastavenú hodnotu tohto ohrievača počas cyklu, ktorý by inak bol nečinný. Skutočne použitý ústup sa automaticky znižuje z tohto maxima na základe nameraných tepelných strát, vykurovacieho výkonu a solárneho zisku, takže podlaha ustúpi len natoľko, nakoľko si to miestnosť môže bezpečne dovoliť.",
+          "warm_floor_level": "Ako intenzívne Teplá podlaha pracuje na tom, aby tento ohrievač úplne nezaháľal. Ovláda spoločne obidve polia nižšie - vyberte 'Vlastné', ak ich chcete nastaviť priamo.\n***1 · Eco***: Jemné, minimálna dodatočná spotreba energie.\n***2 · Vyvážené***: Predvolené nastavenie - primeraná rezerva ústupu, bez udržiavacieho posunu.\n***3 · Udržať teplo***: Najtesnejší ústup plus malý udržiavací posun, pre podlahy, ktoré nesmú nikdy pôsobiť studeno.",
+          "warm_floor_sustain_push": "Pri režimoch kalibrácie, ktoré v nečinnosti pripnú požadovanú hodnotu presne na cieľ (takže ústup vyššie nemá čo zdvihnúť), namiesto toho posunie hodnotu odosielanú ohrievaču o túto hodnotu nad cieľ - iba kým miestnosť už dosiahla cieľ a zostala pri ňom. Nikdy nemení cieľovú teplotu zobrazenú na karte. 0 (predvolené) túto funkciu vypína."
         }
       },
       "confirm": {
@@ -118,7 +124,7 @@
           "heat_auto_swapped": "Ak auto znamená teplo pre váš TRV a chcete ho vymeniť",
           "child_lock": "Ignorovať všetky vstupy na TRV ako detský zámok",
           "homematicip": "Ak používate HomematicIP, mali by ste túto funkciu povoliť, aby ste spomalili požiadavky a zabránili tak pracovnému cyklu",
-          "underfloor_heating_enabled": "Povoliť podporu podlahového vykurovania",
+          "underfloor_heating_enabled": "Zapnúť podlahové kúrenie",
           "boost_heater_enabled": "Povoliť Boost pri opätovnom zatvorení okna",
           "boost_threshold": "Prah odchýlky teploty pre boost (°C)",
           "boost_fan_mode": "Rýchlosť ventilátora boostu",
@@ -126,7 +132,8 @@
           "boost_max_runtime": "Bezpečnostný časový limit boostu (minúty)",
           "boost_asymmetric_threshold": "Použiť iný prah pre chladenie",
           "boost_threshold_cool": "Prah boostu chladenia (°C)",
-          "boost_cooldown_minutes": "Čas obnovy boostu (minúty)"
+          "boost_cooldown_minutes": "Čas obnovy boostu (minúty)",
+          "show_all_calibration_modes": "Zobraziť všetky režimy kalibrácie"
         },
         "data_description": {
           "presets": "Vyberte predvoľby, ktoré chcete mať k dispozícii pre tento termostat.",
@@ -138,7 +145,8 @@
           "boost_max_runtime": "Maximálny čas, počas ktorého môže boost bežať, kým sa vynúti jeho vypnutie bez ohľadu na teplotu.",
           "boost_asymmetric_threshold": "Zapnutím nastavíte iný prah odchýlky teploty na aktiváciu boostu chladenia (napr. horúci letný deň) ako pre boost kúrenia. Ponechajte vypnuté, ak chcete použiť rovnaký prah pre oba smery.",
           "boost_threshold_cool": "Ak teplota v miestnosti stúpla o viac ako túto hodnotu, kým bolo okno otvorené, jeho zatvorenie aktivuje boost chladenia. Používa sa iba vtedy, keď je vyššie uvedený prepínač zapnutý.",
-          "boost_cooldown_minutes": "Minimálny čas po skončení boostu, kým sa môže aktivovať ďalší, aby miestnosť, ktorá opakovane prekračuje prah (napr. opakované otváranie/zatváranie okna), nespôsobovala príliš časté prepínanie zdieľaného zariadenia."
+          "boost_cooldown_minutes": "Minimálny čas po skončení boostu, kým sa môže aktivovať ďalší, aby miestnosť, ktorá opakovane prekračuje prah (napr. opakované otváranie/zatváranie okna), nespôsobovala príliš časté prepínanie zdieľaného zariadenia.",
+          "show_all_calibration_modes": "V predvolenom nastavení ohrievač označený ako 'Podlaha' ponúka iba režimy kalibrácie, ktoré preň fungujú správne (MPC Predictive, (AI) MPC v2, TPI regulátor, PID regulátor). Zapnutím tejto možnosti zobrazíte namiesto toho všetkých 8 režimov - užitočné, ak je váš okruh podlahového kúrenia riadený pohonom s ventilom."
         }
       },
       "advanced": {
@@ -153,14 +161,18 @@
           "calibration_mode": "Režim kalibrácie",
           "no_off_system_mode": "Ak váš TRV nedokáže pracovať v režime vypnutia, môžete namiesto toho povoliť použitie cieľovej teploty 5 °C.",
           "heating_type": "Typ vykurovania",
-          "warm_floor_max_backoff": "Max. ústup Teplej Podlahy (°C)"
+          "warm_floor_max_backoff": "Max. ústup Teplej Podlahy (°C)",
+          "warm_floor_level": "Úroveň Teplej podlahy",
+          "warm_floor_sustain_push": "Teplá podlaha - udržiavací posun (°C)"
         },
         "data_description": {
           "protect_overheating": "Niektoré TRV nezatvárajú ventil úplne, keď sa dosiahne požadovaná teplota. Alebo je v radiátore veľa zvyškového tepla. To môže spôsobiť prehriatie. Táto možnosť tomu môže zabrániť.",
           "calibration_mode": "Druh výpočtu kalibrácie\n***Normálny***: V tomto režime je vnútorný snímač teploty TRV fixovaný externým snímačom teploty.\n***Agresívny***: V tomto režime je vnútorný snímač teploty TRV fixovaný externým snímačom teploty, ale nastavený oveľa nižšie/vyššie, aby sa dosiahlo rýchlejšie zvýšenie teploty.\n***Časovo riadený AI***: V tomto režime je vnútorný snímač teploty TRV fixovaný externým snímačom teploty, ale vlastný algoritmus vypočíta hodnotu na zlepšenie vnútorného algoritmu TRV.\n***Prediktívny MPC (Beta)***: Používa algoritmus hydraulického vyváženia MPC na odvodenie otvorenia ventilu a prevádza ho na posuny alebo požadované hodnoty, keď priame riadenie ventilu nie je k dispozícii.\n***PID regulátor***: Používa PID regulátor na dynamické nastavenie polohy ventilu na základe teplotnej chyby, proporcionálneho člena, integrálnej akumulácie a derivačnej predikcie.\n***TPI regulátor***: Používa časovo proporcionálny integračný regulátor pre stabilnú a presnú reguláciu teploty v priebehu času.",
           "calibration": "Ako sa má kalibrácia použiť na TRV (cieľová teplota alebo ofset)\n***Na základe cieľovej teploty***: Použite kalibráciu na cieľovú teplotu.\n***Na základe ofsetu***: Použite kalibráciu na offset.",
-          "heating_type": "Radiátor: normálne správanie TRV. Podlahové: povolí režim Teplá Podlaha pre tento ohrievač.",
-          "warm_floor_max_backoff": "Ako ďaleko pod cieľovou teplotou môže režim Teplá Podlaha nechať odchýliť nastavenú hodnotu tohto ohrievača počas cyklu, ktorý by inak bol nečinný. Skutočne použitý ústup sa automaticky znižuje z tohto maxima na základe nameraných tepelných strát, vykurovacieho výkonu a solárneho zisku, takže podlaha ustúpi len natoľko, nakoľko si to miestnosť môže bezpečne dovoliť."
+          "heating_type": "Podlaha: aktivuje režim Teplá podlaha pre tento ohrievač. Radiátor/Fan-coil konvektor/Klimatizácia-HVAC: zatiaľ bežné správanie TRV - tieto štítky existujú, aby zmiešaná zostava podlahového kúrenia a sekundárneho zariadenia dokázala správne identifikovať každý ohrievač.",
+          "warm_floor_max_backoff": "Ako ďaleko pod cieľovou teplotou môže režim Teplá Podlaha nechať odchýliť nastavenú hodnotu tohto ohrievača počas cyklu, ktorý by inak bol nečinný. Skutočne použitý ústup sa automaticky znižuje z tohto maxima na základe nameraných tepelných strát, vykurovacieho výkonu a solárneho zisku, takže podlaha ustúpi len natoľko, nakoľko si to miestnosť môže bezpečne dovoliť.",
+          "warm_floor_level": "Ako intenzívne Teplá podlaha pracuje na tom, aby tento ohrievač úplne nezaháľal. Ovláda spoločne obidve polia nižšie - vyberte 'Vlastné', ak ich chcete nastaviť priamo.\n***1 · Eco***: Jemné, minimálna dodatočná spotreba energie.\n***2 · Vyvážené***: Predvolené nastavenie - primeraná rezerva ústupu, bez udržiavacieho posunu.\n***3 · Udržať teplo***: Najtesnejší ústup plus malý udržiavací posun, pre podlahy, ktoré nesmú nikdy pôsobiť studeno.",
+          "warm_floor_sustain_push": "Pri režimoch kalibrácie, ktoré v nečinnosti pripnú požadovanú hodnotu presne na cieľ (takže ústup vyššie nemá čo zdvihnúť), namiesto toho posunie hodnotu odosielanú ohrievaču o túto hodnotu nad cieľ - iba kým miestnosť už dosiahla cieľ a zostala pri ňom. Nikdy nemení cieľovú teplotu zobrazenú na karte. 0 (predvolené) túto funkciu vypína."
         }
       }
     },
@@ -390,12 +402,22 @@
     "heating_type": {
       "options": {
         "radiator": "Radiátor",
-        "underfloor": "Podlahové vykurovanie"
+        "underfloor": "Podlahové vykurovanie",
+        "convector": "Fan-coil / Konvektor",
+        "ac_hvac": "Klimatizácia / HVAC"
       }
     },
     "boost_fan_mode": {
       "options": {
         "__no_change__": "Nemeniť rýchlosť ventilátora"
+      }
+    },
+    "warm_floor_level": {
+      "options": {
+        "level_1": "1 · Eco",
+        "level_2": "2 · Vyvážené",
+        "level_3": "3 · Udržať teplo",
+        "custom": "Vlastné"
       }
     }
   },

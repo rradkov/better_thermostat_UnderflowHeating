@@ -25,7 +25,7 @@
           "target_temp_max": "Température cible maximale",
           "target_temp_step": "Pas de la température cible",
           "presets": "Préréglages activés",
-          "underfloor_heating_enabled": "Activer la prise en charge du chauffage au sol",
+          "underfloor_heating_enabled": "Activer le chauffage au sol",
           "boost_heater_enabled": "Activer le Boost à la fermeture de la fenêtre",
           "boost_threshold": "Seuil d'écart de température pour le boost (°C)",
           "boost_fan_mode": "Vitesse de ventilateur du boost",
@@ -33,7 +33,8 @@
           "boost_max_runtime": "Délai de sécurité du boost (minutes)",
           "boost_asymmetric_threshold": "Utiliser un seuil différent pour le refroidissement",
           "boost_threshold_cool": "Seuil de boost de refroidissement (°C)",
-          "boost_cooldown_minutes": "Délai de récupération du boost (minutes)"
+          "boost_cooldown_minutes": "Délai de récupération du boost (minutes)",
+          "show_all_calibration_modes": "Afficher tous les modes de calibration"
         },
         "data_description": {
           "presets": "Sélectionnez les préréglages qui doivent être disponibles pour ce thermostat.",
@@ -46,7 +47,8 @@
           "cooler": "Optionnel. Un appareil utilisé pour le refroidissement (dans les installations chauffage+climatisation) et/ou, une fois le Boost activé ci-dessous, comme appareil qui rétablit rapidement la température de la pièce après la réouverture d'une fenêtre - de nombreux ventilo-convecteurs, pompes à chaleur et climatiseurs remplissent déjà les deux rôles, un seul appareil peut donc suffire.",
           "boost_asymmetric_threshold": "Activez ceci pour définir un seuil de dérive différent pour déclencher un boost de refroidissement (par exemple, une chaude journée d'été) que pour un boost de chauffage. Laissez désactivé pour utiliser le même seuil dans les deux sens.",
           "boost_threshold_cool": "Si la température de la pièce a augmenté de plus de cette valeur pendant qu'une fenêtre était ouverte, la fermer déclenche un boost de refroidissement. Utilisé uniquement lorsque l'option ci-dessus est activée.",
-          "boost_cooldown_minutes": "Délai minimal après la fin d'un boost avant qu'un autre puisse se déclencher, afin qu'une pièce qui dérive continuellement au-delà du seuil (par exemple des ouvertures/fermetures répétées de fenêtre) ne sollicite pas trop fréquemment l'appareil partagé."
+          "boost_cooldown_minutes": "Délai minimal après la fin d'un boost avant qu'un autre puisse se déclencher, afin qu'une pièce qui dérive continuellement au-delà du seuil (par exemple des ouvertures/fermetures répétées de fenêtre) ne sollicite pas trop fréquemment l'appareil partagé.",
+          "show_all_calibration_modes": "Par défaut, un radiateur marqué « Plancher » ne propose que les modes de calibration qui fonctionnent correctement pour lui (MPC Predictive, (IA) MPC v2, Contrôleur TPI, Contrôleur PID). Activez ceci pour voir les 8 modes à la place - utile si votre boucle de plancher chauffant est pilotée par un actionneur à vanne."
         }
       },
       "advanced": {
@@ -61,14 +63,18 @@
           "calibration_mode": "Mode de calibrage",
           "no_off_system_mode": "Si votre TRV ne peut pas gérer le mode hors tension, vous pouvez activer ceci pour utiliser une température cible de 5°C à la place",
           "heating_type": "Type de chauffage",
-          "warm_floor_max_backoff": "Recul maximal du Plancher Chaud (°C)"
+          "warm_floor_max_backoff": "Recul maximal du Plancher Chaud (°C)",
+          "warm_floor_level": "Niveau Plancher Chaud",
+          "warm_floor_sustain_push": "Plancher Chaud - poussée de maintien (°C)"
         },
         "data_description": {
           "protect_overheating": "Certains TRVs ne ferment pas complètement la vanne lorsque la température est atteinte. Ou le radiateur a beaucoup de chaleur résiduelle. Cela peut provoquer une surchauffe. Cette option peut prévenir cela.",
           "calibration_mode": "Le type de calcul du calibrage\n***Normal*** : Dans ce mode, le capteur de température interne du TRV est fixé par le capteur de température externe.\n***Aggressif*** : Dans ce mode, le capteur de température interne du TRV est fixé par le capteur de température externe mais réglé beaucoup plus bas/haut pour obtenir un boost plus rapide.\n***AI Time Based*** : Dans ce mode, le capteur de température interne du TRV est fixé par le capteur de température externe, mais la valeur est calculée par un algorithme personnalisé pour améliorer l'algorithme interne du TRV.\n***MPC Predictive (Beta)*** : Utilise le contrôleur prédictif MPC pour dériver une ouverture de vanne et la convertir en décalages ou points de consigne lorsque le contrôle direct de la vanne n'est pas disponible.\n***PID Controller*** : Utilise un contrôleur PID pour ajuster dynamiquement la position de la vanne en fonction de l'erreur de température, du terme proportionnel, de l'accumulation intégrale et de la prédiction dérivée.\n***TPI Controller*** : Utilise un contrôleur Proportionnel Intégral Temporel pour un contrôle de température stable et précis dans le temps.",
           "calibration": "Comment le calibrage doit être appliqué sur le TRV (Température cible ou décalage)\n***Basé sur la température cible*** : Appliquer le calibrage à la température cible.\n***Basé sur le décalage*** : Appliquer le calibrage au décalage.",
-          "heating_type": "Radiateur : comportement normal de la vanne thermostatique. Chauffage au sol : active le mode Plancher Chaud pour cet appareil.",
-          "warm_floor_max_backoff": "De combien de degrés sous la température cible le mode Plancher Chaud est autorisé à laisser dériver la consigne de cet appareil pendant ce qui serait autrement un cycle inactif. Le recul réellement utilisé est automatiquement réduit par rapport à ce maximum en fonction des pertes de chaleur, de la puissance de chauffe et du gain solaire mesurés, afin que le sol ne recule que dans la limite de ce que la pièce peut supporter sans risque."
+          "heating_type": "Plancher : active le mode Plancher Chaud pour ce radiateur. Radiateur/Ventilo-convecteur/Climatiseur-HVAC : comportement TRV normal pour l'instant - ces libellés existent pour qu'une installation mixte plancher chauffant + appareil secondaire puisse identifier correctement chaque radiateur.",
+          "warm_floor_max_backoff": "De combien de degrés sous la température cible le mode Plancher Chaud est autorisé à laisser dériver la consigne de cet appareil pendant ce qui serait autrement un cycle inactif. Le recul réellement utilisé est automatiquement réduit par rapport à ce maximum en fonction des pertes de chaleur, de la puissance de chauffe et du gain solaire mesurés, afin que le sol ne recule que dans la limite de ce que la pièce peut supporter sans risque.",
+          "warm_floor_level": "À quel point Plancher Chaud travaille pour empêcher ce radiateur de rester totalement inactif. Contrôle les deux champs ci-dessous ensemble - choisissez « Personnalisé » pour les régler directement à la place.\n***1 · Éco***: Doux, consommation d'énergie supplémentaire minimale.\n***2 · Équilibré***: La valeur par défaut - une marge de recul raisonnable, sans poussée de maintien.\n***3 · Garder au chaud***: Recul le plus serré plus une petite poussée de maintien, pour les sols qui ne doivent jamais paraître froids.",
+          "warm_floor_sustain_push": "Pour les modes de calibration qui figent la consigne exactement à la cible une fois inactifs (le recul ci-dessus n'a alors rien à relever), pousse plutôt la consigne envoyée au radiateur de cette valeur au-dessus de la cible - uniquement lorsque la pièce a déjà atteint la cible et y est restée. Ne modifie jamais la température cible affichée sur la carte. 0 (par défaut) désactive ceci."
         }
       },
       "confirm": {
@@ -118,7 +124,7 @@
           "heat_auto_swapped": "Si le mode automatique signifie chauffage pour votre TRV et que vous voulez le permuter",
           "child_lock": "Ignorer toutes les entrées sur le TRV comme une sécurité enfant",
           "homematicip": "Si vous utilisez HomematicIP, vous devriez l'activer pour ralentir les demandes et éviter le cycle de fonctionnement excessif",
-          "underfloor_heating_enabled": "Activer la prise en charge du chauffage au sol",
+          "underfloor_heating_enabled": "Activer le chauffage au sol",
           "boost_heater_enabled": "Activer le Boost à la fermeture de la fenêtre",
           "boost_threshold": "Seuil d'écart de température pour le boost (°C)",
           "boost_fan_mode": "Vitesse de ventilateur du boost",
@@ -126,7 +132,8 @@
           "boost_max_runtime": "Délai de sécurité du boost (minutes)",
           "boost_asymmetric_threshold": "Utiliser un seuil différent pour le refroidissement",
           "boost_threshold_cool": "Seuil de boost de refroidissement (°C)",
-          "boost_cooldown_minutes": "Délai de récupération du boost (minutes)"
+          "boost_cooldown_minutes": "Délai de récupération du boost (minutes)",
+          "show_all_calibration_modes": "Afficher tous les modes de calibration"
         },
         "data_description": {
           "presets": "Sélectionnez les préréglages qui doivent être disponibles pour ce thermostat.",
@@ -138,7 +145,8 @@
           "boost_max_runtime": "Durée maximale pendant laquelle le boost est autorisé à fonctionner avant d'être arrêté de force, quelle que soit la température.",
           "boost_asymmetric_threshold": "Activez ceci pour définir un seuil de dérive différent pour déclencher un boost de refroidissement (par exemple, une chaude journée d'été) que pour un boost de chauffage. Laissez désactivé pour utiliser le même seuil dans les deux sens.",
           "boost_threshold_cool": "Si la température de la pièce a augmenté de plus de cette valeur pendant qu'une fenêtre était ouverte, la fermer déclenche un boost de refroidissement. Utilisé uniquement lorsque l'option ci-dessus est activée.",
-          "boost_cooldown_minutes": "Délai minimal après la fin d'un boost avant qu'un autre puisse se déclencher, afin qu'une pièce qui dérive continuellement au-delà du seuil (par exemple des ouvertures/fermetures répétées de fenêtre) ne sollicite pas trop fréquemment l'appareil partagé."
+          "boost_cooldown_minutes": "Délai minimal après la fin d'un boost avant qu'un autre puisse se déclencher, afin qu'une pièce qui dérive continuellement au-delà du seuil (par exemple des ouvertures/fermetures répétées de fenêtre) ne sollicite pas trop fréquemment l'appareil partagé.",
+          "show_all_calibration_modes": "Par défaut, un radiateur marqué « Plancher » ne propose que les modes de calibration qui fonctionnent correctement pour lui (MPC Predictive, (IA) MPC v2, Contrôleur TPI, Contrôleur PID). Activez ceci pour voir les 8 modes à la place - utile si votre boucle de plancher chauffant est pilotée par un actionneur à vanne."
         }
       },
       "advanced": {
@@ -153,14 +161,18 @@
           "calibration_mode": "Mode de calibrage",
           "no_off_system_mode": "Si votre TRV ne peut pas gérer le mode hors tension, vous pouvez activer ceci pour utiliser une température cible de 5°C à la place",
           "heating_type": "Type de chauffage",
-          "warm_floor_max_backoff": "Recul maximal du Plancher Chaud (°C)"
+          "warm_floor_max_backoff": "Recul maximal du Plancher Chaud (°C)",
+          "warm_floor_level": "Niveau Plancher Chaud",
+          "warm_floor_sustain_push": "Plancher Chaud - poussée de maintien (°C)"
         },
         "data_description": {
           "protect_overheating": "Certains TRVs ne ferment pas complètement la vanne lorsque la température est atteinte. Ou le radiateur a beaucoup de chaleur résiduelle. Cela peut provoquer une surchauffe. Cette option peut prévenir cela.",
           "calibration_mode": "Le type de calcul du calibrage\n***Normal*** : Dans ce mode, le capteur de température interne du TRV est fixé par le capteur de température externe.\n***Aggressif*** : Dans ce mode, le capteur de température interne du TRV est fixé par le capteur de température externe mais réglé beaucoup plus bas/haut pour obtenir un boost plus rapide.\n***AI Time Based*** : Dans ce mode, le capteur de température interne du TRV est fixé par le capteur de température externe, mais la valeur est calculée par un algorithme personnalisé pour améliorer l'algorithme interne du TRV.\n***MPC Predictive (Beta)*** : Utilise le contrôleur prédictif MPC pour dériver une ouverture de vanne et la convertir en décalages ou points de consigne lorsque le contrôle direct de la vanne n'est pas disponible.\n***PID Controller*** : Utilise un contrôleur PID pour ajuster dynamiquement la position de la vanne en fonction de l'erreur de température, du terme proportionnel, de l'accumulation intégrale et de la prédiction dérivée.\n***TPI Controller*** : Utilise un contrôleur Proportionnel Intégral Temporel pour un contrôle de température stable et précis dans le temps.",
           "calibration": "Comment le calibrage doit être appliqué sur le TRV (Température cible ou décalage)\n***Basé sur la température cible*** : Appliquer le calibrage à la température cible.\n***Basé sur le décalage*** : Appliquer le calibrage au décalage.",
-          "heating_type": "Radiateur : comportement normal de la vanne thermostatique. Chauffage au sol : active le mode Plancher Chaud pour cet appareil.",
-          "warm_floor_max_backoff": "De combien de degrés sous la température cible le mode Plancher Chaud est autorisé à laisser dériver la consigne de cet appareil pendant ce qui serait autrement un cycle inactif. Le recul réellement utilisé est automatiquement réduit par rapport à ce maximum en fonction des pertes de chaleur, de la puissance de chauffe et du gain solaire mesurés, afin que le sol ne recule que dans la limite de ce que la pièce peut supporter sans risque."
+          "heating_type": "Plancher : active le mode Plancher Chaud pour ce radiateur. Radiateur/Ventilo-convecteur/Climatiseur-HVAC : comportement TRV normal pour l'instant - ces libellés existent pour qu'une installation mixte plancher chauffant + appareil secondaire puisse identifier correctement chaque radiateur.",
+          "warm_floor_max_backoff": "De combien de degrés sous la température cible le mode Plancher Chaud est autorisé à laisser dériver la consigne de cet appareil pendant ce qui serait autrement un cycle inactif. Le recul réellement utilisé est automatiquement réduit par rapport à ce maximum en fonction des pertes de chaleur, de la puissance de chauffe et du gain solaire mesurés, afin que le sol ne recule que dans la limite de ce que la pièce peut supporter sans risque.",
+          "warm_floor_level": "À quel point Plancher Chaud travaille pour empêcher ce radiateur de rester totalement inactif. Contrôle les deux champs ci-dessous ensemble - choisissez « Personnalisé » pour les régler directement à la place.\n***1 · Éco***: Doux, consommation d'énergie supplémentaire minimale.\n***2 · Équilibré***: La valeur par défaut - une marge de recul raisonnable, sans poussée de maintien.\n***3 · Garder au chaud***: Recul le plus serré plus une petite poussée de maintien, pour les sols qui ne doivent jamais paraître froids.",
+          "warm_floor_sustain_push": "Pour les modes de calibration qui figent la consigne exactement à la cible une fois inactifs (le recul ci-dessus n'a alors rien à relever), pousse plutôt la consigne envoyée au radiateur de cette valeur au-dessus de la cible - uniquement lorsque la pièce a déjà atteint la cible et y est restée. Ne modifie jamais la température cible affichée sur la carte. 0 (par défaut) désactive ceci."
         }
       }
     },
@@ -390,12 +402,22 @@
     "heating_type": {
       "options": {
         "radiator": "Radiateur",
-        "underfloor": "Chauffage au sol"
+        "underfloor": "Chauffage au sol",
+        "convector": "Ventilo-convecteur",
+        "ac_hvac": "Climatiseur / HVAC"
       }
     },
     "boost_fan_mode": {
       "options": {
         "__no_change__": "Ne pas changer la vitesse du ventilateur"
+      }
+    },
+    "warm_floor_level": {
+      "options": {
+        "level_1": "1 · Éco",
+        "level_2": "2 · Équilibré",
+        "level_3": "3 · Garder au chaud",
+        "custom": "Personnalisé"
       }
     }
   },
