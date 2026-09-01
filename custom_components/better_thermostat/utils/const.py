@@ -51,6 +51,14 @@ CONF_WINDOW_TIMEOUT_AFTER: Final = "window_off_delay_after"
 CONF_DOOR_TIMEOUT: Final = "door_off_delay"
 CONF_DOOR_TIMEOUT_AFTER: Final = "door_off_delay_after"
 CONF_OUTDOOR_SENSOR: Final = "outdoor_sensor"
+# Live heat-source (flow/water) temperature for MPC v2's plant model only -
+# see utils/calibration/mpc_v2_internals/plant.py's PlantParams.T_water_C.
+# Sensor takes priority; the static fallback covers setups without one.
+# Neither configured means MPC v2 keeps its own 65.0 default, unaffected.
+CONF_FLOW_TEMP_SENSOR: Final = "flow_temp_sensor"
+CONF_FLOW_TEMP_STATIC_C: Final = "flow_temp_static_c"
+FLOW_TEMP_STATIC_MIN_C: Final = 20.0
+FLOW_TEMP_STATIC_MAX_C: Final = 90.0
 CONF_VALVE_MAINTENANCE: Final = "valve_maintenance"
 CONF_MIN_TEMP: Final = "min_temp"
 CONF_MAX_TEMP: Final = "max_temp"

@@ -34,7 +34,9 @@
           "boost_asymmetric_threshold": "Użyj innego progu dla chłodzenia",
           "boost_threshold_cool": "Próg boostu chłodzenia (°C)",
           "boost_cooldown_minutes": "Czas odnowienia boostu (minuty)",
-          "show_all_calibration_modes": "Pokaż wszystkie tryby kalibracji"
+          "show_all_calibration_modes": "Pokaż wszystkie tryby kalibracji",
+          "flow_temp_sensor": "Czujnik temperatury zasilania (opcjonalnie)",
+          "flow_temp_static_c": "Temperatura zasilania, statyczna wartość zastępcza (°C)"
         },
         "data_description": {
           "presets": "Wybierz ustawienia predefiniowane, które mają być dostępne dla tego termostatu.",
@@ -48,7 +50,9 @@
           "boost_asymmetric_threshold": "Włącz, aby ustawić inny próg dryfu temperatury dla uzbrojenia boostu chłodzenia (np. w gorący letni dzień) niż dla boostu grzania. Pozostaw wyłączone, aby używać tego samego progu w obu kierunkach.",
           "boost_threshold_cool": "Jeśli temperatura w pomieszczeniu wzrosła o więcej niż ta wartość, gdy okno było otwarte, zamknięcie go uzbraja boost chłodzenia. Używane tylko, gdy powyższy przełącznik jest włączony.",
           "boost_cooldown_minutes": "Minimalny czas po zakończeniu boostu, zanim będzie mógł się uzbroić kolejny, aby pomieszczenie, które wielokrotnie przekracza próg (np. powtarzane otwieranie/zamykanie okna), nie powodowało zbyt częstego przełączania współdzielonego urządzenia.",
-          "show_all_calibration_modes": "Domyślnie grzejnik oznaczony jako 'Podłoga' oferuje tylko tryby kalibracji, które działają dla niego poprawnie (MPC Predictive, (AI) MPC v2, Kontroler TPI, Kontroler PID). Włącz tę opcję, aby zamiast tego zobaczyć wszystkie 8 trybów - przydatne, jeśli pętla ogrzewania podłogowego jest sterowana siłownikiem z zaworem."
+          "show_all_calibration_modes": "Domyślnie grzejnik oznaczony jako 'Podłoga' oferuje tylko tryby kalibracji, które działają dla niego poprawnie (MPC Predictive, (AI) MPC v2, Kontroler TPI, Kontroler PID). Włącz tę opcję, aby zamiast tego zobaczyć wszystkie 8 trybów - przydatne, jeśli pętla ogrzewania podłogowego jest sterowana siłownikiem z zaworem.",
+          "flow_temp_sensor": "Używane wyłącznie przez model instalacji trybu kalibracji (AI) MPC v2. Wartość domyślna zakłada źródło ciepła 65°C (typowe dla kotła gazowego/olejowego); pompa ciepła lub dowolny system z pogodową regulacją temperatury pracuje znacznie niżej (często 30-45°C), co zaburza obliczenia otwarcia zaworu w MPC v2. Wskaż tutaj czujnik śledzący rzeczywistą temperaturę zasilania/wody (np. w zbiorniku buforowym) - jest odczytywany na żywo w każdym cyklu. Ma pierwszeństwo przed statyczną wartością zastępczą poniżej, gdy obie są ustawione.",
+          "flow_temp_static_c": "Statyczna wartość zastępcza dla powyższej temperatury zasilania/wody, używana gdy nie skonfigurowano czujnika lub jego odczyt jest chwilowo niedostępny. Pozostaw puste, aby zachować wbudowaną wartość domyślną MPC v2 (65°C)."
         }
       },
       "advanced": {
@@ -133,7 +137,9 @@
           "boost_asymmetric_threshold": "Użyj innego progu dla chłodzenia",
           "boost_threshold_cool": "Próg boostu chłodzenia (°C)",
           "boost_cooldown_minutes": "Czas odnowienia boostu (minuty)",
-          "show_all_calibration_modes": "Pokaż wszystkie tryby kalibracji"
+          "show_all_calibration_modes": "Pokaż wszystkie tryby kalibracji",
+          "flow_temp_sensor": "Czujnik temperatury zasilania (opcjonalnie)",
+          "flow_temp_static_c": "Temperatura zasilania, statyczna wartość zastępcza (°C)"
         },
         "data_description": {
           "presets": "Wybierz ustawienia predefiniowane, które mają być dostępne dla tego termostatu.",
@@ -146,7 +152,9 @@
           "boost_asymmetric_threshold": "Włącz, aby ustawić inny próg dryfu temperatury dla uzbrojenia boostu chłodzenia (np. w gorący letni dzień) niż dla boostu grzania. Pozostaw wyłączone, aby używać tego samego progu w obu kierunkach.",
           "boost_threshold_cool": "Jeśli temperatura w pomieszczeniu wzrosła o więcej niż ta wartość, gdy okno było otwarte, zamknięcie go uzbraja boost chłodzenia. Używane tylko, gdy powyższy przełącznik jest włączony.",
           "boost_cooldown_minutes": "Minimalny czas po zakończeniu boostu, zanim będzie mógł się uzbroić kolejny, aby pomieszczenie, które wielokrotnie przekracza próg (np. powtarzane otwieranie/zamykanie okna), nie powodowało zbyt częstego przełączania współdzielonego urządzenia.",
-          "show_all_calibration_modes": "Domyślnie grzejnik oznaczony jako 'Podłoga' oferuje tylko tryby kalibracji, które działają dla niego poprawnie (MPC Predictive, (AI) MPC v2, Kontroler TPI, Kontroler PID). Włącz tę opcję, aby zamiast tego zobaczyć wszystkie 8 trybów - przydatne, jeśli pętla ogrzewania podłogowego jest sterowana siłownikiem z zaworem."
+          "show_all_calibration_modes": "Domyślnie grzejnik oznaczony jako 'Podłoga' oferuje tylko tryby kalibracji, które działają dla niego poprawnie (MPC Predictive, (AI) MPC v2, Kontroler TPI, Kontroler PID). Włącz tę opcję, aby zamiast tego zobaczyć wszystkie 8 trybów - przydatne, jeśli pętla ogrzewania podłogowego jest sterowana siłownikiem z zaworem.",
+          "flow_temp_sensor": "Używane wyłącznie przez model instalacji trybu kalibracji (AI) MPC v2. Wartość domyślna zakłada źródło ciepła 65°C (typowe dla kotła gazowego/olejowego); pompa ciepła lub dowolny system z pogodową regulacją temperatury pracuje znacznie niżej (często 30-45°C), co zaburza obliczenia otwarcia zaworu w MPC v2. Wskaż tutaj czujnik śledzący rzeczywistą temperaturę zasilania/wody (np. w zbiorniku buforowym) - jest odczytywany na żywo w każdym cyklu. Ma pierwszeństwo przed statyczną wartością zastępczą poniżej, gdy obie są ustawione.",
+          "flow_temp_static_c": "Statyczna wartość zastępcza dla powyższej temperatury zasilania/wody, używana gdy nie skonfigurowano czujnika lub jego odczyt jest chwilowo niedostępny. Pozostaw puste, aby zachować wbudowaną wartość domyślną MPC v2 (65°C)."
         }
       },
       "advanced": {

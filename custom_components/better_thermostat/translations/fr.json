@@ -34,7 +34,9 @@
           "boost_asymmetric_threshold": "Utiliser un seuil différent pour le refroidissement",
           "boost_threshold_cool": "Seuil de boost de refroidissement (°C)",
           "boost_cooldown_minutes": "Délai de récupération du boost (minutes)",
-          "show_all_calibration_modes": "Afficher tous les modes de calibration"
+          "show_all_calibration_modes": "Afficher tous les modes de calibration",
+          "flow_temp_sensor": "Capteur de température de départ (facultatif)",
+          "flow_temp_static_c": "Température de départ, valeur de repli statique (°C)"
         },
         "data_description": {
           "presets": "Sélectionnez les préréglages qui doivent être disponibles pour ce thermostat.",
@@ -48,7 +50,9 @@
           "boost_asymmetric_threshold": "Activez ceci pour définir un seuil de dérive différent pour déclencher un boost de refroidissement (par exemple, une chaude journée d'été) que pour un boost de chauffage. Laissez désactivé pour utiliser le même seuil dans les deux sens.",
           "boost_threshold_cool": "Si la température de la pièce a augmenté de plus de cette valeur pendant qu'une fenêtre était ouverte, la fermer déclenche un boost de refroidissement. Utilisé uniquement lorsque l'option ci-dessus est activée.",
           "boost_cooldown_minutes": "Délai minimal après la fin d'un boost avant qu'un autre puisse se déclencher, afin qu'une pièce qui dérive continuellement au-delà du seuil (par exemple des ouvertures/fermetures répétées de fenêtre) ne sollicite pas trop fréquemment l'appareil partagé.",
-          "show_all_calibration_modes": "Par défaut, un radiateur marqué « Plancher » ne propose que les modes de calibration qui fonctionnent correctement pour lui (MPC Predictive, (IA) MPC v2, Contrôleur TPI, Contrôleur PID). Activez ceci pour voir les 8 modes à la place - utile si votre boucle de plancher chauffant est pilotée par un actionneur à vanne."
+          "show_all_calibration_modes": "Par défaut, un radiateur marqué « Plancher » ne propose que les modes de calibration qui fonctionnent correctement pour lui (MPC Predictive, (IA) MPC v2, Contrôleur TPI, Contrôleur PID). Activez ceci pour voir les 8 modes à la place - utile si votre boucle de plancher chauffant est pilotée par un actionneur à vanne.",
+          "flow_temp_sensor": "Utilisé uniquement par le modèle d'installation du mode de calibration (IA) MPC v2. La valeur par défaut suppose une source de chaleur à 65°C (typique d'une chaudière gaz/fioul) ; une pompe à chaleur ou tout système à loi d'eau fonctionne bien plus bas (souvent 30-45°C), ce qui fausse les calculs d'ouverture de vanne de MPC v2. Pointez ceci vers un capteur qui suit votre température de départ/eau réelle (par exemple dans un ballon tampon) - elle est lue en direct à chaque cycle. Prend le pas sur la valeur de repli statique ci-dessous lorsque les deux sont définies.",
+          "flow_temp_static_c": "Valeur de repli statique pour la température de départ/eau ci-dessus, utilisée quand aucun capteur n'est configuré ou que sa lecture est momentanément indisponible. Laissez vide pour conserver la valeur par défaut intégrée de MPC v2 (65°C)."
         }
       },
       "advanced": {
@@ -133,7 +137,9 @@
           "boost_asymmetric_threshold": "Utiliser un seuil différent pour le refroidissement",
           "boost_threshold_cool": "Seuil de boost de refroidissement (°C)",
           "boost_cooldown_minutes": "Délai de récupération du boost (minutes)",
-          "show_all_calibration_modes": "Afficher tous les modes de calibration"
+          "show_all_calibration_modes": "Afficher tous les modes de calibration",
+          "flow_temp_sensor": "Capteur de température de départ (facultatif)",
+          "flow_temp_static_c": "Température de départ, valeur de repli statique (°C)"
         },
         "data_description": {
           "presets": "Sélectionnez les préréglages qui doivent être disponibles pour ce thermostat.",
@@ -146,7 +152,9 @@
           "boost_asymmetric_threshold": "Activez ceci pour définir un seuil de dérive différent pour déclencher un boost de refroidissement (par exemple, une chaude journée d'été) que pour un boost de chauffage. Laissez désactivé pour utiliser le même seuil dans les deux sens.",
           "boost_threshold_cool": "Si la température de la pièce a augmenté de plus de cette valeur pendant qu'une fenêtre était ouverte, la fermer déclenche un boost de refroidissement. Utilisé uniquement lorsque l'option ci-dessus est activée.",
           "boost_cooldown_minutes": "Délai minimal après la fin d'un boost avant qu'un autre puisse se déclencher, afin qu'une pièce qui dérive continuellement au-delà du seuil (par exemple des ouvertures/fermetures répétées de fenêtre) ne sollicite pas trop fréquemment l'appareil partagé.",
-          "show_all_calibration_modes": "Par défaut, un radiateur marqué « Plancher » ne propose que les modes de calibration qui fonctionnent correctement pour lui (MPC Predictive, (IA) MPC v2, Contrôleur TPI, Contrôleur PID). Activez ceci pour voir les 8 modes à la place - utile si votre boucle de plancher chauffant est pilotée par un actionneur à vanne."
+          "show_all_calibration_modes": "Par défaut, un radiateur marqué « Plancher » ne propose que les modes de calibration qui fonctionnent correctement pour lui (MPC Predictive, (IA) MPC v2, Contrôleur TPI, Contrôleur PID). Activez ceci pour voir les 8 modes à la place - utile si votre boucle de plancher chauffant est pilotée par un actionneur à vanne.",
+          "flow_temp_sensor": "Utilisé uniquement par le modèle d'installation du mode de calibration (IA) MPC v2. La valeur par défaut suppose une source de chaleur à 65°C (typique d'une chaudière gaz/fioul) ; une pompe à chaleur ou tout système à loi d'eau fonctionne bien plus bas (souvent 30-45°C), ce qui fausse les calculs d'ouverture de vanne de MPC v2. Pointez ceci vers un capteur qui suit votre température de départ/eau réelle (par exemple dans un ballon tampon) - elle est lue en direct à chaque cycle. Prend le pas sur la valeur de repli statique ci-dessous lorsque les deux sont définies.",
+          "flow_temp_static_c": "Valeur de repli statique pour la température de départ/eau ci-dessus, utilisée quand aucun capteur n'est configuré ou que sa lecture est momentanément indisponible. Laissez vide pour conserver la valeur par défaut intégrée de MPC v2 (65°C)."
         }
       },
       "advanced": {

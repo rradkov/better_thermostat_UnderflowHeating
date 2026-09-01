@@ -34,7 +34,9 @@
           "boost_asymmetric_threshold": "Brug en anden grænseværdi til køling",
           "boost_threshold_cool": "Boost-køletærskel (°C)",
           "boost_cooldown_minutes": "Boost-nedkølingstid (minutter)",
-          "show_all_calibration_modes": "Vis alle kalibreringstilstande"
+          "show_all_calibration_modes": "Vis alle kalibreringstilstande",
+          "flow_temp_sensor": "Fremløbstemperatur-sensor (valgfri)",
+          "flow_temp_static_c": "Fremløbstemperatur, statisk reserveværdi (°C)"
         },
         "data_description": {
           "presets": "Vælg de forudindstillinger, der skal være tilgængelige for denne termostat.",
@@ -48,7 +50,9 @@
           "boost_asymmetric_threshold": "Slå dette til for at angive en anden temperaturafvigelsestærskel for at aktivere et køleboost (f.eks. en varm sommerdag) end for et varmeboost. Lad det være slået fra for at bruge samme tærskel i begge retninger.",
           "boost_threshold_cool": "Hvis rumtemperaturen steg mere end denne værdi, mens et vindue var åbent, aktiverer lukning af det et køleboost. Bruges kun, når kontakten ovenfor er slået til.",
           "boost_cooldown_minutes": "Minimumstid efter et boost er afsluttet, før et nyt kan aktiveres, så et rum, der gentagne gange driver forbi tærsklen (f.eks. gentagen åbning/lukning af vindue), ikke får den delte enhed til at skifte for ofte.",
-          "show_all_calibration_modes": "Som standard tilbyder et varmelegeme markeret 'Gulv' kun de kalibreringstilstande, der fungerer korrekt for det (MPC Predictive, (AI) MPC v2, TPI-controller, PID-controller). Slå dette til for at se alle 8 tilstande i stedet - nyttigt hvis din gulvvarmeslynge styres af en ventilstyret aktuator."
+          "show_all_calibration_modes": "Som standard tilbyder et varmelegeme markeret 'Gulv' kun de kalibreringstilstande, der fungerer korrekt for det (MPC Predictive, (AI) MPC v2, TPI-controller, PID-controller). Slå dette til for at se alle 8 tilstande i stedet - nyttigt hvis din gulvvarmeslynge styres af en ventilstyret aktuator.",
+          "flow_temp_sensor": "Bruges kun af (AI) MPC v2-kalibreringstilstandens anlægsmodel. Standardværdien antager en varmekilde på 65°C (en typisk gas-/oliefyr); en varmepumpe eller ethvert vejrkompenseret system kører meget lavere (ofte 30-45°C), hvilket forstyrrer MPC v2's beregning af ventilåbning. Peg denne på en sensor, der sporer din faktiske fremløbs-/vandtemperatur (f.eks. ind i en bufferbeholder), og den læses live hver cyklus. Har forrang over den statiske reserveværdi nedenfor, når begge er indstillet.",
+          "flow_temp_static_c": "Statisk reserveværdi for fremløbs-/vandtemperaturen ovenfor, brugt når ingen sensor er konfigureret, eller dens aflæsning midlertidigt er utilgængelig. Lad stå tomt for at beholde MPC v2's indbyggede standard på 65°C."
         }
       },
       "advanced": {
@@ -133,7 +137,9 @@
           "boost_asymmetric_threshold": "Brug en anden grænseværdi til køling",
           "boost_threshold_cool": "Boost-køletærskel (°C)",
           "boost_cooldown_minutes": "Boost-nedkølingstid (minutter)",
-          "show_all_calibration_modes": "Vis alle kalibreringstilstande"
+          "show_all_calibration_modes": "Vis alle kalibreringstilstande",
+          "flow_temp_sensor": "Fremløbstemperatur-sensor (valgfri)",
+          "flow_temp_static_c": "Fremløbstemperatur, statisk reserveværdi (°C)"
         },
         "data_description": {
           "presets": "Vælg de forudindstillinger, der skal være tilgængelige for denne termostat.",
@@ -146,7 +152,9 @@
           "boost_asymmetric_threshold": "Slå dette til for at angive en anden temperaturafvigelsestærskel for at aktivere et køleboost (f.eks. en varm sommerdag) end for et varmeboost. Lad det være slået fra for at bruge samme tærskel i begge retninger.",
           "boost_threshold_cool": "Hvis rumtemperaturen steg mere end denne værdi, mens et vindue var åbent, aktiverer lukning af det et køleboost. Bruges kun, når kontakten ovenfor er slået til.",
           "boost_cooldown_minutes": "Minimumstid efter et boost er afsluttet, før et nyt kan aktiveres, så et rum, der gentagne gange driver forbi tærsklen (f.eks. gentagen åbning/lukning af vindue), ikke får den delte enhed til at skifte for ofte.",
-          "show_all_calibration_modes": "Som standard tilbyder et varmelegeme markeret 'Gulv' kun de kalibreringstilstande, der fungerer korrekt for det (MPC Predictive, (AI) MPC v2, TPI-controller, PID-controller). Slå dette til for at se alle 8 tilstande i stedet - nyttigt hvis din gulvvarmeslynge styres af en ventilstyret aktuator."
+          "show_all_calibration_modes": "Som standard tilbyder et varmelegeme markeret 'Gulv' kun de kalibreringstilstande, der fungerer korrekt for det (MPC Predictive, (AI) MPC v2, TPI-controller, PID-controller). Slå dette til for at se alle 8 tilstande i stedet - nyttigt hvis din gulvvarmeslynge styres af en ventilstyret aktuator.",
+          "flow_temp_sensor": "Bruges kun af (AI) MPC v2-kalibreringstilstandens anlægsmodel. Standardværdien antager en varmekilde på 65°C (en typisk gas-/oliefyr); en varmepumpe eller ethvert vejrkompenseret system kører meget lavere (ofte 30-45°C), hvilket forstyrrer MPC v2's beregning af ventilåbning. Peg denne på en sensor, der sporer din faktiske fremløbs-/vandtemperatur (f.eks. ind i en bufferbeholder), og den læses live hver cyklus. Har forrang over den statiske reserveværdi nedenfor, når begge er indstillet.",
+          "flow_temp_static_c": "Statisk reserveværdi for fremløbs-/vandtemperaturen ovenfor, brugt når ingen sensor er konfigureret, eller dens aflæsning midlertidigt er utilgængelig. Lad stå tomt for at beholde MPC v2's indbyggede standard på 65°C."
         }
       },
       "advanced": {

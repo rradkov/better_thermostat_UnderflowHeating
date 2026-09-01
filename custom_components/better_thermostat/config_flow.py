@@ -39,6 +39,8 @@ from .utils.const import (
     CONF_COOLER,
     CONF_DOOR_TIMEOUT,
     CONF_DOOR_TIMEOUT_AFTER,
+    CONF_FLOW_TEMP_SENSOR,
+    CONF_FLOW_TEMP_STATIC_C,
     CONF_HEAT_AUTO_SWAPPED,
     CONF_HEATER,
     CONF_HOMEMATICIP,
@@ -64,6 +66,8 @@ from .utils.const import (
     CONF_WINDOW_TIMEOUT,
     CONF_WINDOW_TIMEOUT_AFTER,
     DEFAULT_CALIBRATION_MODE,
+    FLOW_TEMP_STATIC_MAX_C,
+    FLOW_TEMP_STATIC_MIN_C,
     CalibrationMode,
     CalibrationType,
     MpcV2PlantPreset,
@@ -678,6 +682,28 @@ def _build_user_fields(
         domain=["sensor", "input_number", "number"],
         device_class="temperature",
     )
+    # MPC v2-only: the plant model's heat-source (flow/water) temperature.
+    # Sensor takes priority; the static fallback (blank by default, unlike
+    # the always-a-number CONF_TOLERANCE-style fields) covers setups without
+    # one. Neither configured leaves MPC v2 on its own 65.0 default.
+    add_entity_selector(
+        CONF_FLOW_TEMP_SENSOR,
+        domain=["sensor", "input_number", "number"],
+        device_class="temperature",
+    )
+    add_field(
+        CONF_FLOW_TEMP_STATIC_C,
+        selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="°C",
+                min=FLOW_TEMP_STATIC_MIN_C,
+                max=FLOW_TEMP_STATIC_MAX_C,
+                step=0.5,
+            )
+        ),
+        default=resolve(CONF_FLOW_TEMP_STATIC_C),
+    )
     add_entity_selector(
         CONF_SENSOR_WINDOW, domain=["group", "sensor", "input_boolean", "binary_sensor"]
     )
@@ -838,6 +864,7 @@ def _normalize_user_submission(
         CONF_SENSOR_DOOR,
         CONF_HUMIDITY,
         CONF_OUTDOOR_SENSOR,
+        CONF_FLOW_TEMP_SENSOR,
         CONF_WEATHER,
     )
     for key in optional_keys:
@@ -849,6 +876,23 @@ def _normalize_user_submission(
                 normalized[key] = value
         else:
             normalized[key] = None
+
+    # Genuinely optional, no forced default (unlike e.g. CONF_TOLERANCE) -
+    # blank/invalid means "not configured", not "explicitly zero".
+    if CONF_FLOW_TEMP_STATIC_C in user_input:
+        raw_static = user_input.get(CONF_FLOW_TEMP_STATIC_C)
+        if raw_static in ("", None):
+            normalized[CONF_FLOW_TEMP_STATIC_C] = None
+        else:
+            try:
+                normalized[CONF_FLOW_TEMP_STATIC_C] = max(
+                    FLOW_TEMP_STATIC_MIN_C,
+                    min(FLOW_TEMP_STATIC_MAX_C, float(raw_static)),
+                )
+            except TypeError, ValueError:
+                normalized[CONF_FLOW_TEMP_STATIC_C] = None
+    else:
+        normalized[CONF_FLOW_TEMP_STATIC_C] = None
 
     for key in (
         CONF_WINDOW_TIMEOUT,

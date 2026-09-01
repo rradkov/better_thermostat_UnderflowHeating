@@ -120,6 +120,35 @@ def _get_current_outdoor_temp(self) -> float | None:
     return None
 
 
+def _get_current_flow_temp_c(self) -> float | None:
+    """Best-effort live flow/water temperature for MPC v2's plant model.
+
+    Sensor (if configured and available) takes priority over the static
+    fallback (if configured); ``None`` means neither is set, in which case
+    the caller leaves ``PlantParams.T_water_C`` at its own 65.0 default -
+    an instance that configures neither is unaffected by this feature.
+    """
+    flow_temp_sensor = getattr(self, "flow_temp_sensor", None)
+    hass = getattr(self, "hass", None)
+    if flow_temp_sensor is not None and hass is not None:
+        state = hass.states.get(flow_temp_sensor)
+        if state:
+            value = convert_to_float_celsius(
+                state.state,
+                self.device_name,
+                "_get_current_flow_temp_c()",
+                unit_of_measurement=state.attributes.get("unit_of_measurement"),
+            )
+            if value is not None:
+                return value
+
+    static = getattr(self, "flow_temp_static_c", None)
+    if isinstance(static, (int, float)):
+        return float(static)
+
+    return None
+
+
 def _get_current_solar_intensity(self) -> float:
     """Estimate solar intensity (0.0 to 1.0) based on weather entity data."""
     if self.weather_entity is None:
@@ -455,6 +484,14 @@ def _compute_mpc_v2_balance(self, entity_id: str):
             preset=None if preset == MpcV2PlantPreset.AUTO else preset.value,
         )
     )
+    flow_temp_c = _get_current_flow_temp_c(self)
+    if flow_temp_c is not None:
+        # Seeds a correct prior for a *fresh* controller build (first-ever
+        # cycle, or after a genuine preset-driven rebuild) instead of the
+        # plant's hardcoded 65.0 - the live per-cycle path that keeps an
+        # already-running controller tracking this value is flow_temp_C on
+        # MpcV2Input below, not this line.
+        v2_params.plant.T_water_C = flow_temp_c
 
     try:
         mpc_v2_state = self.state_mgr.get_mpc_v2_live(mpc_key, v2_params)
@@ -470,6 +507,7 @@ def _compute_mpc_v2_balance(self, entity_id: str):
                 entity_id=entity_id,
                 outdoor_temp_C=_get_current_outdoor_temp(self),
                 max_opening_pct=max_opening_pct,
+                flow_temp_C=flow_temp_c,
             ),
             v2_params,
             state=mpc_v2_state,

@@ -34,7 +34,9 @@
           "boost_asymmetric_threshold": "Usa una soglia diversa per il raffreddamento",
           "boost_threshold_cool": "Soglia di boost raffreddamento (°C)",
           "boost_cooldown_minutes": "Tempo di recupero del boost (minuti)",
-          "show_all_calibration_modes": "Mostra tutte le modalità di calibrazione"
+          "show_all_calibration_modes": "Mostra tutte le modalità di calibrazione",
+          "flow_temp_sensor": "Sensore di temperatura di mandata (opzionale)",
+          "flow_temp_static_c": "Temperatura di mandata, valore statico di riserva (°C)"
         },
         "data_description": {
           "presets": "Seleziona i preset che vuoi rendere disponibili per questo termostato.",
@@ -48,7 +50,9 @@
           "boost_asymmetric_threshold": "Attiva per impostare una soglia di deriva diversa per attivare un boost di raffreddamento (ad esempio, una calda giornata estiva) rispetto a un boost di riscaldamento. Lascia disattivato per usare la stessa soglia in entrambe le direzioni.",
           "boost_threshold_cool": "Se la temperatura ambiente è aumentata di oltre questo valore mentre una finestra era aperta, chiuderla attiva un boost di raffreddamento. Usato solo quando l'interruttore sopra è attivo.",
           "boost_cooldown_minutes": "Tempo minimo dopo la fine di un boost prima che un altro possa riattivarsi, così una stanza che continua a superare la soglia (ad esempio finestra aperta e chiusa ripetutamente) non sovraccarica il dispositivo condiviso.",
-          "show_all_calibration_modes": "Per impostazione predefinita, un radiatore contrassegnato come 'Pavimento' offre solo le modalità di calibrazione che funzionano correttamente per esso (MPC Predictive, (AI) MPC v2, Controller TPI, Controller PID). Attiva questa opzione per vedere tutte e 8 le modalità - utile se il tuo circuito a pavimento è pilotato da un attuatore con valvola."
+          "show_all_calibration_modes": "Per impostazione predefinita, un radiatore contrassegnato come 'Pavimento' offre solo le modalità di calibrazione che funzionano correttamente per esso (MPC Predictive, (AI) MPC v2, Controller TPI, Controller PID). Attiva questa opzione per vedere tutte e 8 le modalità - utile se il tuo circuito a pavimento è pilotato da un attuatore con valvola.",
+          "flow_temp_sensor": "Usato solo dal modello di impianto della modalità di calibrazione (AI) MPC v2. Il valore predefinito presuppone una fonte di calore a 65°C (tipica di una caldaia a gas/gasolio); una pompa di calore o qualsiasi sistema con compensazione climatica funziona molto più in basso (spesso 30-45°C), il che falsa i calcoli di apertura della valvola di MPC v2. Puntalo a un sensore che rileva la tua reale temperatura di mandata/acqua (ad es. in un accumulatore) - viene letto in tempo reale ad ogni ciclo. Ha priorità sul valore statico di riserva sottostante quando entrambi sono impostati.",
+          "flow_temp_static_c": "Valore statico di riserva per la temperatura di mandata/acqua sopra, usato quando non è configurato alcun sensore o la sua lettura è temporaneamente non disponibile. Lascia vuoto per mantenere il valore predefinito integrato di MPC v2 (65°C)."
         }
       },
       "advanced": {
@@ -133,7 +137,9 @@
           "boost_asymmetric_threshold": "Usa una soglia diversa per il raffreddamento",
           "boost_threshold_cool": "Soglia di boost raffreddamento (°C)",
           "boost_cooldown_minutes": "Tempo di recupero del boost (minuti)",
-          "show_all_calibration_modes": "Mostra tutte le modalità di calibrazione"
+          "show_all_calibration_modes": "Mostra tutte le modalità di calibrazione",
+          "flow_temp_sensor": "Sensore di temperatura di mandata (opzionale)",
+          "flow_temp_static_c": "Temperatura di mandata, valore statico di riserva (°C)"
         },
         "data_description": {
           "presets": "Seleziona i preset che vuoi rendere disponibili per questo termostato.",
@@ -146,7 +152,9 @@
           "boost_asymmetric_threshold": "Attiva per impostare una soglia di deriva diversa per attivare un boost di raffreddamento (ad esempio, una calda giornata estiva) rispetto a un boost di riscaldamento. Lascia disattivato per usare la stessa soglia in entrambe le direzioni.",
           "boost_threshold_cool": "Se la temperatura ambiente è aumentata di oltre questo valore mentre una finestra era aperta, chiuderla attiva un boost di raffreddamento. Usato solo quando l'interruttore sopra è attivo.",
           "boost_cooldown_minutes": "Tempo minimo dopo la fine di un boost prima che un altro possa riattivarsi, così una stanza che continua a superare la soglia (ad esempio finestra aperta e chiusa ripetutamente) non sovraccarica il dispositivo condiviso.",
-          "show_all_calibration_modes": "Per impostazione predefinita, un radiatore contrassegnato come 'Pavimento' offre solo le modalità di calibrazione che funzionano correttamente per esso (MPC Predictive, (AI) MPC v2, Controller TPI, Controller PID). Attiva questa opzione per vedere tutte e 8 le modalità - utile se il tuo circuito a pavimento è pilotato da un attuatore con valvola."
+          "show_all_calibration_modes": "Per impostazione predefinita, un radiatore contrassegnato come 'Pavimento' offre solo le modalità di calibrazione che funzionano correttamente per esso (MPC Predictive, (AI) MPC v2, Controller TPI, Controller PID). Attiva questa opzione per vedere tutte e 8 le modalità - utile se il tuo circuito a pavimento è pilotato da un attuatore con valvola.",
+          "flow_temp_sensor": "Usato solo dal modello di impianto della modalità di calibrazione (AI) MPC v2. Il valore predefinito presuppone una fonte di calore a 65°C (tipica di una caldaia a gas/gasolio); una pompa di calore o qualsiasi sistema con compensazione climatica funziona molto più in basso (spesso 30-45°C), il che falsa i calcoli di apertura della valvola di MPC v2. Puntalo a un sensore che rileva la tua reale temperatura di mandata/acqua (ad es. in un accumulatore) - viene letto in tempo reale ad ogni ciclo. Ha priorità sul valore statico di riserva sottostante quando entrambi sono impostati.",
+          "flow_temp_static_c": "Valore statico di riserva per la temperatura di mandata/acqua sopra, usato quando non è configurato alcun sensore o la sua lettura è temporaneamente non disponibile. Lascia vuoto per mantenere il valore predefinito integrato di MPC v2 (65°C)."
         }
       },
       "advanced": {

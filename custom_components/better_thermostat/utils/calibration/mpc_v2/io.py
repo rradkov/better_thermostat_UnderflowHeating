@@ -26,6 +26,12 @@ class MpcV2Input:
     max_opening_pct: float | None = None
     bt_name: str | None = None
     entity_id: str | None = None
+    # Live heat-source (flow/water) temperature, °C - resolved each cycle by
+    # calibration.py's _get_current_flow_temp_c() from a configured sensor or
+    # static fallback. None means neither is configured, in which case the
+    # controller keeps whatever T_water_C its plant prior was seeded with
+    # (PlantParams' own 65.0 default unless a preset/AUTO override applies).
+    flow_temp_C: float | None = None
 
 
 @dataclass
@@ -37,6 +43,9 @@ class MpcV2Diagnostics:
     D_hat_K_per_min: float
     tau_room_min: float
     coupling_rad_room: float
+    # The plant's T_water_C at the time this cycle ran - lets a user confirm
+    # a configured flow-temp sensor/fallback is actually reaching the model.
+    T_water_C: float
 
 
 @dataclass

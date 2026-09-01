@@ -74,6 +74,8 @@ def _make_bt(*, real_trvs: dict[str, Trv], unique_id: str = "bt_test") -> Any:
         heat_loss_rate=0.02,
         outdoor_sensor=None,
         weather_entity=None,
+        flow_temp_sensor=None,
+        flow_temp_static_c=None,
         hass=None,
         _unique_id=unique_id,
         device_id="bt_test_device",
@@ -195,6 +197,78 @@ def test_single_trv_passes_through_without_distribution() -> None:
     cal = real_trvs["climate.solo"].calibration_balance
     assert cal["debug"]["group_valve_pct"] == cal["debug"]["distributed_valve_pct"]
     assert cal["debug"]["controller_version"] == "v2"
+
+
+def test_flow_temp_defaults_to_65_when_unconfigured() -> None:
+    """Neither flow_temp_sensor nor flow_temp_static_c set -> unaffected."""
+    real_trvs = {
+        "climate.solo": _trv_info(
+            "climate.solo", current_temp=19.0, supports_valve=True
+        )
+    }
+    bt = _make_bt(real_trvs=real_trvs)
+
+    out, _ = _compute_mpc_v2_balance(bt, "climate.solo")
+    assert out is not None
+    assert real_trvs["climate.solo"].calibration_balance["debug"]["T_water_C"] == 65.0
+
+
+def test_flow_temp_static_fallback_flows_through() -> None:
+    """A configured static fallback reaches the plant model."""
+    real_trvs = {
+        "climate.solo": _trv_info(
+            "climate.solo", current_temp=19.0, supports_valve=True
+        )
+    }
+    bt = _make_bt(real_trvs=real_trvs)
+    bt.flow_temp_static_c = 40.0
+
+    out, _ = _compute_mpc_v2_balance(bt, "climate.solo")
+    assert out is not None
+    assert real_trvs["climate.solo"].calibration_balance["debug"]["T_water_C"] == 40.0
+
+
+def test_flow_temp_sensor_takes_priority_over_static_fallback() -> None:
+    """A live sensor reading wins over the static fallback when both are set."""
+    real_trvs = {
+        "climate.solo": _trv_info(
+            "climate.solo", current_temp=19.0, supports_valve=True
+        )
+    }
+    bt = _make_bt(real_trvs=real_trvs)
+    bt.flow_temp_sensor = "sensor.buffer_flow_temp"
+    bt.flow_temp_static_c = 40.0
+    bt.hass = SimpleNamespace(
+        states=SimpleNamespace(
+            get=lambda entity_id: (
+                SimpleNamespace(state="45.0", attributes={"unit_of_measurement": "°C"})
+                if entity_id == "sensor.buffer_flow_temp"
+                else None
+            )
+        )
+    )
+
+    out, _ = _compute_mpc_v2_balance(bt, "climate.solo")
+    assert out is not None
+    assert real_trvs["climate.solo"].calibration_balance["debug"]["T_water_C"] == 45.0
+
+
+def test_flow_temp_sensor_unavailable_falls_back_to_static() -> None:
+    """A sensor that's currently unresolvable (e.g. unavailable) falls
+    through to the static fallback rather than the 65.0 plant default."""
+    real_trvs = {
+        "climate.solo": _trv_info(
+            "climate.solo", current_temp=19.0, supports_valve=True
+        )
+    }
+    bt = _make_bt(real_trvs=real_trvs)
+    bt.flow_temp_sensor = "sensor.buffer_flow_temp"
+    bt.flow_temp_static_c = 40.0
+    bt.hass = SimpleNamespace(states=SimpleNamespace(get=lambda entity_id: None))
+
+    out, _ = _compute_mpc_v2_balance(bt, "climate.solo")
+    assert out is not None
+    assert real_trvs["climate.solo"].calibration_balance["debug"]["T_water_C"] == 40.0
 
 
 def test_hvac_off_returns_none() -> None:

@@ -34,7 +34,9 @@
           "boost_asymmetric_threshold": "Für Kühlung einen anderen Schwellenwert verwenden",
           "boost_threshold_cool": "Boost-Kühlschwellenwert (°C)",
           "boost_cooldown_minutes": "Boost-Abklingzeit (Minuten)",
-          "show_all_calibration_modes": "Alle Kalibrierungsmodi anzeigen"
+          "show_all_calibration_modes": "Alle Kalibrierungsmodi anzeigen",
+          "flow_temp_sensor": "Vorlauftemperatur-Sensor (optional)",
+          "flow_temp_static_c": "Vorlauftemperatur, statischer Ersatzwert (°C)"
         },
         "data_description": {
           "presets": "Wähle die Presets aus, die für dieses Thermostat verfügbar sein sollen.",
@@ -48,7 +50,9 @@
           "boost_asymmetric_threshold": "Aktivieren, um für das Auslösen eines Kühl-Boosts (z. B. an einem heißen Sommertag) einen anderen Temperaturabweichungs-Schwellenwert als für einen Heiz-Boost festzulegen. Lassen Sie dies deaktiviert, um denselben Schwellenwert für beide Richtungen zu verwenden.",
           "boost_threshold_cool": "Wenn die Raumtemperatur bei geöffnetem Fenster um mehr als diesen Wert gestiegen ist, löst das Schließen einen Kühl-Boost aus. Wird nur verwendet, wenn der Schalter oben aktiviert ist.",
           "boost_cooldown_minutes": "Mindestzeit nach Ende eines Boosts, bevor ein weiterer ausgelöst werden kann, damit ein Raum, der wiederholt über den Schwellenwert driftet (z. B. wiederholtes Öffnen/Schließen des Fensters), das gemeinsam genutzte Gerät nicht zu häufig schaltet.",
-          "show_all_calibration_modes": "Standardmäßig bietet ein als 'Fußboden' markiertes Heizgerät nur die Kalibrierungsmodi an, die dafür korrekt funktionieren (MPC Predictive, (AI) MPC v2, TPI-Controller, PID-Controller). Aktivieren Sie dies, um stattdessen alle 8 Modi zu sehen - nützlich, wenn Ihre Fußbodenheizungsschleife von einem ventilfähigen Aktuator gesteuert wird."
+          "show_all_calibration_modes": "Standardmäßig bietet ein als 'Fußboden' markiertes Heizgerät nur die Kalibrierungsmodi an, die dafür korrekt funktionieren (MPC Predictive, (AI) MPC v2, TPI-Controller, PID-Controller). Aktivieren Sie dies, um stattdessen alle 8 Modi zu sehen - nützlich, wenn Ihre Fußbodenheizungsschleife von einem ventilfähigen Aktuator gesteuert wird.",
+          "flow_temp_sensor": "Wird nur vom Anlagenmodell des (AI) MPC v2-Kalibrierungsmodus verwendet. Der Standardwert geht von einer Wärmequelle mit 65°C aus (typisch für einen Gas-/Ölkessel); eine Wärmepumpe oder jedes witterungsgeführte System läuft deutlich niedriger (oft 30-45°C), was die Ventilöffnungsberechnung von MPC v2 verfälscht. Verweisen Sie hierauf einen Sensor, der Ihre tatsächliche Vorlauf-/Wassertemperatur erfasst (z. B. in einen Pufferspeicher) - er wird jeden Zyklus live ausgelesen. Hat Vorrang vor dem statischen Ersatzwert unten, wenn beide gesetzt sind.",
+          "flow_temp_static_c": "Statischer Ersatzwert für die obige Vorlauf-/Wassertemperatur, verwendet, wenn kein Sensor konfiguriert ist oder dessen Messwert kurzzeitig nicht verfügbar ist. Leer lassen, um den eingebauten Standardwert von 65°C von MPC v2 beizubehalten."
         }
       },
       "advanced": {
@@ -133,7 +137,9 @@
           "boost_asymmetric_threshold": "Für Kühlung einen anderen Schwellenwert verwenden",
           "boost_threshold_cool": "Boost-Kühlschwellenwert (°C)",
           "boost_cooldown_minutes": "Boost-Abklingzeit (Minuten)",
-          "show_all_calibration_modes": "Alle Kalibrierungsmodi anzeigen"
+          "show_all_calibration_modes": "Alle Kalibrierungsmodi anzeigen",
+          "flow_temp_sensor": "Vorlauftemperatur-Sensor (optional)",
+          "flow_temp_static_c": "Vorlauftemperatur, statischer Ersatzwert (°C)"
         },
         "data_description": {
           "presets": "Wähle die Presets aus, die für dieses Thermostat verfügbar sein sollen.",
@@ -146,7 +152,9 @@
           "boost_asymmetric_threshold": "Aktivieren, um für das Auslösen eines Kühl-Boosts (z. B. an einem heißen Sommertag) einen anderen Temperaturabweichungs-Schwellenwert als für einen Heiz-Boost festzulegen. Lassen Sie dies deaktiviert, um denselben Schwellenwert für beide Richtungen zu verwenden.",
           "boost_threshold_cool": "Wenn die Raumtemperatur bei geöffnetem Fenster um mehr als diesen Wert gestiegen ist, löst das Schließen einen Kühl-Boost aus. Wird nur verwendet, wenn der Schalter oben aktiviert ist.",
           "boost_cooldown_minutes": "Mindestzeit nach Ende eines Boosts, bevor ein weiterer ausgelöst werden kann, damit ein Raum, der wiederholt über den Schwellenwert driftet (z. B. wiederholtes Öffnen/Schließen des Fensters), das gemeinsam genutzte Gerät nicht zu häufig schaltet.",
-          "show_all_calibration_modes": "Standardmäßig bietet ein als 'Fußboden' markiertes Heizgerät nur die Kalibrierungsmodi an, die dafür korrekt funktionieren (MPC Predictive, (AI) MPC v2, TPI-Controller, PID-Controller). Aktivieren Sie dies, um stattdessen alle 8 Modi zu sehen - nützlich, wenn Ihre Fußbodenheizungsschleife von einem ventilfähigen Aktuator gesteuert wird."
+          "show_all_calibration_modes": "Standardmäßig bietet ein als 'Fußboden' markiertes Heizgerät nur die Kalibrierungsmodi an, die dafür korrekt funktionieren (MPC Predictive, (AI) MPC v2, TPI-Controller, PID-Controller). Aktivieren Sie dies, um stattdessen alle 8 Modi zu sehen - nützlich, wenn Ihre Fußbodenheizungsschleife von einem ventilfähigen Aktuator gesteuert wird.",
+          "flow_temp_sensor": "Wird nur vom Anlagenmodell des (AI) MPC v2-Kalibrierungsmodus verwendet. Der Standardwert geht von einer Wärmequelle mit 65°C aus (typisch für einen Gas-/Ölkessel); eine Wärmepumpe oder jedes witterungsgeführte System läuft deutlich niedriger (oft 30-45°C), was die Ventilöffnungsberechnung von MPC v2 verfälscht. Verweisen Sie hierauf einen Sensor, der Ihre tatsächliche Vorlauf-/Wassertemperatur erfasst (z. B. in einen Pufferspeicher) - er wird jeden Zyklus live ausgelesen. Hat Vorrang vor dem statischen Ersatzwert unten, wenn beide gesetzt sind.",
+          "flow_temp_static_c": "Statischer Ersatzwert für die obige Vorlauf-/Wassertemperatur, verwendet, wenn kein Sensor konfiguriert ist oder dessen Messwert kurzzeitig nicht verfügbar ist. Leer lassen, um den eingebauten Standardwert von 65°C von MPC v2 beizubehalten."
         }
       },
       "advanced": {

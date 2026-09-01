@@ -125,6 +125,8 @@ from .utils.const import (
     CONF_COOLER,
     CONF_DOOR_TIMEOUT,
     CONF_DOOR_TIMEOUT_AFTER,
+    CONF_FLOW_TEMP_SENSOR,
+    CONF_FLOW_TEMP_STATIC_C,
     CONF_HEATER,
     CONF_HUMIDITY,
     CONF_MIN_COOLER_RESEND_INTERVAL,
@@ -317,6 +319,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
         entry.entry_id,
         device_class="better_thermostat",
         state_class="better_thermostat_state",
+        flow_temp_sensor=entry.data.get(CONF_FLOW_TEMP_SENSOR, None),
+        flow_temp_static_c=entry.data.get(CONF_FLOW_TEMP_STATIC_C, None),
     )
     hass.data[DOMAIN][entry.entry_id]["climate"] = bt_entity
     async_normalize_bt_entity_ids(hass, entry, Platform.CLIMATE)
@@ -514,6 +518,8 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         unique_id,
         device_class,
         state_class,
+        flow_temp_sensor=None,
+        flow_temp_static_c=None,
     ):
         """Initialize the thermostat.
 
@@ -588,6 +594,12 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
             Device class of the climate entity.
         state_class : str | None
             State class of the climate entity.
+        flow_temp_sensor : str | None
+            Heat-source (flow/water) temperature sensor entity id, used only
+            by MPC v2's plant model.
+        flow_temp_static_c : float | None
+            Static °C fallback for the same, used when the sensor above is
+            unset or briefly unavailable.
         """
         self.device_name = name
         self.model = model
@@ -639,6 +651,10 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         self.door_delay_after = door_delay_after or 0
         self.weather_entity = weather_entity or None
         self.outdoor_sensor = outdoor_sensor or None
+        self.flow_temp_sensor = flow_temp_sensor or None
+        self.flow_temp_static_c = (
+            flow_temp_static_c if isinstance(flow_temp_static_c, (int, float)) else None
+        )
         # Robust off temperature parsing: preserve 0.0 and ignore invalid strings
         self.off_temperature = None
         if off_temperature not in (None, "", "None"):  # allow numeric 0
@@ -2173,14 +2189,16 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         )
 
         # The battery scan below reads all_entities, so every configured
-        # device has to be registered before it runs. The cooler and the
-        # outdoor sensor are the two that no earlier init step registers.
-        # Boost reuses the cooler entity, so it needs no registration of its
-        # own.
+        # device has to be registered before it runs. The cooler, the
+        # outdoor sensor and the flow-temp sensor are the ones that no
+        # earlier init step registers. Boost reuses the cooler entity, so it
+        # needs no registration of its own.
         if self.cooler_entity_id is not None:
             self.all_entities.append(self.cooler_entity_id)
         if self.outdoor_sensor is not None:
             self.all_entities.append(self.outdoor_sensor)
+        if getattr(self, "flow_temp_sensor", None) is not None:
+            self.all_entities.append(self.flow_temp_sensor)
 
         # try to find battery entities for all related entities
         for entity in self.all_entities:

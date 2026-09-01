@@ -34,7 +34,9 @@
           "boost_asymmetric_threshold": "Použiť iný prah pre chladenie",
           "boost_threshold_cool": "Prah boostu chladenia (°C)",
           "boost_cooldown_minutes": "Čas obnovy boostu (minúty)",
-          "show_all_calibration_modes": "Zobraziť všetky režimy kalibrácie"
+          "show_all_calibration_modes": "Zobraziť všetky režimy kalibrácie",
+          "flow_temp_sensor": "Senzor teploty prívodu (voliteľné)",
+          "flow_temp_static_c": "Teplota prívodu, statická záložná hodnota (°C)"
         },
         "data_description": {
           "presets": "Vyberte predvoľby, ktoré chcete mať k dispozícii pre tento termostat.",
@@ -48,7 +50,9 @@
           "boost_asymmetric_threshold": "Zapnutím nastavíte iný prah odchýlky teploty na aktiváciu boostu chladenia (napr. horúci letný deň) ako pre boost kúrenia. Ponechajte vypnuté, ak chcete použiť rovnaký prah pre oba smery.",
           "boost_threshold_cool": "Ak teplota v miestnosti stúpla o viac ako túto hodnotu, kým bolo okno otvorené, jeho zatvorenie aktivuje boost chladenia. Používa sa iba vtedy, keď je vyššie uvedený prepínač zapnutý.",
           "boost_cooldown_minutes": "Minimálny čas po skončení boostu, kým sa môže aktivovať ďalší, aby miestnosť, ktorá opakovane prekračuje prah (napr. opakované otváranie/zatváranie okna), nespôsobovala príliš časté prepínanie zdieľaného zariadenia.",
-          "show_all_calibration_modes": "V predvolenom nastavení ohrievač označený ako 'Podlaha' ponúka iba režimy kalibrácie, ktoré preň fungujú správne (MPC Predictive, (AI) MPC v2, TPI regulátor, PID regulátor). Zapnutím tejto možnosti zobrazíte namiesto toho všetkých 8 režimov - užitočné, ak je váš okruh podlahového kúrenia riadený pohonom s ventilom."
+          "show_all_calibration_modes": "V predvolenom nastavení ohrievač označený ako 'Podlaha' ponúka iba režimy kalibrácie, ktoré preň fungujú správne (MPC Predictive, (AI) MPC v2, TPI regulátor, PID regulátor). Zapnutím tejto možnosti zobrazíte namiesto toho všetkých 8 režimov - užitočné, ak je váš okruh podlahového kúrenia riadený pohonom s ventilom.",
+          "flow_temp_sensor": "Používa sa iba modelom sústavy režimu kalibrácie (AI) MPC v2. Predvolená hodnota predpokladá zdroj tepla 65°C (typické pre plynový/olejový kotol); tepelné čerpadlo alebo akýkoľvek systém s ekvitermickou reguláciou beží oveľa nižšie (často 30-45°C), čo skresľuje výpočty otvorenia ventilu v MPC v2. Nasmerujte sem senzor sledujúci vašu skutočnú teplotu prívodu/vody (napr. v zásobníku) - číta sa naživo pri každom cykle. Má prednosť pred statickou záložnou hodnotou nižšie, ak sú nastavené obe.",
+          "flow_temp_static_c": "Statická záložná hodnota pre vyššie uvedenú teplotu prívodu/vody, použije sa, keď nie je nakonfigurovaný žiadny senzor alebo je jeho hodnota dočasne nedostupná. Nechajte prázdne, ak chcete zachovať vstavanú predvolenú hodnotu MPC v2 (65°C)."
         }
       },
       "advanced": {
@@ -133,7 +137,9 @@
           "boost_asymmetric_threshold": "Použiť iný prah pre chladenie",
           "boost_threshold_cool": "Prah boostu chladenia (°C)",
           "boost_cooldown_minutes": "Čas obnovy boostu (minúty)",
-          "show_all_calibration_modes": "Zobraziť všetky režimy kalibrácie"
+          "show_all_calibration_modes": "Zobraziť všetky režimy kalibrácie",
+          "flow_temp_sensor": "Senzor teploty prívodu (voliteľné)",
+          "flow_temp_static_c": "Teplota prívodu, statická záložná hodnota (°C)"
         },
         "data_description": {
           "presets": "Vyberte predvoľby, ktoré chcete mať k dispozícii pre tento termostat.",
@@ -146,7 +152,9 @@
           "boost_asymmetric_threshold": "Zapnutím nastavíte iný prah odchýlky teploty na aktiváciu boostu chladenia (napr. horúci letný deň) ako pre boost kúrenia. Ponechajte vypnuté, ak chcete použiť rovnaký prah pre oba smery.",
           "boost_threshold_cool": "Ak teplota v miestnosti stúpla o viac ako túto hodnotu, kým bolo okno otvorené, jeho zatvorenie aktivuje boost chladenia. Používa sa iba vtedy, keď je vyššie uvedený prepínač zapnutý.",
           "boost_cooldown_minutes": "Minimálny čas po skončení boostu, kým sa môže aktivovať ďalší, aby miestnosť, ktorá opakovane prekračuje prah (napr. opakované otváranie/zatváranie okna), nespôsobovala príliš časté prepínanie zdieľaného zariadenia.",
-          "show_all_calibration_modes": "V predvolenom nastavení ohrievač označený ako 'Podlaha' ponúka iba režimy kalibrácie, ktoré preň fungujú správne (MPC Predictive, (AI) MPC v2, TPI regulátor, PID regulátor). Zapnutím tejto možnosti zobrazíte namiesto toho všetkých 8 režimov - užitočné, ak je váš okruh podlahového kúrenia riadený pohonom s ventilom."
+          "show_all_calibration_modes": "V predvolenom nastavení ohrievač označený ako 'Podlaha' ponúka iba režimy kalibrácie, ktoré preň fungujú správne (MPC Predictive, (AI) MPC v2, TPI regulátor, PID regulátor). Zapnutím tejto možnosti zobrazíte namiesto toho všetkých 8 režimov - užitočné, ak je váš okruh podlahového kúrenia riadený pohonom s ventilom.",
+          "flow_temp_sensor": "Používa sa iba modelom sústavy režimu kalibrácie (AI) MPC v2. Predvolená hodnota predpokladá zdroj tepla 65°C (typické pre plynový/olejový kotol); tepelné čerpadlo alebo akýkoľvek systém s ekvitermickou reguláciou beží oveľa nižšie (často 30-45°C), čo skresľuje výpočty otvorenia ventilu v MPC v2. Nasmerujte sem senzor sledujúci vašu skutočnú teplotu prívodu/vody (napr. v zásobníku) - číta sa naživo pri každom cykle. Má prednosť pred statickou záložnou hodnotou nižšie, ak sú nastavené obe.",
+          "flow_temp_static_c": "Statická záložná hodnota pre vyššie uvedenú teplotu prívodu/vody, použije sa, keď nie je nakonfigurovaný žiadny senzor alebo je jeho hodnota dočasne nedostupná. Nechajte prázdne, ak chcete zachovať vstavanú predvolenú hodnotu MPC v2 (65°C)."
         }
       },
       "advanced": {

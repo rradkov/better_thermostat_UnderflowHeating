@@ -120,6 +120,7 @@ def compute_mpc_v2(
         T_target_C=inp.target_temp_C,
         T_outdoor_C=T_outdoor,
         T_rad_C=inp.trv_temp_C,
+        T_water_C=inp.flow_temp_C,
     )
 
     percent_int = round(max(0.0, min(1.0, u)) * 100.0)

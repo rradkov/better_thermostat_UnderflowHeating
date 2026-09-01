@@ -34,7 +34,9 @@
           "boost_asymmetric_threshold": "Soğutma için farklı bir eşik kullan",
           "boost_threshold_cool": "Boost soğutma eşiği (°C)",
           "boost_cooldown_minutes": "Boost soğuma süresi (dakika)",
-          "show_all_calibration_modes": "Tüm kalibrasyon modlarını göster"
+          "show_all_calibration_modes": "Tüm kalibrasyon modlarını göster",
+          "flow_temp_sensor": "Gidiş suyu sıcaklık sensörü (isteğe bağlı)",
+          "flow_temp_static_c": "Gidiş suyu sıcaklığı, statik yedek değer (°C)"
         },
         "data_description": {
           "presets": "Bu termostat için kullanılabilir olmasını istediğiniz ön ayarları seçin.",
@@ -48,7 +50,9 @@
           "boost_asymmetric_threshold": "Bir soğutma boost'unu (örneğin sıcak bir yaz günü) tetiklemek için ısıtma boost'undan farklı bir sapma eşiği ayarlamak için bunu açın. Her iki yön için de aynı eşiği kullanmak için kapalı bırakın.",
           "boost_threshold_cool": "Pencere açıkken oda sıcaklığı bu değerden fazla yükseldiyse, pencereyi kapatmak bir soğutma boost'unu devreye sokar. Yalnızca yukarıdaki anahtar açıkken kullanılır.",
           "boost_cooldown_minutes": "Bir boost bittikten sonra başka birinin devreye girebilmesi için gereken minimum süre, böylece eşiği tekrar tekrar aşan bir oda (örneğin tekrar tekrar pencere açma/kapama) paylaşılan cihazın çok sık geçiş yapmasına neden olmaz.",
-          "show_all_calibration_modes": "Varsayılan olarak 'Yerden' olarak işaretlenmiş bir ısıtıcı yalnızca kendisi için doğru çalışan kalibrasyon modlarını sunar (MPC Predictive, (AI) MPC v2, TPI Denetleyici, PID Denetleyici). Bunun yerine tüm 8 modu görmek için bunu açın - yerden ısıtma devreniz valf kontrollü bir aktüatör tarafından yönetiliyorsa kullanışlıdır."
+          "show_all_calibration_modes": "Varsayılan olarak 'Yerden' olarak işaretlenmiş bir ısıtıcı yalnızca kendisi için doğru çalışan kalibrasyon modlarını sunar (MPC Predictive, (AI) MPC v2, TPI Denetleyici, PID Denetleyici). Bunun yerine tüm 8 modu görmek için bunu açın - yerden ısıtma devreniz valf kontrollü bir aktüatör tarafından yönetiliyorsa kullanışlıdır.",
+          "flow_temp_sensor": "Yalnızca (AI) MPC v2 kalibrasyon modunun tesis modeli tarafından kullanılır. Varsayılan değer 65°C'lik bir ısı kaynağı varsayar (tipik bir gaz/yağ kombisi); bir ısı pompası veya herhangi bir hava koşullarına duyarlı sistem çok daha düşük çalışır (genellikle 30-45°C), bu da MPC v2'nin vana açma hesaplamalarını bozar. Bunu gerçek gidiş suyu/su sıcaklığınızı izleyen bir sensöre yönlendirin (ör. bir tampon depoya) - her döngüde canlı olarak okunur. Her ikisi de ayarlandığında aşağıdaki statik yedek değere göre önceliklidir.",
+          "flow_temp_static_c": "Yukarıdaki gidiş suyu/su sıcaklığı için, sensör yapılandırılmadığında veya okuması geçici olarak kullanılamadığında kullanılan statik yedek değer. MPC v2'nin yerleşik 65°C varsayılanını korumak için boş bırakın."
         }
       },
       "advanced": {
@@ -133,7 +137,9 @@
           "boost_asymmetric_threshold": "Soğutma için farklı bir eşik kullan",
           "boost_threshold_cool": "Boost soğutma eşiği (°C)",
           "boost_cooldown_minutes": "Boost soğuma süresi (dakika)",
-          "show_all_calibration_modes": "Tüm kalibrasyon modlarını göster"
+          "show_all_calibration_modes": "Tüm kalibrasyon modlarını göster",
+          "flow_temp_sensor": "Gidiş suyu sıcaklık sensörü (isteğe bağlı)",
+          "flow_temp_static_c": "Gidiş suyu sıcaklığı, statik yedek değer (°C)"
         },
         "data_description": {
           "presets": "Bu termostat için kullanılabilir olmasını istediğiniz ön ayarları seçin.",
@@ -146,7 +152,9 @@
           "boost_asymmetric_threshold": "Bir soğutma boost'unu (örneğin sıcak bir yaz günü) tetiklemek için ısıtma boost'undan farklı bir sapma eşiği ayarlamak için bunu açın. Her iki yön için de aynı eşiği kullanmak için kapalı bırakın.",
           "boost_threshold_cool": "Pencere açıkken oda sıcaklığı bu değerden fazla yükseldiyse, pencereyi kapatmak bir soğutma boost'unu devreye sokar. Yalnızca yukarıdaki anahtar açıkken kullanılır.",
           "boost_cooldown_minutes": "Bir boost bittikten sonra başka birinin devreye girebilmesi için gereken minimum süre, böylece eşiği tekrar tekrar aşan bir oda (örneğin tekrar tekrar pencere açma/kapama) paylaşılan cihazın çok sık geçiş yapmasına neden olmaz.",
-          "show_all_calibration_modes": "Varsayılan olarak 'Yerden' olarak işaretlenmiş bir ısıtıcı yalnızca kendisi için doğru çalışan kalibrasyon modlarını sunar (MPC Predictive, (AI) MPC v2, TPI Denetleyici, PID Denetleyici). Bunun yerine tüm 8 modu görmek için bunu açın - yerden ısıtma devreniz valf kontrollü bir aktüatör tarafından yönetiliyorsa kullanışlıdır."
+          "show_all_calibration_modes": "Varsayılan olarak 'Yerden' olarak işaretlenmiş bir ısıtıcı yalnızca kendisi için doğru çalışan kalibrasyon modlarını sunar (MPC Predictive, (AI) MPC v2, TPI Denetleyici, PID Denetleyici). Bunun yerine tüm 8 modu görmek için bunu açın - yerden ısıtma devreniz valf kontrollü bir aktüatör tarafından yönetiliyorsa kullanışlıdır.",
+          "flow_temp_sensor": "Yalnızca (AI) MPC v2 kalibrasyon modunun tesis modeli tarafından kullanılır. Varsayılan değer 65°C'lik bir ısı kaynağı varsayar (tipik bir gaz/yağ kombisi); bir ısı pompası veya herhangi bir hava koşullarına duyarlı sistem çok daha düşük çalışır (genellikle 30-45°C), bu da MPC v2'nin vana açma hesaplamalarını bozar. Bunu gerçek gidiş suyu/su sıcaklığınızı izleyen bir sensöre yönlendirin (ör. bir tampon depoya) - her döngüde canlı olarak okunur. Her ikisi de ayarlandığında aşağıdaki statik yedek değere göre önceliklidir.",
+          "flow_temp_static_c": "Yukarıdaki gidiş suyu/su sıcaklığı için, sensör yapılandırılmadığında veya okuması geçici olarak kullanılamadığında kullanılan statik yedek değer. MPC v2'nin yerleşik 65°C varsayılanını korumak için boş bırakın."
         }
       },
       "advanced": {

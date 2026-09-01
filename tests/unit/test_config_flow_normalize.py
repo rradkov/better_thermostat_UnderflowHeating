@@ -16,9 +16,13 @@ from custom_components.better_thermostat.utils.const import (
     CONF_COOLER,
     CONF_DOOR_TIMEOUT,
     CONF_DOOR_TIMEOUT_AFTER,
+    CONF_FLOW_TEMP_SENSOR,
+    CONF_FLOW_TEMP_STATIC_C,
     CONF_HEATER,
     CONF_SENSOR,
     CONF_SENSOR_DOOR,
+    FLOW_TEMP_STATIC_MAX_C,
+    FLOW_TEMP_STATIC_MIN_C,
 )
 
 
@@ -147,3 +151,76 @@ def test_door_timeouts_default_to_zero_on_create():
     normalized = _normalize_user_submission(user_input, mode="create")
     assert normalized[CONF_DOOR_TIMEOUT] == 0
     assert normalized[CONF_DOOR_TIMEOUT_AFTER] == 0
+
+
+def test_flow_temp_fields_are_offered_in_the_user_step():
+    fields = _build_user_fields(mode="create", current={})
+    keys = {getattr(key, "schema", key) for key in fields}
+    assert CONF_FLOW_TEMP_SENSOR in keys
+    assert CONF_FLOW_TEMP_STATIC_C in keys
+
+
+def test_flow_temp_sensor_removed_when_key_absent_from_input():
+    """Clearing the flow-temp sensor omits the key; drop the stored value."""
+    base = {
+        CONF_NAME: "Living Room",
+        CONF_HEATER: ["climate.trv"],
+        CONF_SENSOR: "sensor.temp",
+        CONF_FLOW_TEMP_SENSOR: "sensor.buffer_flow_temp",
+    }
+    user_input = {
+        CONF_NAME: "Living Room",
+        CONF_HEATER: ["climate.trv"],
+        CONF_SENSOR: "sensor.temp",
+    }
+    normalized = _normalize_user_submission(user_input, mode="options", base=base)
+    assert normalized[CONF_FLOW_TEMP_SENSOR] is None
+
+
+def test_flow_temp_sensor_retained_when_present_in_input():
+    user_input = {
+        CONF_NAME: "Living Room",
+        CONF_HEATER: ["climate.trv"],
+        CONF_SENSOR: "sensor.temp",
+        CONF_FLOW_TEMP_SENSOR: "sensor.buffer_flow_temp",
+    }
+    normalized = _normalize_user_submission(user_input, mode="create")
+    assert normalized[CONF_FLOW_TEMP_SENSOR] == "sensor.buffer_flow_temp"
+
+
+def test_flow_temp_static_c_blank_stays_none():
+    """A blank/omitted static fallback is None, not a forced default -
+    distinct from CONF_TOLERANCE-style fields, which always store a number."""
+    user_input = {
+        CONF_NAME: "Living Room",
+        CONF_HEATER: ["climate.trv"],
+        CONF_SENSOR: "sensor.temp",
+    }
+    normalized = _normalize_user_submission(user_input, mode="create")
+    assert normalized[CONF_FLOW_TEMP_STATIC_C] is None
+
+
+def test_flow_temp_static_c_stores_a_valid_value():
+    user_input = {
+        CONF_NAME: "Living Room",
+        CONF_HEATER: ["climate.trv"],
+        CONF_SENSOR: "sensor.temp",
+        CONF_FLOW_TEMP_STATIC_C: 42.5,
+    }
+    normalized = _normalize_user_submission(user_input, mode="create")
+    assert normalized[CONF_FLOW_TEMP_STATIC_C] == 42.5
+
+
+def test_flow_temp_static_c_clamps_to_bounds():
+    for raw, expected in (
+        (999.0, FLOW_TEMP_STATIC_MAX_C),
+        (-5.0, FLOW_TEMP_STATIC_MIN_C),
+    ):
+        user_input = {
+            CONF_NAME: "Living Room",
+            CONF_HEATER: ["climate.trv"],
+            CONF_SENSOR: "sensor.temp",
+            CONF_FLOW_TEMP_STATIC_C: raw,
+        }
+        normalized = _normalize_user_submission(user_input, mode="create")
+        assert normalized[CONF_FLOW_TEMP_STATIC_C] == expected

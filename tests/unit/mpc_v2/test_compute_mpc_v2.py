@@ -223,6 +223,73 @@ def test_cumulative_plant_prior_drift_rebuilds_once() -> None:
     assert state.controller is not original_ctrl
 
 
+def test_flow_temp_c_updates_live_without_rebuilding_controller() -> None:
+    """A weather-compensated flow temp swinging cycle to cycle must never
+    trigger a rebuild - only tau/tau_rad/gain/coupling do (see
+    _plant_signature_of()). T_water_C simply isn't part of that signature."""
+    state: MpcV2State | None = None
+    out, state = compute_mpc_v2(
+        _baseline_input(key="flow-temp-key", flow_temp_C=65.0), MpcV2Params(), state
+    )
+    assert out is not None
+    assert out.diagnostics.T_water_C == 65.0
+    original_ctrl = state.controller
+
+    for flow_temp in (45.0, 35.0, 50.0):
+        out, state = compute_mpc_v2(
+            _baseline_input(key="flow-temp-key", flow_temp_C=flow_temp),
+            MpcV2Params(),
+            state,
+        )
+        assert out is not None
+        assert state.controller is original_ctrl
+        assert state.controller.params.plant.T_water_C == flow_temp
+        assert out.diagnostics.T_water_C == flow_temp
+
+
+def test_flow_temp_c_none_leaves_the_seeded_prior_untouched() -> None:
+    """flow_temp_C=None (neither sensor nor static fallback configured)
+    must not disturb whatever T_water_C the plant prior was built with."""
+    state: MpcV2State | None = None
+    out, state = compute_mpc_v2(
+        _baseline_input(key="flow-temp-none-key", flow_temp_C=None),
+        MpcV2Params(plant=make_plant_prior()),
+        state,
+    )
+    assert out is not None
+    assert out.diagnostics.T_water_C == 65.0  # PlantParams' own default
+
+    out, state = compute_mpc_v2(
+        _baseline_input(key="flow-temp-none-key", flow_temp_C=None),
+        MpcV2Params(),
+        state,
+    )
+    assert out is not None
+    assert out.diagnostics.T_water_C == 65.0
+
+
+def test_step_updates_water_temp_in_place_without_resetting_kalman() -> None:
+    """MpcV2Controller.step()'s own T_water_C mutation, isolated from the
+    dispatch layer - the observer's covariance keeps evolving normally, it
+    is never reset by a flow-temp change the way a rebuild would reset it."""
+    controller = MpcV2Controller(MpcV2Params())
+    controller.step(t_s=1000.0, T_room_C=20.0, T_target_C=22.0, T_outdoor_C=5.0)
+    assert controller.params.plant.T_water_C == 65.0  # untouched (None passed)
+    p_after_first = controller.kalman.P.copy()
+
+    controller.step(
+        t_s=1030.0, T_room_C=20.05, T_target_C=22.0, T_outdoor_C=5.0, T_water_C=40.0
+    )
+    assert controller.params.plant.T_water_C == 40.0
+    # plant_fine/plant_coarse share the same PlantParams instance - the
+    # mutation reaches both without rebuilding either.
+    assert controller.plant_fine.params.T_water_C == 40.0
+    assert controller.plant_coarse.params.T_water_C == 40.0
+    # The Kalman filter kept running (P changed from the normal predict/update
+    # cycle), it was not reset back to a fresh-controller state.
+    assert not np.array_equal(controller.kalman.P, p_after_first)
+
+
 def test_sub_second_repeat_step_holds_covariance() -> None:
     """A same-pass repeat step returns last_u without re-folding the measurement."""
     controller = MpcV2Controller(MpcV2Params())

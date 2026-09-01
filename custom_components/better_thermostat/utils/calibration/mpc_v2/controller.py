@@ -170,6 +170,7 @@ class MpcV2Controller:
         T_target_C: float,
         T_outdoor_C: float,
         T_rad_C: float | None = None,
+        T_water_C: float | None = None,
     ) -> tuple[float, MpcV2Diagnostics]:
         """Run one control cycle. Returns (valve_fraction, diagnostics).
 
@@ -188,7 +189,19 @@ class MpcV2Controller:
             Measured radiator temperature. Used only to seed the initial
             Kalman estimate on the very first cycle (falling back to
             ``T_room_C`` when ``None``); ignored on every subsequent cycle.
+        T_water_C : float | None, optional
+            Live heat-source (flow/water) temperature for this cycle. Unlike
+            ``T_rad_C``, this is read every cycle, not just the first: it's
+            written onto the shared ``self.params.plant`` in place below, so
+            every downstream computation (Kalman, Smith, DOB, QP, governor -
+            they all hold a reference to the same ``PlantParams`` instance)
+            sees the new value immediately, with no controller rebuild and no
+            loss of learned state. ``None`` leaves the plant's current
+            ``T_water_C`` untouched.
         """
+        if T_water_C is not None:
+            self.params.plant.T_water_C = float(T_water_C)
+
         if not self._initialised:
             T_rad_init = T_rad_C if T_rad_C is not None else T_room_C
             self.kalman.initialise(np.array([T_room_C, T_rad_init]))
@@ -307,4 +320,5 @@ class MpcV2Controller:
             D_hat_K_per_min=self.dob.D_hat_K_per_min,
             tau_room_min=self.plant_fine.params.tau_room_min,
             coupling_rad_room=self.plant_fine.params.coupling_rad_room,
+            T_water_C=self.plant_fine.params.T_water_C,
         )
