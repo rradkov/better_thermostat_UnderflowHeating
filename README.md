@@ -2,8 +2,6 @@
 
 [![GitHub issues](https://img.shields.io/github/issues/rradkov/better_thermostat_UnderflowHeating?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/issues)
 [![Version](https://img.shields.io/badge/Version-1.9.2.1.1-009688?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/releases)
-[![Discord](https://img.shields.io/discord/925725316540923914.svg?style=for-the-badge)](https://discord.gg/9BUegWTG3K)
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
 **For more info visit: <https://better-thermostat.org/>**
 
