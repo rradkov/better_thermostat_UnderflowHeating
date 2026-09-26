@@ -979,6 +979,7 @@ class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
             "duty_period_s": status.get("duty_period_s"),
             "duty_on_s": status.get("duty_on_s"),
             "valve_min_pct": status.get("valve_min_pct"),
+            "demand_factor": status.get("demand_factor"),
         }
 
 

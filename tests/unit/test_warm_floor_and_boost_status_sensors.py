@@ -54,6 +54,7 @@ def test_active_status_reads_active_with_attributes():
             "reason": "valve_minimum_applied",
             "warm_floor_level": "level_2",
             "valve_min_pct": 12.0,
+            "demand_factor": 0.4,
         }
     )
     sensor = BetterThermostatWarmFloorStatusSensor(bt)
@@ -65,6 +66,7 @@ def test_active_status_reads_active_with_attributes():
     assert sensor._attr_extra_state_attributes["reason"] == "valve_minimum_applied"
     assert sensor._attr_extra_state_attributes["warm_floor_level"] == "level_2"
     assert sensor._attr_extra_state_attributes["valve_min_pct"] == 12.0
+    assert sensor._attr_extra_state_attributes["demand_factor"] == 0.4
 
 
 def test_status_surfaces_generic_duty_cycle_details():

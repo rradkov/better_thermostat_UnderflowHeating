@@ -282,3 +282,49 @@ def test_warm_floor_level_increases_direct_valve_floor_when_raised():
     assert valve_floor(underfloor.WARM_FLOOR_LEVEL_ECO) < valve_floor(
         underfloor.WARM_FLOOR_LEVEL_BALANCED
     ) < valve_floor(underfloor.WARM_FLOOR_LEVEL_KEEP_HOT)
+
+
+def test_generic_duty_profile_adapts_to_falling_temperature():
+    stable = _make_bt(cur_temp=22.0, target_temp=22.0)
+    falling = _make_bt(cur_temp=22.0, target_temp=22.0)
+    falling.temp_slope = -0.02
+
+    stable_profile = underfloor._effective_duty_profile(
+        stable.real_trvs["climate.trv"], underfloor._warm_floor_demand_factor(stable)
+    )
+    falling_profile = underfloor._effective_duty_profile(
+        falling.real_trvs["climate.trv"], underfloor._warm_floor_demand_factor(falling)
+    )
+
+    assert falling_profile[0] < stable_profile[0]
+    assert falling_profile[1] > stable_profile[1]
+
+
+def test_direct_valve_floor_increases_when_room_is_cooling():
+    stable = _make_bt(cur_temp=22.0, target_temp=22.0)
+    falling = _make_bt(cur_temp=22.0, target_temp=22.0)
+    falling.temp_slope = -0.02
+    for bt in (stable, falling):
+        bt.real_trvs["climate.trv"].calibration_balance = {
+            "apply_valve": True,
+            "valve_percent": 0,
+        }
+
+    apply_warm_floor_floor(stable, "climate.trv", 22.0, is_offset=False)
+    apply_warm_floor_floor(falling, "climate.trv", 22.0, is_offset=False)
+
+    assert (
+        falling.real_trvs["climate.trv"].calibration_balance["valve_percent"]
+        > stable.real_trvs["climate.trv"].calibration_balance["valve_percent"]
+    )
+
+
+def test_setpoint_floor_moves_toward_target_when_room_is_cooling():
+    stable = _make_bt(cur_temp=22.0, target_temp=22.0, sustain_push=0.0)
+    falling = _make_bt(cur_temp=22.0, target_temp=22.0, sustain_push=0.0)
+    falling.temp_slope = -0.02
+
+    stable_result = apply_warm_floor_floor(stable, "climate.trv", 20.0, is_offset=False)
+    falling_result = apply_warm_floor_floor(falling, "climate.trv", 20.0, is_offset=False)
+
+    assert falling_result > stable_result

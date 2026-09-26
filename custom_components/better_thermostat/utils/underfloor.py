@@ -506,6 +506,9 @@ def _record_status(
     control_method: str | None = None,
     reason: str | None = None,
     valve_min_pct: float | None = None,
+    duty_period_s: int | None = None,
+    duty_on_s: int | None = None,
+    demand_factor: float | None = None,
 ) -> None:
     """Publish the last Warm Floor decision for ``entity_id`` onto ``bt``.
 
@@ -518,14 +521,16 @@ def _record_status(
     target = getattr(bt, "bt_target_temp", None)
     trv_state = getattr(bt, "real_trvs", {}).get(entity_id)
     warm_floor_level = None
-    duty_period_s = None
-    duty_on_s = None
+    status_duty_period_s = None
+    status_duty_on_s = None
     if trv_state is not None:
         warm_floor_level = trv_state.advanced.get(
             CONF_WARM_FLOOR_LEVEL, DEFAULT_WARM_FLOOR_LEVEL
         )
         if _is_generic_thermostat(trv_state):
-            duty_period_s, duty_on_s, _ = _warm_floor_duty_profile(trv_state)
+            status_duty_period_s, status_duty_on_s, _ = _warm_floor_duty_profile(
+                trv_state
+            )
     backoff_c = None
     if isinstance(target, (int, float)) and isinstance(
         sustaining_setpoint, (int, float)
@@ -540,9 +545,10 @@ def _record_status(
         "control_method": control_method,
         "reason": reason,
         "warm_floor_level": warm_floor_level,
-        "duty_period_s": duty_period_s,
-        "duty_on_s": duty_on_s,
+        "duty_period_s": duty_period_s or status_duty_period_s,
+        "duty_on_s": duty_on_s or status_duty_on_s,
         "valve_min_pct": valve_min_pct,
+        "demand_factor": demand_factor,
     }
 
 
@@ -615,6 +621,47 @@ def _warm_floor_duty_profile(trv_state) -> tuple[int, int, float]:
     )
 
 
+def _warm_floor_demand_factor(bt) -> float:
+    """Estimate current slab-heating demand from live controller telemetry.
+
+    The selected Warm Floor level remains the baseline. This factor makes all
+    actuator paths more assertive when the room is below target, cooling, or
+    losing heat faster than the learned heating power can replace it.
+    """
+    demand = 0.0
+    target = getattr(bt, "bt_target_temp", None)
+    current = getattr(bt, "cur_temp", None)
+    if isinstance(target, (int, float)) and isinstance(current, (int, float)):
+        demand = max(demand, _clamp((float(target) - float(current)) / 0.5, 0.0, 1.0))
+
+    slope = getattr(bt, "temp_slope", None)
+    if isinstance(slope, (int, float)) and slope < 0.0:
+        demand = max(
+            demand,
+            _clamp(abs(float(slope)) / UNDERSHOOT_SLOPE_GUARD, 0.0, 1.0),
+        )
+
+    heat_loss = getattr(bt, "heat_loss_rate", None)
+    heating_power = getattr(bt, "heating_power", None)
+    if isinstance(heat_loss, (int, float)) and isinstance(heating_power, (int, float)):
+        if float(heat_loss) > 0.0 and float(heating_power) > 0.0:
+            load_ratio = float(heat_loss) / float(heating_power)
+            demand = max(demand, _clamp((load_ratio - 0.5) / 0.5, 0.0, 1.0))
+    return _clamp(demand, 0.0, 1.0)
+
+
+def _effective_duty_profile(
+    trv_state, demand_factor: float
+) -> tuple[int, int, float]:
+    """Adapt the level's duty profile to the current heating demand."""
+    base_period_s, base_on_s, level_band = _warm_floor_duty_profile(trv_state)
+    demand_factor = _clamp(demand_factor, 0.0, 1.0)
+    period_s = max(5 * 60, int(round(base_period_s * (1.0 - 0.35 * demand_factor))))
+    on_s = int(round(base_on_s * (1.0 + demand_factor)))
+    on_s = min(on_s, max(60, period_s - 60))
+    return period_s, on_s, level_band
+
+
 def _generic_duty_cycle_is_on(period_s: int, on_s: int) -> bool:
     """Return the current deterministic Warm Floor ON/OFF window."""
     phase = dt_util.utcnow().timestamp() % period_s
@@ -622,8 +669,8 @@ def _generic_duty_cycle_is_on(period_s: int, on_s: int) -> bool:
 
 
 def _apply_generic_duty_cycle(
-    bt, entity_id: str, result: float, structural_scale: float
-) -> tuple[float, str | None]:
+    bt, entity_id: str, result: float, structural_scale: float, demand_factor: float
+) -> tuple[float, str | None, int | None, int | None]:
     """Apply a short sustaining setpoint pulse to an ON/OFF heater.
 
     Generic Thermostat has no valve percentage to floor. Its only actuator is
@@ -636,30 +683,27 @@ def _apply_generic_duty_cycle(
     target = getattr(bt, "bt_target_temp", None)
     current = getattr(bt, "cur_temp", None)
     if trv_state is None or not _is_generic_thermostat(trv_state):
-        return result, None
+        return result, None, None, None
     if not isinstance(target, (int, float)) or not isinstance(current, (int, float)):
-        return result, None
+        return result, None, None, None
     # Never replace a normal heating command with a maintenance pulse. The
     # pulse is only for the satisfied/idle part of the control cycle.
     if getattr(bt, "hvac_action", None) != HVACAction.IDLE:
-        return result, None
+        return result, None, None, None
     if current < float(target):
-        return result, None
+        return result, None, None, None
     temp_slope = getattr(bt, "temp_slope", None)
     if isinstance(temp_slope, (int, float)) and temp_slope > OVERSHOOT_SLOPE_GUARD:
-        return result, "rising"
+        return result, "rising", None, None
 
-    period_s, base_on_s, level_band = _warm_floor_duty_profile(trv_state)
+    period_s, base_on_s, level_band = _effective_duty_profile(
+        trv_state, demand_factor
+    )
     band = level_band * (0.75 + 0.25 * _clamp(structural_scale, 0.0, 1.0))
     # A cooling room needs more sustaining time; a rising room was already
     # rejected above. This keeps the same user-selected level dynamic instead
     # of using a fixed 5-minute relay pulse for every installation.
-    cooling_need = 0.0
-    if isinstance(temp_slope, (int, float)) and temp_slope < 0:
-        cooling_need = _clamp(
-            abs(float(temp_slope)) / UNDERSHOOT_SLOPE_GUARD, 0.0, 1.0
-        )
-    on_s = min(period_s, int(round(base_on_s * (1.0 + 0.5 * cooling_need))))
+    on_s = min(period_s, base_on_s)
     # The Generic Thermostat integration commonly exposes a 0.5 °C target
     # step. A +0.1 °C pulse would then be rounded back to the current target
     # and would never turn the relay on. Reserve room for the next valid
@@ -672,7 +716,7 @@ def _apply_generic_duty_cycle(
     band = max(band, float(target_step) + 0.05)
     ceiling = float(target) + band
     if float(current) > ceiling or not _generic_duty_cycle_is_on(period_s, on_s):
-        return result, "outside_duty_window"
+        return result, "outside_duty_window", period_s, on_s
 
     # Generic Thermostat turns on only when its target exceeds its measured
     # temperature. Keep the pulse just above the live reading, never above
@@ -686,8 +730,8 @@ def _apply_generic_duty_cycle(
         ),
     )
     if pulse_setpoint <= result:
-        return result, None
-    return pulse_setpoint, "duty_cycle_on"
+        return result, None, period_s, on_s
+    return pulse_setpoint, "duty_cycle_on", period_s, on_s
 
 
 def apply_warm_floor_floor(
@@ -770,6 +814,13 @@ def apply_warm_floor_floor(
     if isinstance(temp_slope, (int, float)) and temp_slope < -UNDERSHOOT_SLOPE_GUARD:
         structural_scale = WARM_FLOOR_MIN_BACKOFF_RATIO
 
+    demand_factor = _warm_floor_demand_factor(bt)
+    if demand_factor > 0.0:
+        structural_scale = max(
+            WARM_FLOOR_MIN_BACKOFF_RATIO,
+            structural_scale * (1.0 - 0.75 * demand_factor),
+        )
+
     sustaining_setpoint = _sustaining_setpoint(
         bt, entity_id, structural_scale, solar_scale
     )
@@ -779,6 +830,8 @@ def apply_warm_floor_floor(
 
     sustain_push_c = None
     duty_reason = None
+    duty_period_s = None
+    duty_on_s = None
     if not is_offset:
         # Setpoint semantics: higher = more heat. Warm Floor only ever raises.
         result = max(computed_value, sustaining_setpoint)
@@ -810,8 +863,8 @@ def apply_warm_floor_floor(
                     sustain_push_c = round(push_ceiling - result, 3)
                     result = push_ceiling
 
-        result, duty_reason = _apply_generic_duty_cycle(
-            bt, entity_id, result, structural_scale
+        result, duty_reason, duty_period_s, duty_on_s = _apply_generic_duty_cycle(
+            bt, entity_id, result, structural_scale, demand_factor
         )
         if duty_reason == "duty_cycle_on":
             sustain_push_c = round(result - float(bt.bt_target_temp), 3)
@@ -839,7 +892,9 @@ def apply_warm_floor_floor(
         offset_ceiling = sustaining_setpoint - float(trv_internal_temp)
         result = min(computed_value, offset_ceiling)
 
-    _apply_valve_floor(bt, entity_id, structural_scale, solar_scale)
+    _apply_valve_floor(
+        bt, entity_id, structural_scale, solar_scale, demand_factor
+    )
     valve_min_pct = None
     balance = getattr(trv_state, "calibration_balance", None)
     if isinstance(balance, dict) and balance.get("apply_valve"):
@@ -874,12 +929,19 @@ def apply_warm_floor_floor(
         control_method=control_method,
         reason=reason,
         valve_min_pct=valve_min_pct,
+        duty_period_s=duty_period_s,
+        duty_on_s=duty_on_s,
+        demand_factor=demand_factor,
     )
     return result
 
 
 def _apply_valve_floor(
-    bt, entity_id: str, structural_scale: float, solar_scale: float
+    bt,
+    entity_id: str,
+    structural_scale: float,
+    solar_scale: float,
+    demand_factor: float = 0.0,
 ) -> None:
     """Floor a previously-computed direct-valve ``calibration_balance``, if any."""
     trv_state = bt.real_trvs.get(entity_id)
@@ -917,6 +979,7 @@ def _apply_valve_floor(
     peak_sustaining_pct = 20.0 * (
         1.0 - _clamp(max_backoff / WARM_FLOOR_MAX_BACKOFF_CAP, 0.0, 1.0)
     )
-    sustaining_pct = peak_sustaining_pct * tightness
+    dynamic_intensity = 0.75 + 0.25 * _clamp(demand_factor, 0.0, 1.0)
+    sustaining_pct = peak_sustaining_pct * tightness * dynamic_intensity
     new_pct = max(float(valve_percent), sustaining_pct)
     balance["valve_percent"] = int(round(_clamp(new_pct, 0.0, 100.0)))
