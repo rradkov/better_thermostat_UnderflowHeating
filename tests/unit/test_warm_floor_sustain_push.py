@@ -300,6 +300,19 @@ def test_generic_duty_profile_adapts_to_falling_temperature():
     assert falling_profile[1] > stable_profile[1]
 
 
+def test_generic_duty_profile_respects_slow_actuator_travel_time():
+    """A pulse must allow both opening and closing of a thermal actuator."""
+    for level in underfloor.WARM_FLOOR_DUTY_PROFILES:
+        bt = _make_bt(warm_floor_level=level)
+        period_s, on_s, _ = underfloor._effective_duty_profile(
+            bt.real_trvs["climate.trv"], 1.0
+        )
+
+        travel_s = underfloor.WARM_FLOOR_ACTUATOR_TRAVEL_S
+        assert on_s >= travel_s
+        assert period_s - on_s >= travel_s
+
+
 def test_direct_valve_floor_increases_when_room_is_cooling():
     stable = _make_bt(cur_temp=22.0, target_temp=22.0)
     falling = _make_bt(cur_temp=22.0, target_temp=22.0)

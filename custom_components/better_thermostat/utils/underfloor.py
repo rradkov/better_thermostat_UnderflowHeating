@@ -104,6 +104,10 @@ WARM_FLOOR_SENSOR_STALE_AFTER_S: Final = 1200.0
 # sustaining window so it can warm the slab without requiring a valve entity.
 WARM_FLOOR_DUTY_PERIOD_S: Final = 20 * 60
 WARM_FLOOR_DUTY_ON_S: Final = 5 * 60
+# Typical electrothermal UFH actuators need several minutes to travel fully
+# in either direction.  A shorter ON/OFF window is not merely inefficient:
+# the actuator may not move far enough to produce any useful heat.
+WARM_FLOOR_ACTUATOR_TRAVEL_S: Final = 4 * 60
 WARM_FLOOR_DUTY_MIN_ON_BAND_C: Final = 0.15
 WARM_FLOOR_DUTY_MAX_ON_BAND_C: Final = 0.30
 
@@ -536,6 +540,22 @@ def _record_status(
         sustaining_setpoint, (int, float)
     ):
         backoff_c = round(float(target) - float(sustaining_setpoint), 3)
+    effective_period_s = duty_period_s or status_duty_period_s
+    effective_on_s = duty_on_s or status_duty_on_s
+    duty_phase = None
+    duty_elapsed_s = None
+    duty_remaining_s = None
+    if effective_period_s and effective_on_s:
+        duty_elapsed_s = int(dt_util.utcnow().timestamp() % effective_period_s)
+        if duty_elapsed_s < effective_on_s:
+            duty_phase = "on"
+            duty_remaining_s = effective_on_s - duty_elapsed_s
+        else:
+            duty_phase = "off"
+            duty_remaining_s = effective_period_s - duty_elapsed_s
+    hvac_action = getattr(bt, "hvac_action", None)
+    if isinstance(hvac_action, HVACAction):
+        hvac_action = hvac_action.value
     bt._warm_floor_status = {
         "active": bool(active),
         "entity_id": entity_id,
@@ -545,8 +565,14 @@ def _record_status(
         "control_method": control_method,
         "reason": reason,
         "warm_floor_level": warm_floor_level,
-        "duty_period_s": duty_period_s or status_duty_period_s,
-        "duty_on_s": duty_on_s or status_duty_on_s,
+        "duty_period_s": effective_period_s,
+        "duty_on_s": effective_on_s,
+        "duty_phase": duty_phase,
+        "duty_elapsed_s": duty_elapsed_s,
+        "duty_remaining_s": duty_remaining_s,
+        "current_temp_c": getattr(bt, "cur_temp", None),
+        "target_temp_c": target,
+        "hvac_action": hvac_action,
         "valve_min_pct": valve_min_pct,
         "demand_factor": demand_factor,
     }
@@ -656,9 +682,18 @@ def _effective_duty_profile(
     """Adapt the level's duty profile to the current heating demand."""
     base_period_s, base_on_s, level_band = _warm_floor_duty_profile(trv_state)
     demand_factor = _clamp(demand_factor, 0.0, 1.0)
-    period_s = max(5 * 60, int(round(base_period_s * (1.0 - 0.35 * demand_factor))))
-    on_s = int(round(base_on_s * (1.0 + demand_factor)))
-    on_s = min(on_s, max(60, period_s - 60))
+    period_s = max(
+        2 * WARM_FLOOR_ACTUATOR_TRAVEL_S,
+        int(round(base_period_s * (1.0 - 0.35 * demand_factor))),
+    )
+    on_s = max(
+        WARM_FLOOR_ACTUATOR_TRAVEL_S,
+        int(round(base_on_s * (1.0 + demand_factor))),
+    )
+    # Leave enough OFF time for the actuator to close completely before the
+    # next pulse. This prevents a rapid ON/OFF command sequence from being
+    # mechanically invisible to slow thermal actuators.
+    on_s = min(on_s, period_s - WARM_FLOOR_ACTUATOR_TRAVEL_S)
     return period_s, on_s, level_band
 
 

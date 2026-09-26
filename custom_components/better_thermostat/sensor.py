@@ -978,6 +978,12 @@ class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
             "warm_floor_level": status.get("warm_floor_level"),
             "duty_period_s": status.get("duty_period_s"),
             "duty_on_s": status.get("duty_on_s"),
+            "duty_phase": status.get("duty_phase"),
+            "duty_elapsed_s": status.get("duty_elapsed_s"),
+            "duty_remaining_s": status.get("duty_remaining_s"),
+            "current_temp_c": status.get("current_temp_c"),
+            "target_temp_c": status.get("target_temp_c"),
+            "hvac_action": status.get("hvac_action"),
             "valve_min_pct": status.get("valve_min_pct"),
             "demand_factor": status.get("demand_factor"),
         }
