@@ -157,15 +157,15 @@ A **Warm Floor Status** diagnostic sensor is created per instance, showing `acti
 
 ## Boost on window reopen
 
-If you've configured a **Cooler** entity (top of the first step), you can also use it for fast recovery after a window reopens — most fan-coil/hydronic units and heat pumps already run in both directions, so the same device that cools in summer can boost-heat a cold room back to temperature after airing it out.
+If you've configured a **Secondary climate device** (top of the first step), you can also use it for cooling and fast recovery after a window reopens — most fan-coil/hydronic units, heat pumps and air conditioners already run in both directions, so the same device can boost-heat a cold room back to temperature after airing it out.
 
-**Enable Boost on window reopen** — shown once a Cooler entity is configured. When on, if the room temperature drifts by more than the configured threshold while a window is open, closing the window arms a boost: colder than the threshold arms a **heat** boost, warmer arms a **cool** boost (checked against what the Cooler entity actually reports supporting). Either way it targets your normal target temperature, temporarily taking the Cooler entity over from its normal duty. Once the boost ends, the device is restored to exactly the mode, temperature, and fan setting it had the moment the boost took over — not simply switched off — so a device that was mid-way through its own independent cooling run when boost interrupted it picks that run back up rather than losing it.
+**Enable Boost on window reopen** — shown once a Secondary climate device is configured. When on, if the room temperature drifts by more than the configured threshold while a window is open, closing the window arms a boost: colder than the threshold arms a **heat** boost, warmer arms a **cool** boost (checked against what the secondary device actually reports supporting). Either way it targets your normal target temperature, temporarily taking the secondary device over from its normal duty. Once the boost ends, the device is restored to exactly the mode, temperature, and fan setting it had the moment the boost took over.
 
 **Boost temperature-drift threshold (°C)** — default `5.0°C`, range `0.1–15.0°C`.
 
 **Use a different threshold for cooling** — off by default (one threshold covers both directions). Turn this on to set a separate, lower or higher **Boost cooling threshold (°C)** for the warm-day case, independent of the heat-boost threshold.
 
-**Boost fan speed** — only shown if the Cooler entity reports fan modes. Optionally forces the device's fan speed (e.g. to maximum) while boosting, restored automatically once the boost ends. Leave as "Don't change fan mode" to skip this.
+**Boost fan speed** — only shown if the Secondary climate device reports fan modes. Optionally forces the device's fan speed (e.g. to maximum) while boosting, restored automatically once the boost ends. Leave as "Don't change fan mode" to skip this.
 
 **Boost anticipation (minutes)** — default `5`, range `0–30`. How many minutes of residual heating/cooling the device keeps delivering into the room after being told to stop; used to stop the boost *before* the room actually reaches target, avoiding overshoot in either direction. When the room's own learned solar gain is available, it's factored in too — a heat boost on a sunny day can stop a little earlier, a cool boost needs a little more margin.
 

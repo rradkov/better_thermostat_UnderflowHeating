@@ -499,6 +499,40 @@ class TestControlTrvAvailablePath:
             assert result is True
 
     @pytest.mark.asyncio
+    async def test_generic_warm_floor_setpoint_reaches_the_temperature_writer(self):
+        """A Warm Floor pulse is sent to an ON/OFF thermostat as a setpoint."""
+        trv = _default_trv_config(integration="generic_thermostat")
+        mock_self = _make_mock_self(
+            trv_state=HVACMode.HEAT,
+            trv_attrs={"temperature": 22.0},
+            real_trvs={"climate.trv1": trv},
+        )
+
+        with (
+            patch(_PATCHES["convert_outbound_states"]) as mock_convert,
+            patch(_PATCHES["handle_contact_open"]) as mock_window,
+            patch(
+                _PATCHES["override_set_hvac_mode"], new=AsyncMock(return_value=False)
+            ),
+            patch(
+                _PATCHES["override_set_temperature"], new=AsyncMock(return_value=False)
+            ),
+            patch(_PATCHES["set_hvac_mode"], new=AsyncMock()),
+            patch(_PATCHES["set_temperature"], new=AsyncMock()) as mock_set_temp,
+            patch("asyncio.sleep", new=AsyncMock()),
+        ):
+            mock_convert.return_value = {
+                "temperature": 22.5,
+                "system_mode": HVACMode.HEAT,
+            }
+            mock_window.return_value = HVACMode.HEAT
+
+            result = await control_trv(mock_self, "climate.trv1")
+
+            assert result is True
+            mock_set_temp.assert_awaited_once_with(mock_self, "climate.trv1", 22.5)
+
+    @pytest.mark.asyncio
     async def test_set_temperature_quirk_skips_generic_adapter(self):
         """A model quirk that handles the write suppresses the adapter call."""
         mock_self = _make_mock_self(

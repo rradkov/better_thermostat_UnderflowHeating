@@ -18,9 +18,11 @@ from homeassistant.components.climate.const import HVACAction, HVACMode
 from homeassistant.util import dt as dt_util
 
 from custom_components.better_thermostat.trv import Trv
+from custom_components.better_thermostat.utils import underfloor
 from custom_components.better_thermostat.utils.const import CalibrationMode
 from custom_components.better_thermostat.utils.underfloor import (
     CONF_HEATING_TYPE,
+    CONF_WARM_FLOOR_LEVEL,
     CONF_WARM_FLOOR_SUSTAIN_PUSH,
     WARM_FLOOR_SENSOR_STALE_AFTER_S,
     HeatingType,
@@ -37,6 +39,7 @@ def _make_bt(
     sensor_last_updated=None,
     calibration_mode: str = CalibrationMode.HEATING_POWER_CALIBRATION.value,
     max_temp: float = 30.0,
+    warm_floor_level: str | None = None,
     **overrides,
 ) -> MagicMock:
     bt = MagicMock()
@@ -73,6 +76,11 @@ def _make_bt(
                     CONF_HEATING_TYPE: HeatingType.UNDERFLOOR.value,
                     "calibration_mode": calibration_mode,
                     CONF_WARM_FLOOR_SUSTAIN_PUSH: sustain_push,
+                    **(
+                        {CONF_WARM_FLOOR_LEVEL: warm_floor_level}
+                        if warm_floor_level is not None
+                        else {}
+                    ),
                 },
                 "current_temperature": cur_temp,
                 "min_temp": 5.0,
@@ -193,3 +201,84 @@ def test_never_touches_bt_target_temp():
     bt = _make_bt(sustain_push=0.3)
     apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
     assert bt.bt_target_temp == 22.0
+
+
+def test_generic_thermostat_gets_a_short_warm_floor_setpoint_pulse(monkeypatch):
+    """ON/OFF helpers need a target above the live temperature to turn on."""
+    bt = _make_bt(sustain_push=0.0, cur_temp=22.0, target_temp=22.0)
+    bt.real_trvs["climate.trv"].integration = "generic_thermostat"
+    monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: True)
+
+    result = apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
+
+    assert result == 22.5
+    assert bt._warm_floor_status["control_method"] == "generic_duty_cycle"
+
+
+def test_generic_thermostat_releases_the_setpoint_outside_the_on_window(monkeypatch):
+    bt = _make_bt(sustain_push=0.0, cur_temp=22.0, target_temp=22.0)
+    bt.real_trvs["climate.trv"].integration = "generic"
+    monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: False)
+
+    result = apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
+
+    assert result == 22.0
+    assert bt._warm_floor_status["active"] is False
+
+
+def test_stale_raw_sensor_does_not_block_when_derived_slope_is_available():
+    stale_time = dt_util.utcnow() - timedelta(
+        seconds=WARM_FLOOR_SENSOR_STALE_AFTER_S + 1
+    )
+    bt = _make_bt(sustain_push=0.3, sensor_last_updated=stale_time)
+    bt.temp_slope = 0.0
+
+    result = apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
+
+    assert result > 22.0
+    assert bt._warm_floor_status["active"] is True
+
+
+def test_generic_thermostat_does_not_heat_a_room_above_the_safe_band(monkeypatch):
+    bt = _make_bt(sustain_push=0.0, cur_temp=22.6, target_temp=22.0)
+    bt.real_trvs["climate.trv"].integration = "generic_thermostat"
+    monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: True)
+
+    result = apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
+
+    assert result == 22.0
+    assert bt._warm_floor_status["active"] is False
+
+
+def test_warm_floor_level_changes_generic_duty_intensity():
+    eco = _make_bt(warm_floor_level=underfloor.WARM_FLOOR_LEVEL_ECO)
+    balanced = _make_bt(warm_floor_level=underfloor.WARM_FLOOR_LEVEL_BALANCED)
+    keep_hot = _make_bt(warm_floor_level=underfloor.WARM_FLOOR_LEVEL_KEEP_HOT)
+
+    eco_profile = underfloor._warm_floor_duty_profile(eco.real_trvs["climate.trv"])
+    balanced_profile = underfloor._warm_floor_duty_profile(
+        balanced.real_trvs["climate.trv"]
+    )
+    keep_hot_profile = underfloor._warm_floor_duty_profile(
+        keep_hot.real_trvs["climate.trv"]
+    )
+
+    assert eco_profile[0] > balanced_profile[0] > keep_hot_profile[0]
+    assert eco_profile[1] < balanced_profile[1] < keep_hot_profile[1]
+    assert eco_profile[2] < balanced_profile[2] < keep_hot_profile[2]
+
+
+def test_warm_floor_level_increases_direct_valve_floor_when_raised():
+    def valve_floor(level: str) -> int:
+        bt = _make_bt(warm_floor_level=level)
+        trv = bt.real_trvs["climate.trv"]
+        trv.advanced[underfloor.CONF_WARM_FLOOR_MAX_BACKOFF] = (
+            underfloor.WARM_FLOOR_LEVEL_PRESETS[level][0]
+        )
+        trv.calibration_balance = {"apply_valve": True, "valve_percent": 0}
+        underfloor._apply_valve_floor(bt, "climate.trv", 0.5, 1.0)
+        return trv.calibration_balance["valve_percent"]
+
+    assert valve_floor(underfloor.WARM_FLOOR_LEVEL_ECO) < valve_floor(
+        underfloor.WARM_FLOOR_LEVEL_BALANCED
+    ) < valve_floor(underfloor.WARM_FLOOR_LEVEL_KEEP_HOT)

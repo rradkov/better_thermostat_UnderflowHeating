@@ -50,6 +50,10 @@ def test_active_status_reads_active_with_attributes():
             "entity_id": "climate.ufh_living_room",
             "sustaining_setpoint_c": 21.2,
             "backoff_c": 0.8,
+            "control_method": "valve_minimum",
+            "reason": "valve_minimum_applied",
+            "warm_floor_level": "level_2",
+            "valve_min_pct": 12.0,
         }
     )
     sensor = BetterThermostatWarmFloorStatusSensor(bt)
@@ -57,6 +61,30 @@ def test_active_status_reads_active_with_attributes():
     assert sensor._attr_native_value == "active"
     assert sensor._attr_extra_state_attributes["entity_id"] == "climate.ufh_living_room"
     assert sensor._attr_extra_state_attributes["backoff_c"] == 0.8
+    assert sensor._attr_extra_state_attributes["control_method"] == "valve_minimum"
+    assert sensor._attr_extra_state_attributes["reason"] == "valve_minimum_applied"
+    assert sensor._attr_extra_state_attributes["warm_floor_level"] == "level_2"
+    assert sensor._attr_extra_state_attributes["valve_min_pct"] == 12.0
+
+
+def test_status_surfaces_generic_duty_cycle_details():
+    bt = _make_bt_climate(
+        _warm_floor_status={
+            "active": False,
+            "entity_id": "climate.ufh_living_room",
+            "reason": "outside_duty_window",
+            "control_method": "generic_duty_cycle",
+            "warm_floor_level": "level_2",
+            "duty_period_s": 1200,
+            "duty_on_s": 300,
+        }
+    )
+    sensor = BetterThermostatWarmFloorStatusSensor(bt)
+    sensor._update_state()
+    assert sensor._attr_extra_state_attributes["reason"] == "outside_duty_window"
+    assert sensor._attr_extra_state_attributes["control_method"] == "generic_duty_cycle"
+    assert sensor._attr_extra_state_attributes["duty_period_s"] == 1200
+    assert sensor._attr_extra_state_attributes["duty_on_s"] == 300
 
 
 def test_active_status_surfaces_sustain_push_c():

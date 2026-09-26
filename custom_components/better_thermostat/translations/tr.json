@@ -7,7 +7,7 @@
         "data": {
           "name": "Ad",
           "thermostat": "Gerçek termostat",
-          "cooler": "Soğutma / Takviye cihazı (isteğe bağlı)",
+          "cooler": "İkincil iklimlendirme cihazı (isteğe bağlı)",
           "min_cooler_resend_interval": "Tekrarlanan soğutucu komutları arasındaki minimum saniye (0 = devre dışı)",
           "temperature_sensor": "Sıcaklık sensörü",
           "humidity_sensor": "Nem sensörü",
@@ -41,12 +41,12 @@
         "data_description": {
           "presets": "Bu termostat için kullanılabilir olmasını istediğiniz ön ayarları seçin.",
           "underfloor_heating_enabled": "Isıtıcılarınızdan herhangi biri yerden ısıtma (UFH) devresiyse bunu açın. Bu, her ısıtıcı için bir 'Isıtma türü' seçeneğinin ve zemini ısıtma döngüleri arasında tamamen soğumaya bırakmak yerine düşük bir arka plan ısı seviyesinde tutan Sıcak Zemin modunun kilidini açar.",
-          "boost_heater_enabled": "Bir pencere yeniden açıldıktan sonra hızlı sıcaklık kazanımı için yukarıdaki Soğutma/Takviye cihazını da kullanmak üzere bunu açın. Pencere açıkken oda aşağıdaki eşikten daha fazla soğuduysa, kapatmak cihazı ısıtmaya doğru takviye eder; oda ısındıysa (örn. soğutmanın askıya alındığı sıcak bir gün), kapatmak cihazı soğutmaya doğru takviye eder. Her iki durumda da normal hedef sıcaklığınızı hedefler; takviye sona erdiğinde cihaz, takviyenin devralmasından önceki durumuna tam olarak geri döndürülür. Yukarıda yapılandırılmış bir Soğutma/Takviye cihazı gerektirir.",
+          "boost_heater_enabled": "Bir pencere yeniden açıldıktan sonra sıcaklığı hızlıca eski haline getirmek için yukarıdaki ikincil iklimlendirme cihazını kullanmak üzere bunu açın. Oda eşikten daha fazla soğuduysa kapatma ısıtmayı, ısındıysa soğutmayı başlatır. Cihaz normal hedef sıcaklığı izler ve işlem sonunda önceki durumuna döner.",
           "boost_threshold": "Bir pencere açıkken oda sıcaklığı (her iki yönde de) bundan daha fazla saparsa, pencereyi kapatmak takviyeyi devreye sokar.",
           "boost_fan_mode": "İsteğe bağlı olarak, takviye sırasında cihazın fan hızını (örneğin maksimuma) ayarlayın; takviye bittiğinde otomatik olarak geri yüklenir. Bunu atlamak için 'Fan modunu değiştirme' olarak bırakın.",
           "boost_lag_minutes": "Cihazın durdurulması istendikten sonra odaya ne kadar süre (dakika) kalıntı ısı/soğuk vermeye devam ettiği; hedefi aşmayı önlemek için kullanılır.",
           "boost_max_runtime": "Sıcaklığa bakılmaksızın takviyenin zorla kapatılmadan önce ne kadar süre çalışmasına izin verildiği.",
-          "cooler": "İsteğe bağlı. Soğutma için (ısıtma+soğutma kurulumlarında) ve/veya aşağıda Takviye etkinleştirildiğinde, bir pencere yeniden açıldıktan sonra oda sıcaklığını hızla geri kazandıran cihaz olarak kullanılan bir cihaz - birçok fan-coil, ısı pompası ve klima zaten her iki görevi de yapıyor, bu nedenle tek bir cihaz her iki rolü de üstlenebilir.",
+          "cooler": "Soğutma ve/veya bir pencere yeniden açıldıktan sonra oda sıcaklığını hızlıca eski haline getirmek için kullanılan isteğe bağlı ikincil iklimlendirme cihazı. Bu; fan-coil, ısı pompası, klima veya gerekli HVAC modunu destekleyen başka bir climate varlığı olabilir.",
           "boost_asymmetric_threshold": "Bir soğutma boost'unu (örneğin sıcak bir yaz günü) tetiklemek için ısıtma boost'undan farklı bir sapma eşiği ayarlamak için bunu açın. Her iki yön için de aynı eşiği kullanmak için kapalı bırakın.",
           "boost_threshold_cool": "Pencere açıkken oda sıcaklığı bu değerden fazla yükseldiyse, pencereyi kapatmak bir soğutma boost'unu devreye sokar. Yalnızca yukarıdaki anahtar açıkken kullanılır.",
           "boost_cooldown_minutes": "Bir boost bittikten sonra başka birinin devreye girebilmesi için gereken minimum süre, böylece eşiği tekrar tekrar aşan bir oda (örneğin tekrar tekrar pencere açma/kapama) paylaşılan cihazın çok sık geçiş yapmasına neden olmaz.",
@@ -144,7 +144,7 @@
         "data_description": {
           "presets": "Bu termostat için kullanılabilir olmasını istediğiniz ön ayarları seçin.",
           "underfloor_heating_enabled": "Isıtıcılarınızdan herhangi biri yerden ısıtma (UFH) devresiyse bunu açın. Bu, her ısıtıcı için bir 'Isıtma türü' seçeneğinin ve zemini ısıtma döngüleri arasında tamamen soğumaya bırakmak yerine düşük bir arka plan ısı seviyesinde tutan Sıcak Zemin modunun kilidini açar.",
-          "boost_heater_enabled": "Bir pencere yeniden açıldıktan sonra hızlı sıcaklık kazanımı için yukarıdaki Soğutma/Takviye cihazını da kullanmak üzere bunu açın. Pencere açıkken oda aşağıdaki eşikten daha fazla soğuduysa, kapatmak cihazı ısıtmaya doğru takviye eder; oda ısındıysa (örn. soğutmanın askıya alındığı sıcak bir gün), kapatmak cihazı soğutmaya doğru takviye eder. Her iki durumda da normal hedef sıcaklığınızı hedefler; takviye sona erdiğinde cihaz, takviyenin devralmasından önceki durumuna tam olarak geri döndürülür. Yukarıda yapılandırılmış bir Soğutma/Takviye cihazı gerektirir.",
+          "boost_heater_enabled": "Bir pencere yeniden açıldıktan sonra sıcaklığı hızlıca eski haline getirmek için yukarıdaki ikincil iklimlendirme cihazını kullanmak üzere bunu açın. Oda eşikten daha fazla soğuduysa kapatma ısıtmayı, ısındıysa soğutmayı başlatır. Cihaz normal hedef sıcaklığı izler ve işlem sonunda önceki durumuna döner.",
           "boost_threshold": "Bir pencere açıkken oda sıcaklığı (her iki yönde de) bundan daha fazla saparsa, pencereyi kapatmak takviyeyi devreye sokar.",
           "boost_fan_mode": "İsteğe bağlı olarak, takviye sırasında cihazın fan hızını (örneğin maksimuma) ayarlayın; takviye bittiğinde otomatik olarak geri yüklenir. Bunu atlamak için 'Fan modunu değiştirme' olarak bırakın.",
           "boost_lag_minutes": "Cihazın durdurulması istendikten sonra odaya ne kadar süre (dakika) kalıntı ısı/soğuk vermeye devam ettiği; hedefi aşmayı önlemek için kullanılır.",
@@ -256,7 +256,7 @@
     },
     "test_boost": {
       "name": "Boost'u test et",
-      "description": "Bir pencereyi açıp kapatmaya gerek kalmadan kablo bağlantısını (hedef cihaz, fan modu, eşiğe ulaşılabilirlik) test etmek için yapılandırılmış Soğutucu cihazında manuel olarak bir Boost döngüsü tetikler.",
+      "description": "Bir pencereyi açıp kapatmaya gerek kalmadan kablo bağlantısını (hedef cihaz, fan modu, eşiğe ulaşılabilirlik) test etmek için yapılandırılmış ikincil iklimlendirme cihazında manuel olarak bir Boost döngüsü tetikler.",
       "fields": {
         "direction": {
           "name": "Yön",

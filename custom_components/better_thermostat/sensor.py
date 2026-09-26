@@ -973,6 +973,12 @@ class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
             "sustaining_setpoint_c": status.get("sustaining_setpoint_c"),
             "backoff_c": status.get("backoff_c"),
             "sustain_push_c": status.get("sustain_push_c"),
+            "control_method": status.get("control_method"),
+            "reason": status.get("reason"),
+            "warm_floor_level": status.get("warm_floor_level"),
+            "duty_period_s": status.get("duty_period_s"),
+            "duty_on_s": status.get("duty_on_s"),
+            "valve_min_pct": status.get("valve_min_pct"),
         }
 
 

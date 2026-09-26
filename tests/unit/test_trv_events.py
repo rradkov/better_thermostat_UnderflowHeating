@@ -1937,6 +1937,34 @@ class TestConvertOutboundStates:
         assert result is not None
         assert result["temperature"] == mock_bt.bt_target_temp
 
+    def test_no_calibration_mode_applies_warm_floor(self, mock_bt):
+        """NO_CALIBRATION still gives an explicitly UFH heater its floor."""
+        mock_bt.real_trvs[ENTITY_ID].advanced["calibration"] = (
+            CalibrationType.TARGET_TEMP_BASED
+        )
+        mock_bt.real_trvs[ENTITY_ID].advanced["calibration_mode"] = (
+            CalibrationMode.NO_CALIBRATION
+        )
+        warm_floor_setpoint = mock_bt.bt_target_temp + 0.3
+
+        with (
+            patch(
+                "custom_components.better_thermostat.events.trv.apply_warm_floor_floor",
+                return_value=warm_floor_setpoint,
+            ) as apply_floor,
+            patch(
+                "custom_components.better_thermostat.events.trv.mode_remap",
+                return_value=HVACMode.HEAT,
+            ),
+        ):
+            result = convert_outbound_states(mock_bt, ENTITY_ID, HVACMode.HEAT)
+
+        assert result is not None
+        apply_floor.assert_called_once_with(
+            mock_bt, ENTITY_ID, mock_bt.bt_target_temp, is_offset=False
+        )
+        assert result["temperature"] == warm_floor_setpoint
+
     def test_none_calibration_type_fallback(self, mock_bt):
         """None calibration type falls back to bt_target_temp without calibration."""
         mock_bt.real_trvs[ENTITY_ID].advanced["calibration"] = None

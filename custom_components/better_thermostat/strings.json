@@ -7,7 +7,7 @@
         "data": {
           "name": "Name",
           "thermostat": "The real thermostat",
-          "cooler": "Cooling / Boost device (optional)",
+          "cooler": "Secondary climate device (optional)",
           "min_cooler_resend_interval": "Minimum seconds between repeated cooler commands (0 = disabled)",
           "temperature_sensor": "Temperature sensor",
           "humidity_sensor": "Humidity sensor",
@@ -44,8 +44,8 @@
           "flow_temp_static_c": "Static fallback for the flow/water temperature above, used when no sensor is configured or its reading is briefly unavailable. Leave blank to keep MPC v2's built-in 65°C default.",
           "underfloor_heating_enabled": "Turn this on if any of your heaters are underfloor heating (UFH) loops. This unlocks a per-heater 'Heating type' option and Warm Floor mode, which keeps a low background heat level in the floor instead of letting it fully cool between heat calls.",
           "show_all_calibration_modes": "By default, a heater flagged 'Underfloor' only offers the calibration modes that work correctly for it (MPC Predictive, (AI) MPC v2, TPI Controller, PID Controller). Turn this on to see all 8 modes instead - useful if your underfloor loop is driven by a valve-capable actuator.",
-          "cooler": "Optional. A device used for cooling (in heat+cool setups) and/or, once Boost is enabled below, as the device that quickly recovers room temperature after a window reopens - many fan-coils, heat pumps, and AC units already do both jobs, so one entity can serve both roles.",
-          "boost_heater_enabled": "Turn this on to also use the Cooling / Boost device above for fast temperature recovery after a window reopens. If the room drifted colder than the threshold below while the window was open, closing it boosts the device to heat; if it drifted warmer (e.g. a hot day with cooling suppressed), closing it boosts the device to cool. Either way it targets your normal target temperature; once it ends, the device is restored to exactly what it was doing before the boost took over. Requires a Cooling / Boost device to be configured above.",
+          "cooler": "Optional. A secondary climate device used for cooling and/or fast temperature recovery after a window reopens. This can be a fan-coil, heat pump, air conditioner or another climate entity that supports the required HVAC mode.",
+          "boost_heater_enabled": "Turn this on to use the secondary climate device above for fast temperature recovery after a window reopens. If the room drifted colder than the threshold below while the window was open, closing it boosts the device to heat; if it drifted warmer, closing it boosts the device to cool. Either way it targets your normal target temperature; once it ends, the device is restored to exactly what it was doing before the boost took over.",
           "boost_threshold": "If the room temperature drifts (in either direction) by more than this while a window is open, closing the window arms the boost.",
           "boost_fan_mode": "Optionally set the device's fan speed (e.g. to maximum) while boosting; restored automatically once the boost ends. Leave as 'Don't change fan mode' to skip this.",
           "boost_lag_minutes": "How many minutes of residual heating/cooling the device keeps delivering into the room after being told to stop, used to avoid overshooting the target.",
@@ -147,7 +147,7 @@
           "flow_temp_static_c": "Static fallback for the flow/water temperature above, used when no sensor is configured or its reading is briefly unavailable. Leave blank to keep MPC v2's built-in 65°C default.",
           "underfloor_heating_enabled": "Turn this on if any of your heaters are underfloor heating (UFH) loops. This unlocks a per-heater 'Heating type' option and Warm Floor mode, which keeps a low background heat level in the floor instead of letting it fully cool between heat calls.",
           "show_all_calibration_modes": "By default, a heater flagged 'Underfloor' only offers the calibration modes that work correctly for it (MPC Predictive, (AI) MPC v2, TPI Controller, PID Controller). Turn this on to see all 8 modes instead - useful if your underfloor loop is driven by a valve-capable actuator.",
-          "boost_heater_enabled": "Turn this on to also use the Cooling / Boost device above for fast temperature recovery after a window reopens. If the room drifted colder than the threshold below while the window was open, closing it boosts the device to heat; if it drifted warmer (e.g. a hot day with cooling suppressed), closing it boosts the device to cool. Either way it targets your normal target temperature; once it ends, the device is restored to exactly what it was doing before the boost took over. Requires a Cooling / Boost device to be configured above.",
+          "boost_heater_enabled": "Turn this on to use the secondary climate device above for fast temperature recovery after a window reopens. If the room drifted colder than the threshold below while the window was open, closing it boosts the device to heat; if it drifted warmer, closing it boosts the device to cool. Either way it targets your normal target temperature; once it ends, the device is restored to exactly what it was doing before the boost took over.",
           "boost_threshold": "If the room temperature drifts (in either direction) by more than this while a window is open, closing the window arms the boost.",
           "boost_fan_mode": "Optionally set the device's fan speed (e.g. to maximum) while boosting; restored automatically once the boost ends. Leave as 'Don't change fan mode' to skip this.",
           "boost_lag_minutes": "How many minutes of residual heating/cooling the device keeps delivering into the room after being told to stop, used to avoid overshooting the target.",
@@ -256,7 +256,7 @@
     },
     "test_boost": {
       "name": "Test boost",
-      "description": "Manually trigger a Boost cycle on the configured Cooler entity, for testing wiring (target device, fan mode, threshold reachability) without needing to open and close a window.",
+      "description": "Manually trigger a Boost cycle on the configured secondary climate device, for testing wiring (target device, fan mode, threshold reachability) without needing to open and close a window.",
       "fields": {
         "direction": {
           "name": "Direction",
