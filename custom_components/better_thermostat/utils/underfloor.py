@@ -130,14 +130,19 @@ WARM_FLOOR_LEVEL_PRESETS: Final[dict[str, tuple[float, float]]] = {
 }
 
 # Generic Thermostat duty profiles. The Warm Floor level is the user's
-# intensity control: higher levels use shorter recovery periods, longer ON
-# windows and a wider hold band. These are starting profiles; the live slope
-# and learned heat-loss/heating-power values adjust them each cycle.
+# intensity control. The period is the complete cycle (ON + pause), so these
+# starting values intentionally include the actuator travel time: an
+# electrothermal actuator needs roughly four minutes to open and another four
+# minutes to close. The live slope and learned heat-loss/heating-power values
+# may still make the cycle more assertive when the room is losing heat.
 WARM_FLOOR_DUTY_PROFILES: Final[dict[str, tuple[int, int, float]]] = {
-    WARM_FLOOR_LEVEL_ECO: (30 * 60, 3 * 60, 0.15),
-    WARM_FLOOR_LEVEL_BALANCED: (20 * 60, 5 * 60, 0.30),
-    WARM_FLOOR_LEVEL_KEEP_HOT: (15 * 60, 8 * 60, 0.55),
-    WARM_FLOOR_LEVEL_CUSTOM: (20 * 60, 5 * 60, 0.30),
+    # Requested starting profile: 4 min ON + about 43 min pause.
+    WARM_FLOOR_LEVEL_ECO: (47 * 60, 4 * 60, 0.15),
+    # Requested starting profile: 6 min ON + about 28 min pause.
+    WARM_FLOOR_LEVEL_BALANCED: (34 * 60, 6 * 60, 0.30),
+    # Requested starting profile: 8 min ON + about 13 min pause.
+    WARM_FLOOR_LEVEL_KEEP_HOT: (21 * 60, 8 * 60, 0.55),
+    WARM_FLOOR_LEVEL_CUSTOM: (34 * 60, 6 * 60, 0.30),
 }
 
 

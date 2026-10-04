@@ -77,16 +77,16 @@ def test_status_surfaces_generic_duty_cycle_details():
             "reason": "outside_duty_window",
             "control_method": "generic_duty_cycle",
             "warm_floor_level": "level_2",
-            "duty_period_s": 1200,
-            "duty_on_s": 300,
+            "duty_period_s": 2040,
+            "duty_on_s": 360,
         }
     )
     sensor = BetterThermostatWarmFloorStatusSensor(bt)
     sensor._update_state()
     assert sensor._attr_extra_state_attributes["reason"] == "outside_duty_window"
     assert sensor._attr_extra_state_attributes["control_method"] == "generic_duty_cycle"
-    assert sensor._attr_extra_state_attributes["duty_period_s"] == 1200
-    assert sensor._attr_extra_state_attributes["duty_on_s"] == 300
+    assert sensor._attr_extra_state_attributes["duty_period_s"] == 2040
+    assert sensor._attr_extra_state_attributes["duty_on_s"] == 360
 
 
 def test_active_status_surfaces_sustain_push_c():
