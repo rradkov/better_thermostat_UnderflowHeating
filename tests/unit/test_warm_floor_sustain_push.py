@@ -21,8 +21,10 @@ from custom_components.better_thermostat.trv import Trv
 from custom_components.better_thermostat.utils.const import CalibrationMode
 from custom_components.better_thermostat.utils.underfloor import (
     CONF_HEATING_TYPE,
+    CONF_WARM_FLOOR_LEVEL,
     CONF_WARM_FLOOR_SUSTAIN_PUSH,
     WARM_FLOOR_SENSOR_STALE_AFTER_S,
+    WARM_FLOOR_LEVEL_CUSTOM,
     HeatingType,
     apply_warm_floor_floor,
 )
@@ -37,6 +39,7 @@ def _make_bt(
     sensor_last_updated=None,
     calibration_mode: str = CalibrationMode.HEATING_POWER_CALIBRATION.value,
     max_temp: float = 30.0,
+    warm_floor_level: str | None = None,
     **overrides,
 ) -> MagicMock:
     bt = MagicMock()
@@ -73,6 +76,11 @@ def _make_bt(
                     CONF_HEATING_TYPE: HeatingType.UNDERFLOOR.value,
                     "calibration_mode": calibration_mode,
                     CONF_WARM_FLOOR_SUSTAIN_PUSH: sustain_push,
+                    **(
+                        {CONF_WARM_FLOOR_LEVEL: warm_floor_level}
+                        if warm_floor_level is not None
+                        else {}
+                    ),
                 },
                 "current_temperature": cur_temp,
                 "min_temp": 5.0,
@@ -97,7 +105,9 @@ def test_pushes_above_target_once_pinned_setpoint_and_idle_at_target():
 
 
 def test_off_by_default_is_a_strict_no_op():
-    bt = _make_bt(sustain_push=0.0)
+    # Custom is the explicit legacy/passive profile; the three named levels
+    # now intentionally run their own maintenance pulses.
+    bt = _make_bt(sustain_push=0.0, warm_floor_level=WARM_FLOOR_LEVEL_CUSTOM)
     result = apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
     assert result == 22.0
     assert bt._warm_floor_status["sustain_push_c"] is None

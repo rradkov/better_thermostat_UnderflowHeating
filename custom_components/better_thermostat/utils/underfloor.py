@@ -14,16 +14,19 @@ Everything here is additive: a heater only gets this behavior when its
 per-heater ``heating_type`` advanced option is explicitly set to
 ``HeatingType.UNDERFLOOR`` (the default once the field is shown at all -
 ``RADIATOR``, ``CONVECTOR`` and ``AC_HVAC`` are all an equal, strict no-op
-through this module). All computation reuses telemetry the BetterThermostat
-entity already maintains (``heat_loss_rate``, ``heating_power``,
-``temp_slope``, and, for MPC-calibrated heaters, the per-TRV learned MPC
-state) — no new thermal model is introduced.
+through this module). Generic Thermostat heaters additionally receive short,
+temperature-margin pulses with adaptive cooldowns. All computation reuses
+telemetry the Better Thermostat entity already maintains
+(``heat_loss_rate``, ``heating_power``, ``temp_slope``, and, for
+MPC-calibrated heaters, the per-TRV learned MPC state) — no floor sensor or
+new room-temperature ceiling is introduced.
 """
 
 from __future__ import annotations
 
 from enum import StrEnum
 import logging
+from time import time
 from typing import Any, Final
 
 from homeassistant.components.climate.const import HVACAction, HVACMode
@@ -117,6 +120,23 @@ WARM_FLOOR_LEVEL_PRESETS: Final[dict[str, tuple[float, float]]] = {
     WARM_FLOOR_LEVEL_BALANCED: (1.5, 0.0),
     WARM_FLOOR_LEVEL_KEEP_HOT: (0.5, 0.3),
 }
+
+# Generic Thermostat / on-off UFH maintenance profiles.  These are deliberately
+# duty-cycle profiles rather than room-temperature ceilings: the room may sit
+# above target because of solar gain, while short pulses keep energy in the slab.
+WARM_FLOOR_MAINTENANCE_PROFILES: Final[dict[str, tuple[float, float, float]]] = {
+    # pulse minutes, base pause minutes, trigger margin above current room temp
+    # The shortest pulse is the actuator's complete travel time. Shorter
+    # commands would mostly move the actuator without refreshing the slab.
+    WARM_FLOOR_LEVEL_ECO: (4.0, 120.0, 0.25),
+    WARM_FLOOR_LEVEL_BALANCED: (6.0, 60.0, 0.35),
+    WARM_FLOOR_LEVEL_KEEP_HOT: (8.0, 30.0, 0.45),
+}
+WARM_FLOOR_ACTUATOR_TRAVEL_MIN: Final = 4.0
+WARM_FLOOR_MAX_MAINTENANCE_PULSE_MIN: Final = 20.0
+MAINTENANCE_MAX_SLOPE: Final = 0.02  # K/min; above this solar/residual heat wins
+MAINTENANCE_MIN_PAUSE_MIN: Final = 15.0
+MAINTENANCE_MAX_PAUSE_MIN: Final = 180.0
 
 
 # ---------------------------------------------------------------------------
@@ -485,6 +505,13 @@ def _record_status(
     active: bool,
     sustaining_setpoint: float | None,
     sustain_push: float | None = None,
+    maintenance_active: bool = False,
+    maintenance_until: float | None = None,
+    maintenance_pause_min: float | None = None,
+    maintenance_reason: str | None = None,
+    maintenance_flow_temp: float | None = None,
+    maintenance_flow_lift: float | None = None,
+    maintenance_pulse_min: float | None = None,
 ) -> None:
     """Publish the last Warm Floor decision for ``entity_id`` onto ``bt``.
 
@@ -506,6 +533,13 @@ def _record_status(
         "sustaining_setpoint_c": sustaining_setpoint,
         "backoff_c": backoff_c,
         "sustain_push_c": sustain_push,
+        "maintenance_active": bool(maintenance_active),
+        "maintenance_until": maintenance_until,
+        "maintenance_pause_min": maintenance_pause_min,
+        "maintenance_reason": maintenance_reason,
+        "maintenance_flow_temp": maintenance_flow_temp,
+        "maintenance_flow_lift": maintenance_flow_lift,
+        "maintenance_pulse_min": maintenance_pulse_min,
     }
 
 
@@ -561,6 +595,235 @@ def _sustain_push_amount(bt, entity_id: str, structural_scale: float) -> float |
     if configured_push <= 0.0:
         return None
     return configured_push * structural_scale
+
+
+def _maintenance_profile(trv_state) -> tuple[float, float, float] | None:
+    """Return the pulse profile selected for this underfloor heater."""
+    level = trv_state.advanced.get(CONF_WARM_FLOOR_LEVEL, DEFAULT_WARM_FLOOR_LEVEL)
+    return WARM_FLOOR_MAINTENANCE_PROFILES.get(str(level))
+
+
+def _maintenance_solar_intensity(bt) -> float | None:
+    """Read the optional solar-intensity signal without making it required."""
+    direct_value = getattr(bt, "solar_intensity", None)
+    if isinstance(direct_value, (int, float)):
+        return float(direct_value)
+    try:
+        from custom_components.better_thermostat.calibration import (
+            _get_current_solar_intensity,
+        )
+
+        value = _get_current_solar_intensity(bt)
+    except (ImportError, AttributeError, TypeError, ValueError):
+        return None
+    return float(value) if isinstance(value, (int, float)) else None
+
+
+def _maintenance_flow_factor(
+    bt,
+) -> tuple[float | None, float | None, float | None]:
+    """Return flow temperature, water-to-room lift and relative heat factor.
+
+    The configured flow sensor is optional. The existing calibration helper
+    already implements the sensor -> static fallback chain, so Warm Floor
+    reuses that same portable configuration instead of knowing any specific
+    heat-source entity IDs.
+    """
+    try:
+        from custom_components.better_thermostat.calibration import (
+            _get_current_flow_temp_c,
+        )
+
+        flow_temp = _get_current_flow_temp_c(bt)
+    except (ImportError, AttributeError, TypeError, ValueError):
+        flow_temp = None
+    if not isinstance(flow_temp, (int, float)):
+        return None, None, None
+
+    room_temp = getattr(bt, "external_temp_ema", None)
+    if not isinstance(room_temp, (int, float)):
+        room_temp = getattr(bt, "cur_temp", None)
+    if not isinstance(room_temp, (int, float)):
+        return float(flow_temp), None, None
+
+    lift = float(flow_temp) - float(room_temp)
+    # Below roughly 3 K of lift the floor receives little useful heat. At
+    # 18 K and above the source is considered fully capable for this simple
+    # duty-cycle model. The clamp leaves room for calibration at either end.
+    factor = _clamp(0.25 + (lift - 3.0) * (1.25 / 15.0), 0.25, 1.5)
+    return float(flow_temp), lift, factor
+
+
+def _maintenance_pause_minutes(
+    bt, profile: tuple[float, float, float], flow_factor: float | None = None
+) -> float:
+    """Calculate a dynamic pause from heat-loss, heating-power and slope.
+
+    The result is deliberately a pause, not a room-temperature ceiling.  A
+    warm sunlit room can therefore remain above the requested temperature
+    while the short pulse still refreshes heat in the slab.
+    """
+    _pulse_min, base_pause_min, _margin = profile
+    pause = float(base_pause_min)
+
+    heat_loss = getattr(bt, "heat_loss_rate", None)
+    heating_power = getattr(bt, "heating_power", None)
+    if (
+        isinstance(heat_loss, (int, float))
+        and isinstance(heating_power, (int, float))
+        and heating_power > 0
+    ):
+        ratio = _clamp(float(heat_loss) / float(heating_power), 0.0, 2.0)
+        # Around ratio 0.4 (the observed example) keeps the preset close to
+        # its base cadence. Higher loss shortens the pause; lower loss lets
+        # the slab coast longer.
+        pause *= _clamp(0.4 / max(ratio, 0.05), 0.5, 1.8)
+
+    slope = getattr(bt, "temp_slope", None)
+    if isinstance(slope, (int, float)):
+        if slope > 0.005:
+            pause *= 2.0
+        elif slope < -0.005:
+            pause *= 0.5
+
+    # EMA is the short-term filtered room signal; EMA 1h is the slow thermal
+    # baseline. Their separation catches a sun-warmed room even when the
+    # instantaneous slope is close to zero, without imposing a fixed room
+    # temperature ceiling.
+    ema = getattr(bt, "external_temp_ema", None)
+    ema_1h = getattr(bt, "external_temp_ema_1h", None)
+    if isinstance(ema, (int, float)) and isinstance(ema_1h, (int, float)):
+        ema_delta = float(ema) - float(ema_1h)
+        if ema_delta > 0.15:
+            pause *= 1.5
+        elif ema_delta < -0.15:
+            pause *= 0.75
+
+    if isinstance(flow_factor, (int, float)):
+        # A hotter source can remain off longer; a weak source needs more
+        # frequent refreshes. The final global clamp prevents rapid cycling.
+        pause *= _clamp(float(flow_factor), 0.35, 1.6)
+
+    solar_intensity = _maintenance_solar_intensity(bt)
+    if isinstance(solar_intensity, (int, float)) and solar_intensity > 0.75:
+        # Strong sun is a reason to wait longer, but not a hard temperature
+        # lockout. If the room is stable, a later pulse is still allowed.
+        pause *= 1.5
+
+    return _clamp(pause, MAINTENANCE_MIN_PAUSE_MIN, MAINTENANCE_MAX_PAUSE_MIN)
+
+
+def _clear_maintenance(trv_state) -> None:
+    """Clear a running pulse while retaining its cooldown timestamp."""
+    if not isinstance(getattr(trv_state, "extra", None), dict):
+        return
+    trv_state.extra.pop("warm_floor_maintenance_started_at", None)
+    trv_state.extra.pop("warm_floor_maintenance_ends_at", None)
+
+
+def _apply_maintenance_pulse(
+    bt,
+    trv_state,
+    computed_value: float,
+) -> tuple[
+    float,
+    bool,
+    float | None,
+    str | None,
+    float | None,
+    float | None,
+    float | None,
+]:
+    """Return a Generic Thermostat maintenance pulse decision."""
+    integration = getattr(trv_state, "integration", None)
+    if integration not in (None, "generic", "generic_thermostat"):
+        return computed_value, False, None, "non_generic_integration", None, None, None
+    profile = _maintenance_profile(trv_state)
+    if profile is None:
+        return computed_value, False, None, None, None, None, None
+
+    cur_temp = getattr(bt, "cur_temp", None)
+    target_temp = getattr(bt, "bt_target_temp", None)
+    if (
+        not isinstance(cur_temp, (int, float))
+        or not isinstance(target_temp, (int, float))
+        or computed_value < float(target_temp)
+        or cur_temp < float(target_temp)
+        or getattr(bt, "hvac_action", None) != HVACAction.IDLE
+        or _has_active_valve_balance(trv_state)
+    ):
+        _clear_maintenance(trv_state)
+        return computed_value, False, None, "not_idle_or_below_target", None, None, None
+
+    slope = getattr(bt, "temp_slope", None)
+    if isinstance(slope, (int, float)) and slope > MAINTENANCE_MAX_SLOPE:
+        _clear_maintenance(trv_state)
+        return computed_value, False, None, "room_still_rising", None, None, None
+
+    now_s = time()
+    extra = trv_state.extra
+    flow_temp, flow_lift, flow_factor = _maintenance_flow_factor(bt)
+    pulse_min, _base_pause_min, margin = profile
+    if isinstance(flow_factor, (int, float)):
+        pulse_min = max(
+            WARM_FLOOR_ACTUATOR_TRAVEL_MIN,
+            min(
+                WARM_FLOOR_MAX_MAINTENANCE_PULSE_MIN,
+                pulse_min / max(float(flow_factor), 0.25),
+            ),
+        )
+    pulse_end = extra.get("warm_floor_maintenance_ends_at")
+    if isinstance(pulse_end, (int, float)) and now_s < pulse_end:
+        pulse_setpoint = float(cur_temp) + float(margin)
+        max_temp = convert_to_float(
+            trv_state.max_temp, getattr(bt, "device_name", None), "warm_floor"
+        )
+        if isinstance(max_temp, (int, float)):
+            pulse_setpoint = min(pulse_setpoint, float(max_temp))
+        return (
+            max(computed_value, pulse_setpoint),
+            True,
+            None,
+            "pulse_running",
+            flow_temp,
+            flow_lift,
+            pulse_min,
+        )
+
+    if isinstance(pulse_end, (int, float)) and now_s >= pulse_end:
+        extra["warm_floor_maintenance_last_end"] = now_s
+        _clear_maintenance(trv_state)
+
+    last_end = extra.get("warm_floor_maintenance_last_end")
+    pause_min = _maintenance_pause_minutes(bt, profile, flow_factor)
+    if isinstance(last_end, (int, float)) and now_s - last_end < pause_min * 60.0:
+        return (
+            computed_value,
+            False,
+            pause_min,
+            "cooldown",
+            flow_temp,
+            flow_lift,
+            pulse_min,
+        )
+
+    pulse_setpoint = float(cur_temp) + float(margin)
+    max_temp = convert_to_float(
+        trv_state.max_temp, getattr(bt, "device_name", None), "warm_floor"
+    )
+    if isinstance(max_temp, (int, float)):
+        pulse_setpoint = min(pulse_setpoint, float(max_temp))
+    extra["warm_floor_maintenance_started_at"] = now_s
+    extra["warm_floor_maintenance_ends_at"] = now_s + pulse_min * 60.0
+    return (
+        max(computed_value, pulse_setpoint),
+        True,
+        pause_min,
+        "pulse_started",
+        flow_temp,
+        flow_lift,
+        pulse_min,
+    )
 
 
 def apply_warm_floor_floor(
@@ -685,6 +948,31 @@ def apply_warm_floor_floor(
         offset_ceiling = sustaining_setpoint - float(trv_internal_temp)
         result = min(computed_value, offset_ceiling)
 
+    maintenance_active = False
+    maintenance_until = None
+    maintenance_pause_min = None
+    maintenance_reason = None
+    maintenance_flow_temp = None
+    maintenance_flow_lift = None
+    maintenance_pulse_min = None
+    if not is_offset:
+        (
+            result,
+            maintenance_active,
+            maintenance_pause_min,
+            maintenance_reason,
+            maintenance_flow_temp,
+            maintenance_flow_lift,
+            maintenance_pulse_min,
+        ) = _apply_maintenance_pulse(
+            bt,
+            trv_state,
+            result,
+        )
+        running_until = trv_state.extra.get("warm_floor_maintenance_ends_at")
+        if isinstance(running_until, (int, float)):
+            maintenance_until = running_until
+
     _apply_valve_floor(bt, entity_id, structural_scale, solar_scale)
     _record_status(
         bt,
@@ -692,6 +980,13 @@ def apply_warm_floor_floor(
         active=(result != computed_value),
         sustaining_setpoint=sustaining_setpoint,
         sustain_push=sustain_push_c,
+        maintenance_active=maintenance_active,
+        maintenance_until=maintenance_until,
+        maintenance_pause_min=maintenance_pause_min,
+        maintenance_reason=maintenance_reason,
+        maintenance_flow_temp=maintenance_flow_temp,
+        maintenance_flow_lift=maintenance_flow_lift,
+        maintenance_pulse_min=maintenance_pulse_min,
     )
     return result
 

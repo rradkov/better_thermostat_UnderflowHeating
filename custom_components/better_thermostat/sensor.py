@@ -758,6 +758,10 @@ class BetterThermostatExternalTemp1hEMASensor(_BtSensorBase):
 
         self._ema_value = ema
         self._last_update_ts = now
+        # Make the long EMA available to Warm Floor's control loop as well as
+        # to this diagnostic sensor. It remains optional for installations
+        # that do not expose the sensor entity.
+        self._bt_climate.external_temp_ema_1h = ema
 
     def _update_state(self) -> None:
         """Update state from internal EMA."""
@@ -949,7 +953,8 @@ class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
     a guard (open contact, no call for heat, HVAC off, still gaining, or a
     stale external sensor) held it off; ``"active"`` means it actually raised
     the floor this cycle - either the passive backoff floor, or, when
-    ``sustain_push_c`` is set, the opt-in sustain push above target.
+    ``sustain_push_c`` is set, the opt-in sustain push above target, or a
+    Generic Thermostat maintenance pulse.
     """
 
     _attr_translation_key = "warm_floor_status"
@@ -973,6 +978,13 @@ class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
             "sustaining_setpoint_c": status.get("sustaining_setpoint_c"),
             "backoff_c": status.get("backoff_c"),
             "sustain_push_c": status.get("sustain_push_c"),
+            "maintenance_active": status.get("maintenance_active", False),
+            "maintenance_until": status.get("maintenance_until"),
+            "maintenance_pause_min": status.get("maintenance_pause_min"),
+            "maintenance_reason": status.get("maintenance_reason"),
+            "maintenance_flow_temp": status.get("maintenance_flow_temp"),
+            "maintenance_flow_lift": status.get("maintenance_flow_lift"),
+            "maintenance_pulse_min": status.get("maintenance_pulse_min"),
         }
 
 
