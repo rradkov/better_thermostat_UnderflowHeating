@@ -45,6 +45,7 @@ from custom_components.better_thermostat.utils.helpers import (
     resolve_inbound_setpoint,
     resolve_state_change_event,
 )
+from custom_components.better_thermostat.utils.underfloor import apply_warm_floor_floor
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -539,7 +540,14 @@ def convert_outbound_states(self, entity_id, hvac_mode) -> dict | None:
             CalibrationType.DIRECT_VALVE_BASED,
         ):
             if _calibration_mode == CalibrationMode.NO_CALIBRATION:
-                _new_heating_setpoint = self.bt_target_temp
+                # Keep the historical no-calibration behavior as the base
+                # value, but still let an explicitly underfloor heater apply
+                # its Warm Floor floor/push. Previously this branch returned
+                # the target directly and skipped apply_warm_floor_floor(),
+                # making Warm Floor a no-op in this supported mode.
+                _new_heating_setpoint = apply_warm_floor_floor(
+                    self, entity_id, self.bt_target_temp, is_offset=False
+                )
             else:
                 _new_heating_setpoint = calculate_calibration_setpoint(self, entity_id)
             _new_local_calibration = None

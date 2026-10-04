@@ -7,7 +7,7 @@
         "data": {
           "name": "Name",
           "thermostat": "Das reale Thermostat",
-          "cooler": "Kühl-/Boost-Gerät (optional)",
+          "cooler": "Sekundäres Klimagerät (optional)",
           "min_cooler_resend_interval": "Mindestsekunden zwischen wiederholten Klimagerät-Befehlen (0 = deaktiviert)",
           "temperature_sensor": "Externer Temperatursensor",
           "humidity_sensor": "Luftfeuchtigkeitssensor",
@@ -41,12 +41,12 @@
         "data_description": {
           "presets": "Wähle die Presets aus, die für dieses Thermostat verfügbar sein sollen.",
           "underfloor_heating_enabled": "Aktivieren Sie dies, wenn eines Ihrer Heizgeräte eine Fußbodenheizungsschleife ist. Dies schaltet eine Option 'Heizungstyp' pro Heizgerät sowie den Warmer-Boden-Modus frei, der ein niedriges Grundwärmeniveau im Boden hält, anstatt ihn zwischen Heizzyklen vollständig abkühlen zu lassen.",
-          "boost_heater_enabled": "Aktivieren Sie dies, um das oben konfigurierte Kühl-/Boost-Gerät auch zur schnellen Temperaturwiederherstellung nach dem erneuten Öffnen eines Fensters zu nutzen. Ist der Raum kälter geworden als der untenstehende Schwellenwert, während das Fenster offen war, boostet das Schließen das Gerät zum Heizen; ist er wärmer geworden (z. B. an einem heißen Tag mit unterdrückter Kühlung), boostet das Schließen das Gerät zum Kühlen. In beiden Fällen wird die normale Zieltemperatur angestrebt; sobald der Boost endet, wird das Gerät genau in den Zustand zurückversetzt, in dem es sich vor dem Boost befand. Erfordert ein oben konfiguriertes Kühl-/Boost-Gerät.",
+          "boost_heater_enabled": "Aktivieren Sie dies, um das oben konfigurierte sekundäre Klimagerät zur schnellen Temperaturwiederherstellung nach dem erneuten Öffnen eines Fensters zu nutzen. Ist der Raum kälter als der Schwellenwert, boostet das Schließen des Fensters zum Heizen; ist er wärmer, zum Kühlen. Das Gerät strebt die normale Zieltemperatur an und wird nach dem Boost in den vorherigen Zustand zurückversetzt.",
           "boost_threshold": "Wenn die Raumtemperatur (in beide Richtungen) um mehr als diesen Wert abweicht, während ein Fenster geöffnet ist, aktiviert das Schließen des Fensters den Boost.",
           "boost_fan_mode": "Optional die Lüfterstufe des Geräts (z. B. auf Maximum) während des Boosts setzen; wird nach Ende des Boosts automatisch wiederhergestellt. Auf 'Lüfterstufe nicht ändern' belassen, um dies zu überspringen.",
           "boost_lag_minutes": "Wie viele Minuten Restwärme/-kühlung das Gerät nach der Abschaltaufforderung noch an den Raum liefert, verwendet um ein Überschießen des Zielwerts zu vermeiden.",
           "boost_max_runtime": "Maximale Laufzeit des Boosts, bevor er unabhängig von der Temperatur zwangsweise abgeschaltet wird.",
-          "cooler": "Optional. Ein Gerät, das zum Kühlen (bei Heiz+Kühl-Setups) und/oder, sobald Boost unten aktiviert ist, als Gerät zur schnellen Wiederherstellung der Raumtemperatur nach dem erneuten Öffnen eines Fensters verwendet wird - viele Fan-Coils, Wärmepumpen und Klimageräte erledigen bereits beide Aufgaben, sodass ein Gerät beide Rollen übernehmen kann.",
+          "cooler": "Optionales sekundäres Klimagerät zum Kühlen und/oder zur schnellen Wiederherstellung der Raumtemperatur nach dem erneuten Öffnen eines Fensters. Dies kann ein Fan-Coil, eine Wärmepumpe, eine Klimaanlage oder ein anderes Klimagerät sein, das den erforderlichen HVAC-Modus unterstützt.",
           "boost_asymmetric_threshold": "Aktivieren, um für das Auslösen eines Kühl-Boosts (z. B. an einem heißen Sommertag) einen anderen Temperaturabweichungs-Schwellenwert als für einen Heiz-Boost festzulegen. Lassen Sie dies deaktiviert, um denselben Schwellenwert für beide Richtungen zu verwenden.",
           "boost_threshold_cool": "Wenn die Raumtemperatur bei geöffnetem Fenster um mehr als diesen Wert gestiegen ist, löst das Schließen einen Kühl-Boost aus. Wird nur verwendet, wenn der Schalter oben aktiviert ist.",
           "boost_cooldown_minutes": "Mindestzeit nach Ende eines Boosts, bevor ein weiterer ausgelöst werden kann, damit ein Raum, der wiederholt über den Schwellenwert driftet (z. B. wiederholtes Öffnen/Schließen des Fensters), das gemeinsam genutzte Gerät nicht zu häufig schaltet.",
@@ -144,7 +144,7 @@
         "data_description": {
           "presets": "Wähle die Presets aus, die für dieses Thermostat verfügbar sein sollen.",
           "underfloor_heating_enabled": "Aktivieren Sie dies, wenn eines Ihrer Heizgeräte eine Fußbodenheizungsschleife ist. Dies schaltet eine Option 'Heizungstyp' pro Heizgerät sowie den Warmer-Boden-Modus frei, der ein niedriges Grundwärmeniveau im Boden hält, anstatt ihn zwischen Heizzyklen vollständig abkühlen zu lassen.",
-          "boost_heater_enabled": "Aktivieren Sie dies, um das oben konfigurierte Kühl-/Boost-Gerät auch zur schnellen Temperaturwiederherstellung nach dem erneuten Öffnen eines Fensters zu nutzen. Ist der Raum kälter geworden als der untenstehende Schwellenwert, während das Fenster offen war, boostet das Schließen das Gerät zum Heizen; ist er wärmer geworden (z. B. an einem heißen Tag mit unterdrückter Kühlung), boostet das Schließen das Gerät zum Kühlen. In beiden Fällen wird die normale Zieltemperatur angestrebt; sobald der Boost endet, wird das Gerät genau in den Zustand zurückversetzt, in dem es sich vor dem Boost befand. Erfordert ein oben konfiguriertes Kühl-/Boost-Gerät.",
+          "boost_heater_enabled": "Aktivieren Sie dies, um das oben konfigurierte sekundäre Klimagerät zur schnellen Temperaturwiederherstellung nach dem erneuten Öffnen eines Fensters zu nutzen. Ist der Raum kälter als der Schwellenwert, boostet das Schließen des Fensters zum Heizen; ist er wärmer, zum Kühlen. Das Gerät strebt die normale Zieltemperatur an und wird nach dem Boost in den vorherigen Zustand zurückversetzt.",
           "boost_threshold": "Wenn die Raumtemperatur (in beide Richtungen) um mehr als diesen Wert abweicht, während ein Fenster geöffnet ist, aktiviert das Schließen des Fensters den Boost.",
           "boost_fan_mode": "Optional die Lüfterstufe des Geräts (z. B. auf Maximum) während des Boosts setzen; wird nach Ende des Boosts automatisch wiederhergestellt. Auf 'Lüfterstufe nicht ändern' belassen, um dies zu überspringen.",
           "boost_lag_minutes": "Wie viele Minuten Restwärme/-kühlung das Gerät nach der Abschaltaufforderung noch an den Raum liefert, verwendet um ein Überschießen des Zielwerts zu vermeiden.",
@@ -256,7 +256,7 @@
     },
     "test_boost": {
       "name": "Boost testen",
-      "description": "Löst manuell einen Boost-Zyklus am konfigurierten Kühlgerät aus, um die Verkabelung (Zielgerät, Lüftermodus, Schwellenwert-Erreichbarkeit) zu testen, ohne ein Fenster öffnen und schließen zu müssen.",
+      "description": "Löst manuell einen Boost-Zyklus am konfigurierten sekundären Klimagerät aus, um die Verkabelung (Zielgerät, Lüftermodus, Schwellenwert-Erreichbarkeit) zu testen, ohne ein Fenster öffnen und schließen zu müssen.",
       "fields": {
         "direction": {
           "name": "Richtung",

@@ -7,7 +7,7 @@
         "data": {
           "name": "Navn",
           "thermostat": "Den rigtige termostat",
-          "cooler": "Kølings-/Boost-enhed (valgfrit)",
+          "cooler": "Sekundær klimaenhed (valgfri)",
           "min_cooler_resend_interval": "Minimum sekunder mellem gentagne kølekommandoer (0 = deaktiveret)",
           "temperature_sensor": "Temperatur måler",
           "humidity_sensor": "Fugtighedssensor",
@@ -41,12 +41,12 @@
         "data_description": {
           "presets": "Vælg de forudindstillinger, der skal være tilgængelige for denne termostat.",
           "underfloor_heating_enabled": "Slå dette til, hvis nogen af dine varmelegemer er gulvvarmeslynger. Dette låser en varmelegeme-indstilling for 'Varmetype' op samt Varm Gulv-tilstand, som holder et lavt baggrundsvarmeniveau i gulvet i stedet for at lade det køle helt af mellem varmecyklusser.",
-          "boost_heater_enabled": "Slå dette til for også at bruge Kølings-/Boost-enheden ovenfor til hurtig temperaturgenopretning, efter et vindue genåbnes. Hvis rummet blev koldere end tærsklen nedenfor, mens vinduet var åbent, booster lukning af vinduet enheden til opvarmning; hvis det blev varmere (f.eks. en varm dag med køling undertrykt), booster lukning enheden til køling. Under alle omstændigheder sigter den mod din normale måltemperatur; når boostet slutter, gendannes enheden præcis til den tilstand, den var i, før boostet overtog. Kræver at en Kølings-/Boost-enhed er konfigureret ovenfor.",
+          "boost_heater_enabled": "Slå dette til for at bruge den sekundære klimaenhed ovenfor til hurtig temperaturgenopretning, efter et vindue genåbnes. Hvis rummet blev koldere end tærsklen nedenfor, mens vinduet var åbent, booster lukning af vinduet enheden til opvarmning; hvis det blev varmere, booster lukning enheden til køling. Enheden sigter mod din normale måltemperatur og gendannes til den tidligere tilstand, når boostet slutter.",
           "boost_threshold": "Hvis rumtemperaturen afviger (i begge retninger) mere end dette, mens et vindue er åbent, aktiverer lukning af vinduet boostet.",
           "boost_fan_mode": "Angiv eventuelt enhedens ventilatorhastighed (f.eks. til maksimum) under boost; gendannes automatisk, når boostet slutter. Lad stå som 'Skift ikke ventilatorhastighed' for at springe dette over.",
           "boost_lag_minutes": "Hvor mange minutters resterende varme/køling enheden fortsat leverer til rummet, efter den er blevet bedt om at stoppe, brugt til at undgå at overskyde målet.",
           "boost_max_runtime": "Maksimal tid boostet må køre, før det tvinges fra, uanset temperatur.",
-          "cooler": "Valgfrit. En enhed der bruges til køling (i varme+køl-opsætninger) og/eller, når Boost er aktiveret nedenfor, som den enhed der hurtigt genopretter rumtemperaturen, efter et vindue genåbnes - mange fan-coils, varmepumper og aircondition-enheder udfører allerede begge opgaver, så én enhed kan varetage begge roller.",
+          "cooler": "Valgfri sekundær klimaenhed til køling og/eller hurtig genopretning af rumtemperaturen efter et vindue genåbnes. Det kan være en fan-coil, varmepumpe, aircondition-enhed eller en anden klimaenhed, der understøtter den nødvendige HVAC-tilstand.",
           "boost_asymmetric_threshold": "Slå dette til for at angive en anden temperaturafvigelsestærskel for at aktivere et køleboost (f.eks. en varm sommerdag) end for et varmeboost. Lad det være slået fra for at bruge samme tærskel i begge retninger.",
           "boost_threshold_cool": "Hvis rumtemperaturen steg mere end denne værdi, mens et vindue var åbent, aktiverer lukning af det et køleboost. Bruges kun, når kontakten ovenfor er slået til.",
           "boost_cooldown_minutes": "Minimumstid efter et boost er afsluttet, før et nyt kan aktiveres, så et rum, der gentagne gange driver forbi tærsklen (f.eks. gentagen åbning/lukning af vindue), ikke får den delte enhed til at skifte for ofte.",
@@ -144,7 +144,7 @@
         "data_description": {
           "presets": "Vælg de forudindstillinger, der skal være tilgængelige for denne termostat.",
           "underfloor_heating_enabled": "Slå dette til, hvis nogen af dine varmelegemer er gulvvarmeslynger. Dette låser en varmelegeme-indstilling for 'Varmetype' op samt Varm Gulv-tilstand, som holder et lavt baggrundsvarmeniveau i gulvet i stedet for at lade det køle helt af mellem varmecyklusser.",
-          "boost_heater_enabled": "Slå dette til for også at bruge Kølings-/Boost-enheden ovenfor til hurtig temperaturgenopretning, efter et vindue genåbnes. Hvis rummet blev koldere end tærsklen nedenfor, mens vinduet var åbent, booster lukning af vinduet enheden til opvarmning; hvis det blev varmere (f.eks. en varm dag med køling undertrykt), booster lukning enheden til køling. Under alle omstændigheder sigter den mod din normale måltemperatur; når boostet slutter, gendannes enheden præcis til den tilstand, den var i, før boostet overtog. Kræver at en Kølings-/Boost-enhed er konfigureret ovenfor.",
+          "boost_heater_enabled": "Slå dette til for at bruge den sekundære klimaenhed ovenfor til hurtig temperaturgenopretning, efter et vindue genåbnes. Hvis rummet blev koldere end tærsklen nedenfor, mens vinduet var åbent, booster lukning af vinduet enheden til opvarmning; hvis det blev varmere, booster lukning enheden til køling. Enheden sigter mod din normale måltemperatur og gendannes til den tidligere tilstand, når boostet slutter.",
           "boost_threshold": "Hvis rumtemperaturen afviger (i begge retninger) mere end dette, mens et vindue er åbent, aktiverer lukning af vinduet boostet.",
           "boost_fan_mode": "Angiv eventuelt enhedens ventilatorhastighed (f.eks. til maksimum) under boost; gendannes automatisk, når boostet slutter. Lad stå som 'Skift ikke ventilatorhastighed' for at springe dette over.",
           "boost_lag_minutes": "Hvor mange minutters resterende varme/køling enheden fortsat leverer til rummet, efter den er blevet bedt om at stoppe, brugt til at undgå at overskyde målet.",
