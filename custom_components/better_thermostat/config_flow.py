@@ -83,6 +83,7 @@ from .utils.helpers import (
     get_device_model,
     get_trv_intigration,
 )
+from .model_fixes.model_quirks import load_model_quirks, quirk_writes_valve
 from .utils.preset_manager import DEFAULT_ENABLED_PRESETS
 from .utils.underfloor import (
     CONF_HEATING_TYPE,
