@@ -627,6 +627,7 @@ def _build_user_fields(
     current: Mapping[str, Any],
     user_input: dict[str, Any] | None = None,
     hass: Any = None,
+    system_unit: str | None = None,
 ) -> OrderedDict:
     user_input = user_input or {}
     is_create = mode == "create"
@@ -1385,6 +1386,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             current=self.data or {},
             user_input=user_input,
             hass=self.hass,
+            system_unit=self.hass.config.units.temperature_unit,
         )
 
         return self.async_show_form(
@@ -1648,6 +1650,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             current=self._config_entry.data,
             user_input=user_input,
             hass=self.hass,
+            system_unit=self.hass.config.units.temperature_unit,
         )
 
         return self.async_show_form(
