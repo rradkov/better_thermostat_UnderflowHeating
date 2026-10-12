@@ -1,7 +1,7 @@
 
 
 [![GitHub issues](https://img.shields.io/github/issues/rradkov/better_thermostat_UnderflowHeating?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/issues)
-[![Version](https://img.shields.io/badge/Version-1.9.3.1.2-009688?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/releases)
+[![Version](https://img.shields.io/badge/Version-1.9.3.1.3-009688?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/releases)
 
 **For more info visit: <https://better-thermostat.org/>**
 
