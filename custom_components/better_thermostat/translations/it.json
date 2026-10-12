@@ -97,7 +97,9 @@
     },
     "abort": {
       "single_instance_allowed": "È consentito un solo termostato per ogni dispositivo reale.",
-      "no_devices_found": "Nessuna entità termostato trovata. Assicurati di avere un’entità climate nel tuo Home Assistant"
+      "no_devices_found": "Nessuna entità termostato trovata. Assicurati di avere un’entità climate nel tuo Home Assistant",
+      "already_configured": "Un Better Thermostat con questo nome controlla già questi termostati.",
+      "trv_in_use": "{trv} è già controllato dal Better Thermostat {entry}. Un termostato può appartenere a un solo Better Thermostat; rimuovilo prima da lì."
     }
   },
   "options": {
@@ -191,7 +193,9 @@
       "no_off_mode": "Il tuo dispositivo è particolare e non ha una modalità 'off' :(\nBetter Thermostat userà invece la temperatura target minima.",
       "target_temp_min_above_max": "La temperatura target minima non deve superare la temperatura target massima.",
       "no_outside_temp": "Non hai un sensore di temperatura esterna. Better Thermostat userà l’entità meteo al suo posto.",
-      "no_data": "Nessun dato ricevuto. Riprova."
+      "no_data": "Nessun dato ricevuto. Riprova.",
+      "no_sensor": "Seleziona un sensore di temperatura ambiente.",
+      "trv_in_use": "{trv} è già controllato dal Better Thermostat {entry}. Un termostato può appartenere a un solo Better Thermostat."
     }
   },
   "issues": {
@@ -221,6 +225,10 @@
     "invalid_external_temperature": {
       "title": "BT: {name} - temperatura esterna non valida",
       "description": "Il sensore di temperatura esterna per Better Thermostat {name} ha riportato un valore non plausibile: {value}.\n\nLa lettura era al di fuori dell'intervallo plausibile ed è stata ignorata. Controlla la configurazione del sensore di temperatura."
+    },
+    "shared_trv": {
+      "title": "BT: {trv} è controllato da più di un Better Thermostat",
+      "description": "Il termostato {trv} appartiene a questi Better Thermostat: {entries}. Gli inviano temperature obiettivo e modalità in conflitto. Rimuovilo da tutti tranne uno nelle loro impostazioni; poi questo problema scompare da solo."
     }
   },
   "services": {
@@ -540,6 +548,7 @@
           "window_close": "riscaldamento ripreso perché una finestra è stata chiusa",
           "summer_mode_on": "spento perché la temperatura esterna è troppo alta",
           "summer_mode_off": "riscaldamento ripreso perché la temperatura esterna è scesa",
+          "weather_forecast_missing": "riscaldamento ripreso perché le previsioni meteo non sono disponibili",
           "degraded_mode_entered": "è entrato in modalità degradata perché alcuni sensori non sono disponibili",
           "degraded_mode_resolved": "è uscito dalla modalità degradata perché tutti i sensori sono disponibili",
           "door_open": "turned off because a door was opened",

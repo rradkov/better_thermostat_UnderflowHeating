@@ -153,7 +153,7 @@ class TestControlCooler:
             bt_target_cooltemp=None,
             cur_temp=26.0,
             bt_target_temp=20.0,
-            bt_hvac_mode=HVACMode.HEAT_COOL,
+            bt_hvac_mode=HVACMode.HEAT,
         )
 
         await control_cooler(mock_self)
@@ -1056,9 +1056,10 @@ class TestControlCoolerFahrenheit:
         mock_hass.config.units.temperature_unit = UnitOfTemperature.FAHRENHEIT
         mock_hass.services = Mock()
         mock_hass.services.async_call = AsyncMock()
-        # 75.2 °F == 24.0 °C, the desired cooling setpoint.
+        # 24.0 °C is 75.2 °F; a °F cooler that publishes no step holds whole
+        # degrees, so 75 °F is the target as it holds it.
         mock_hass.states.get.return_value = _make_cooler_state(
-            state=HVACMode.COOL, temperature=75.2
+            state=HVACMode.COOL, temperature=75.0
         )
 
         mock_self = _make_mock_self(
@@ -1134,7 +1135,8 @@ class TestControlCoolerFahrenheit:
             for c in mock_hass.services.async_call.call_args_list
             if c.args[1] == "set_temperature"
         )
-        assert payload == {"entity_id": "climate.cooler", "temperature": 71.6}
+        # 22.0 °C is 71.6 °F; the device holds the nearest point of its grid.
+        assert payload == {"entity_id": "climate.cooler", "temperature": 72.0}
 
 
 _ATTRIBUTE_ABSENT = object()
@@ -1303,7 +1305,8 @@ class TestControlCoolerTargetRange:
         await control_cooler(mock_self)
 
         payload = self._set_temperature_payload(mock_hass)
-        assert payload["target_temp_high"] == 75.2  # 24.0 °C
+        # Without a published step the cooler holds whole degrees Fahrenheit.
+        assert payload["target_temp_high"] == 75.0  # 24.0 °C is 75.2 °F
         assert payload["target_temp_low"] == 68.0  # 20.0 °C
 
     @pytest.mark.asyncio
@@ -1517,7 +1520,7 @@ class TestControlCoolerOnADualRoleEntity:
 
         mock_self = self._make_shared_self(
             mock_hass,
-            bt_hvac_mode=HVACMode.HEAT_COOL,
+            bt_hvac_mode=HVACMode.HEAT,
             cur_temp=18.0,
             bt_target_temp=30.0,
             bt_target_cooltemp=24.0,
@@ -1539,7 +1542,7 @@ class TestControlCoolerOnADualRoleEntity:
 
         mock_self = self._make_shared_self(
             mock_hass,
-            bt_hvac_mode=HVACMode.HEAT_COOL,
+            bt_hvac_mode=HVACMode.HEAT,
             cur_temp=18.0,
             bt_target_temp=30.0,
             bt_target_cooltemp=24.0,
@@ -1563,7 +1566,7 @@ class TestControlCoolerOnADualRoleEntity:
 
         mock_self = self._make_shared_self(
             mock_hass,
-            bt_hvac_mode=HVACMode.HEAT_COOL,
+            bt_hvac_mode=HVACMode.HEAT,
             cur_temp=18.0,
             bt_target_temp=30.0,
             bt_target_cooltemp=24.0,
@@ -1586,7 +1589,7 @@ class TestControlCoolerOnADualRoleEntity:
 
         mock_self = self._make_shared_self(
             mock_hass,
-            bt_hvac_mode=HVACMode.HEAT_COOL,
+            bt_hvac_mode=HVACMode.HEAT,
             cur_temp=26.0,
             bt_target_temp=20.0,
             bt_target_cooltemp=24.0,
@@ -1615,7 +1618,7 @@ class TestControlCoolerOnADualRoleEntity:
 
         mock_self = self._make_shared_self(
             mock_hass,
-            bt_hvac_mode=HVACMode.HEAT_COOL,
+            bt_hvac_mode=HVACMode.HEAT,
             cur_temp=26.0,
             bt_target_temp=20.0,
             bt_target_cooltemp=24.0,
@@ -1639,7 +1642,7 @@ class TestControlCoolerOnADualRoleEntity:
 
         mock_self = _make_mock_self(
             mock_hass,
-            bt_hvac_mode=HVACMode.HEAT_COOL,
+            bt_hvac_mode=HVACMode.HEAT,
             cur_temp=18.0,
             bt_target_temp=30.0,
             bt_target_cooltemp=24.0,
@@ -1669,7 +1672,7 @@ class TestControlCoolerOpenContact:
 
         mock_self = _make_mock_self(
             mock_hass,
-            bt_hvac_mode=HVACMode.HEAT_COOL,
+            bt_hvac_mode=HVACMode.HEAT,
             cur_temp=26.0,
             bt_target_temp=20.0,
             bt_target_cooltemp=24.0,
@@ -1700,7 +1703,7 @@ class TestControlCoolerOpenContact:
         # setpoint that reached the unit and the moment it did.
         mock_self = _make_mock_self(
             mock_hass,
-            bt_hvac_mode=HVACMode.HEAT_COOL,
+            bt_hvac_mode=HVACMode.HEAT,
             cur_temp=26.0,
             bt_target_temp=20.0,
             bt_target_cooltemp=24.0,
@@ -1732,7 +1735,7 @@ class TestControlCoolerOpenContact:
 
         mock_self = _make_mock_self(
             mock_hass,
-            bt_hvac_mode=HVACMode.HEAT_COOL,
+            bt_hvac_mode=HVACMode.HEAT,
             cur_temp=26.0,
             bt_target_temp=20.0,
             bt_target_cooltemp=24.0,
@@ -1765,7 +1768,7 @@ class TestControlCoolerOpenContact:
 
         mock_self = TestControlCoolerOnADualRoleEntity._make_shared_self(
             mock_hass,
-            bt_hvac_mode=HVACMode.HEAT_COOL,
+            bt_hvac_mode=HVACMode.HEAT,
             cur_temp=26.0,
             bt_target_temp=20.0,
             bt_target_cooltemp=24.0,
