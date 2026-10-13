@@ -521,3 +521,16 @@ for all supported Home Assistant installations.
   The restored live HA targets/presets were set back before code deployment:
   Tino 22, Master 22, Bathroom FL2 24, Office/Guest 22, Kitchen/Dining 23,
   Living/Bathroom 23; all `home`.
+
+### 2026-10-13 — Deployment note for commit `8e0eced`
+
+- HACS installed and reports DEV commit `8e0eced` as both installed and
+  available; all seven Better Thermostat config entries are `loaded`.
+- The restart itself completed, but HA remains in a prolonged startup wait
+  because an unrelated `tuya_local` entry cannot connect. Consequently the
+  Better Thermostat entities are currently published as `unavailable`, so
+  their post-restart wrapper-state verification must be repeated after HA
+  completes startup.
+- The six available Generic Thermostat child setpoints were restored to the
+  last known room targets (22/22/24/22/23/23). Tino's child is also currently
+  unavailable and was not forced. `climate.tatas` was not touched.
