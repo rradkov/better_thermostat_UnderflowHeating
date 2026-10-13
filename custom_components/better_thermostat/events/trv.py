@@ -354,6 +354,11 @@ async def trigger_trv_change(
         )
         and _org_trv_state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
     )
+    if recovered_from_unavailable:
+        # Do not rely on a changed setpoint to restore a downstream actuator:
+        # Generic Thermostat may restore its relay independently of its
+        # reported target.  The control cycle consumes this one-shot request.
+        trv.recovery_pending = True
     if _org_trv_state.state == STATE_UNAVAILABLE or (
         (not state_unknown_as_available) and _org_trv_state.state == STATE_UNKNOWN
     ):

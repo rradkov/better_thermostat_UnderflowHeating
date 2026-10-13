@@ -1715,7 +1715,12 @@ async def control_trv(self, heater_entity_id=None):
                 # Tolerance-based comparison: the outbound value lies on the
                 # device step grid, the read-back values on the 0.01 grid, so
                 # exact set membership would re-send identical setpoints.
-                if not matches_any_setpoint(_temperature, _current_set_temperatures):
+                _recovery_write = self.real_trvs[
+                    heater_entity_id
+                ].recovery_pending
+                if _recovery_write or not matches_any_setpoint(
+                    _temperature, _current_set_temperatures
+                ):
                     old = self.real_trvs[heater_entity_id].last_temperature
                     _LOGGER.debug(
                         "better_thermostat %s: TO TRV set_temperature: %s from: %s to: %s",
@@ -1759,6 +1764,7 @@ async def control_trv(self, heater_entity_id=None):
                             ),
                             name=f"bt_check_target_temp_{heater_entity_id}",
                         )
+                        _written_trv.recovery_pending = False
                 else:
                     # The device already holds what the room wants, whoever
                     # put it there: a knob turned while the room was off can

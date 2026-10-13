@@ -91,6 +91,11 @@ class Trv:
     # Whether a reading turned away by that debounce is due to be read again
     # once the interval is over.
     internal_reread_pending: bool = False
+    # A recovered device must receive one real setpoint write even when the
+    # desired value matches the cached/read-back value.  A downstream Generic
+    # Thermostat may have restored its relay ON while its setpoint stayed the
+    # same during the outage.
+    recovery_pending: bool = False
     # The setpoint BT last sent; the device's own at startup.
     last_temperature: float | None = None
     # The setpoint in °C the device last confirmed, the device's own at

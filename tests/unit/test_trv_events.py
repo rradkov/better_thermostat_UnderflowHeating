@@ -242,6 +242,7 @@ class TestUnavailableInvalidation:
             )
 
         mock_bt.control_queue_task.put.assert_awaited_once_with(mock_bt)
+        assert mock_bt.real_trvs[ENTITY_ID].recovery_pending is True
 
     @pytest.mark.asyncio
     async def test_unavailable_trv_invalidates_internal_temperature(self, mock_bt):

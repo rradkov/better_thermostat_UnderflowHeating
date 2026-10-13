@@ -1,5 +1,25 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-13 — Force one downstream setpoint write after recovery
+
+- **Follow-up to:** The unavailable-to-available recovery cycle fix.
+- **Observed gap:** The recovery cycle was queued, but the control layer could
+  still skip the service call when the desired setpoint matched the cached
+  downstream value. A Generic Thermostat can have restored its relay ON while
+  retaining that same value, so a calculation alone does not reassert the safe
+  idle/Warm Floor command.
+- **Change:** Recovery now marks the affected controlled heater with a one-shot
+  `recovery_pending` flag. The next eligible control cycle forces one normal
+  setpoint write through the configured adapter, then consumes the flag. This
+  remains capability-based and does not directly operate a relay or reference
+  any installation entity.
+- **Safety:** The normal HVAC, window/door, outdoor, stale-data, Warm Floor,
+  and actuator guards still choose the setpoint. Recovery only ensures that
+  the chosen command is actually sent once; it does not force heating.
+- **Verification target:** After deployment, a recovered Generic Thermostat
+  must no longer remain physically ON solely because its relay restored during
+  an outage while Better Thermostat was idle at/above target.
+
 This file is the project decision log and working memory for future changes.
 Before making a design decision, debugging change, configuration change, or
 code change for this project, read this file first. After every change, add a
