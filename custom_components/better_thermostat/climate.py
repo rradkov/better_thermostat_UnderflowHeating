@@ -1074,36 +1074,57 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         or user setting is touched here.
         """
         while not self.is_removed:
-            await asyncio.sleep(WARM_FLOOR_WATCHDOG_INTERVAL_S)
-            if self.is_removed or self.startup_running or self.in_maintenance:
-                continue
+            try:
+                await asyncio.sleep(WARM_FLOOR_WATCHDOG_INTERVAL_S)
+                if self.is_removed or self.startup_running or self.in_maintenance:
+                    continue
 
-            control_task = getattr(self, "_control_task", None)
-            if control_task is None or control_task.done():
-                if control_task is not None and not control_task.cancelled():
-                    try:
-                        error = control_task.exception()
-                    except (asyncio.CancelledError, asyncio.InvalidStateError):
-                        error = None
-                    if error is not None:
-                        _LOGGER.error(
-                            "better_thermostat %s: Warm Floor control queue stopped; restarting: %s",
+                control_task = getattr(self, "_control_task", None)
+                if control_task is None or control_task.done():
+                    if control_task is not None and not control_task.cancelled():
+                        try:
+                            error = control_task.exception()
+                        except (asyncio.CancelledError, asyncio.InvalidStateError):
+                            error = None
+                        if error is not None:
+                            _LOGGER.error(
+                                "better_thermostat %s: Warm Floor control queue stopped; restarting: %s",
+                                self.device_name,
+                                error,
+                            )
+                    self._control_task = self.hass.async_create_background_task(
+                        control_queue(self), name=f"bt_control_queue_{self.device_name}"
+                    )
+
+                age_s = self._warm_floor_status_age()
+                if age_s is None or age_s > WARM_FLOOR_STATUS_STALE_AFTER_S:
+                    if self.control_queue_task.empty():
+                        _LOGGER.warning(
+                            "better_thermostat %s: Warm Floor status stale (age=%s); requesting control cycle",
                             self.device_name,
-                            error,
+                            None if age_s is None else round(age_s, 1),
                         )
-                self._control_task = self.hass.async_create_background_task(
-                    control_queue(self), name=f"bt_control_queue_{self.device_name}"
+                        self.control_queue_task.put_nowait(self)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                _LOGGER.exception(
+                    "better_thermostat %s: Warm Floor watchdog iteration failed",
+                    self.device_name,
                 )
 
-            age_s = self._warm_floor_status_age()
-            if age_s is None or age_s > WARM_FLOOR_STATUS_STALE_AFTER_S:
-                if self.control_queue_task.empty():
-                    _LOGGER.warning(
-                        "better_thermostat %s: Warm Floor status stale (age=%s); requesting control cycle",
-                        self.device_name,
-                        None if age_s is None else round(age_s, 1),
-                    )
-                    self.control_queue_task.put_nowait(self)
+    def _start_warm_floor_watchdog(self) -> bool:
+        """Start the Warm Floor watchdog once the configured heaters exist."""
+        if getattr(self, "_warm_floor_watchdog_started", False):
+            return True
+        if not BetterThermostat._has_generic_warm_floor(self):
+            return False
+        self._warm_floor_watchdog_started = True
+        self._spawn_owned(
+            self._warm_floor_watchdog(),
+            name=f"bt_warm_floor_watchdog_{self.device_name}",
+        )
+        return True
 
     async def async_added_to_hass(self):
         """Run when entity about to be added.
@@ -1127,11 +1148,6 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         self._control_task = self.hass.async_create_background_task(
             control_queue(self), name=f"bt_control_queue_{self.device_name}"
         )
-        if BetterThermostat._has_generic_warm_floor(self):
-            self._spawn_owned(
-                self._warm_floor_watchdog(),
-                name=f"bt_warm_floor_watchdog_{self.device_name}",
-            )
         if self.window_id is not None:
             self._window_task = self.hass.async_create_background_task(
                 window_queue(self), name=f"bt_window_queue_{self.device_name}"
@@ -2752,6 +2768,15 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         self._available = True
         self.async_write_ha_state()
 
+        # The startup checks intentionally do not queue control work when
+        # called with event=None. Once startup is released, guarantee one full
+        # control cycle so Warm Floor cannot remain on a restored pre-restart
+        # decision until the next external state change.
+        try:
+            self.control_queue_task.put_nowait(self)
+        except asyncio.QueueFull:
+            pass
+
         if isinstance(self.all_trvs, list):
             # The via device link is single-valued: binding every TRV rewrites
             # the same BT device row, leaving it attached only to the last
@@ -2827,6 +2852,10 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         # sensors. A slow optional integration must not freeze the duty-cycle
         # clock after a config-entry reload.
         self._register_warm_floor_tick()
+        # Start this only after _initialize_trvs() has populated real_trvs.
+        # Starting it in async_added_to_hass() was too early: the capability
+        # check then saw an empty heater map and silently skipped the watchdog.
+        self._start_warm_floor_watchdog()
         await await_optional_sensors(self)
         # That wait can run for the better part of a minute and gives the
         # entity up on its own once the removal starts, so the removal is

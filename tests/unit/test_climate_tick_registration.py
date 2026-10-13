@@ -148,6 +148,43 @@ async def test_warm_floor_tick_uses_heating_capability_not_adapter_label():
     assert periodic_call.args[2].total_seconds() == 60
 
 
+def test_warm_floor_watchdog_starts_after_heater_capability_is_available():
+    """The watchdog must start once real_trvs contains an underfloor heater."""
+    bt = _make_bt(
+        {
+            "calibration_mode": CalibrationMode.NO_CALIBRATION.value,
+            CONF_HEATING_TYPE: HeatingType.UNDERFLOOR.value,
+        }
+    )
+    bt._warm_floor_watchdog_started = False
+    bt._warm_floor_watchdog = MagicMock(return_value=None)
+    bt._spawn_owned = MagicMock()
+
+    assert BetterThermostat._start_warm_floor_watchdog(bt) is True
+    bt._spawn_owned.assert_called_once_with(
+        None,
+        name="bt_warm_floor_watchdog_Test BT",
+    )
+    assert bt._warm_floor_watchdog_started is True
+
+
+def test_warm_floor_watchdog_skips_without_underfloor_capability():
+    """Radiator-only instances must not create a Warm Floor watchdog."""
+    bt = _make_bt(
+        {
+            "calibration_mode": CalibrationMode.NO_CALIBRATION.value,
+            CONF_HEATING_TYPE: HeatingType.RADIATOR.value,
+        }
+    )
+    bt._warm_floor_watchdog_started = False
+    bt._warm_floor_watchdog = MagicMock(return_value=None)
+    bt._spawn_owned = MagicMock()
+
+    assert BetterThermostat._start_warm_floor_watchdog(bt) is False
+    bt._spawn_owned.assert_not_called()
+    assert bt._warm_floor_watchdog_started is False
+
+
 def _make_bt_for_binding(trv_confs):
     """Build a _finalize_startup mock with a configured all_trvs list."""
     bt = _make_bt({"calibration_mode": CalibrationMode.NO_CALIBRATION.value})

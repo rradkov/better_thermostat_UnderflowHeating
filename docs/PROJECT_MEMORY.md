@@ -1079,3 +1079,38 @@ for all supported Home Assistant installations.
 - **Safety:** Boost statuses remained off during the check. No target, preset,
   relay, or configuration was manually changed, and `climate.tatas` was not
   queried or changed. No release was created.
+
+### 2026-10-14 — Fix Warm Floor control liveness after Home Assistant restart
+
+- **Observed:** After the `ea4fed6` deployment and a full Home Assistant
+  restart, all Better Thermostat entities continued publishing current state,
+  but Warm Floor decision timestamps stayed at the restart point for roughly
+  two hours. The Generic Thermostat children and their relays did not receive
+  new Warm Floor commands. This occurred across all inspected zones, so it was
+  not a single relay or room fault.
+- **Root cause:** The Warm Floor watchdog was started from
+  `async_added_to_hass()`, before startup had populated `real_trvs`. Its
+  capability check therefore saw an empty heater map and skipped the watchdog
+  for every Warm Floor instance. The startup path also ran its checks with
+  `event=None`, which intentionally avoided queuing control work and left no
+  guaranteed first control cycle after restart.
+- **Changed:** Watchdog startup is now deferred until `_initialize_trvs()` has
+  created the configured heater models. The watchdog iteration is isolated so
+  a diagnostic/scheduling exception cannot kill the watchdog itself. Once
+  startup releases `startup_running`, one normal control cycle is queued
+  explicitly. These changes restore scheduling only; the existing HVAC,
+  sensor, contact, outdoor, Warm Floor safety ceiling, duty-cycle, and
+  actuator guards still decide the actual command.
+- **Scope:** The fix is capability-based for all configured underfloor
+  heaters, including multi-heater zones. It does not name or access Tino,
+  Tata, any Tasmota relay, or `climate.tatas`; the latter remains unrelated.
+- **Live evidence before fix:** BT wrapper states were current, while the
+  Warm Floor records had `status_age_s` around 6840 seconds. Generic child
+  states had stopped changing after the restart, and the corresponding relay
+  states remained at their startup values. HACS confirmed DEV `ea4fed6` was
+  installed.
+- **Verification target:** After deployment, every Warm Floor record must
+  refresh within the watchdog interval, the Generic Thermostat children must
+  receive new ON/OFF decisions, and real zone relays must produce valid
+  pulses. Multi-heater relays must remain synchronized. No target, preset,
+  manual relay state, or release metadata may be changed as part of this fix.
