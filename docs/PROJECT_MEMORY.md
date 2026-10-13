@@ -70,6 +70,25 @@
   relay must receive ON pulses when its calculated duty window and safety
   ceiling allow them.
 
+### 2026-10-13 — Verified capability-based Warm Floor tick in HA
+
+- **Deployment:** HACS installed DEV commit `439ccee` and Home Assistant was
+  restarted. No release was created.
+- **Live verification:** Warm Floor `status_age_s` values now refresh roughly
+  every minute (about 30–60 seconds during the check), whereas before the fix
+  they were stale for approximately an hour. This confirms that the periodic
+  control tick is registered and is recalculating the duty-cycle diagnostics.
+- **Observed conditions:** No new Warm Floor relay ON pulse occurred in the
+  short post-restart observation window. Tino was in an ON duty phase but its
+  current decision was `idle_release`; Kitchen/Living were outside their
+  allowed duty window, Master was blocked by `contact_open`, Office was HVAC
+  off or outside its safety window, and Bathroom FL2 was normal room-demand
+  heating rather than Warm Floor maintenance.
+- **Follow-up:** Verify a complete duty-cycle transition in a longer live
+  observation. A status refresh alone proves the missed-tick defect is fixed,
+  but a relay pulse still requires the normal Warm Floor safety envelope to
+  allow it. The unrelated `climate.tatas` entity was not queried or changed.
+
 This file is the project decision log and working memory for future changes.
 Before making a design decision, debugging change, configuration change, or
 code change for this project, read this file first. After every change, add a
