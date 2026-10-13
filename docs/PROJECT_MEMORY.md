@@ -468,6 +468,26 @@ Warm Floor requirements.
   must not overwrite the outer user target.
 - No `climate.tatas` entity was changed or used in this verification.
 
+### 2026-10-13 — Release stale Generic Thermostat setpoint when Warm Floor is idle
+
+- **Observed defect:** Tino's outer Better Thermostat reported `idle` at
+  22.0°C with room temperature 22.1°C and Warm Floor status `idle`, while the
+  Generic Thermostat child still held a 26.0°C setpoint and its relay remained
+  on for more than 30 minutes.
+- **Root cause:** For an ON/OFF Generic Thermostat, the downstream setpoint is
+  itself the relay command. The Warm Floor OFF-window path returned the
+  previously computed value unchanged, so an old value above room temperature
+  could continue heating even though the Warm Floor status was idle.
+- **Change:** In `utils/underfloor.py`, when the controller is idle, the room
+  is at/above the user target, the heater is a Generic Thermostat, and no
+  explicit sustain push is configured, clamp the downstream setpoint back to
+  the user target. Valve and offset-based heaters are not affected. The
+  diagnostic reason is recorded as `idle_release`.
+- **Verification:** Added a regression test for a stale 26.0°C Generic
+  Thermostat setpoint; 35 focused synchronous tests passed, source compilation
+  and `git diff --check` passed. Native Windows HA pytest execution remains
+  unavailable because the HA plugin imports POSIX-only `fcntl`.
+
 ## Review checkpoint
 
 The repository review on 2026-10-13 covered the root project metadata and

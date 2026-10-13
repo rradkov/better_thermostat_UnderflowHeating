@@ -114,6 +114,22 @@ def test_off_by_default_is_a_strict_no_op():
     assert bt._warm_floor_status["sustain_push_c"] is None
 
 
+def test_generic_idle_releases_stale_downstream_setpoint():
+    """An idle Generic Thermostat must not keep heating from an old pulse."""
+    bt = _make_bt(
+        sustain_push=0.0,
+        cur_temp=22.1,
+        target_temp=22.0,
+        warm_floor_level=WARM_FLOOR_LEVEL_CUSTOM,
+    )
+    bt.real_trvs["climate.trv"].integration = "generic_thermostat"
+
+    result = apply_warm_floor_floor(bt, "climate.trv", 26.0, is_offset=False)
+
+    assert result == 22.0
+    assert bt._warm_floor_status["reason"] == "idle_release"
+
+
 def test_does_not_fire_while_still_heating():
     """hvac_action must read IDLE, not just "not COOLING"."""
     bt = _make_bt(sustain_push=0.3, hvac_action=HVACAction.HEATING)

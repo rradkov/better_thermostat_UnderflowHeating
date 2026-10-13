@@ -11,6 +11,14 @@ A radiator TRV backing off to 0% between heat calls is nearly free to recover fr
 
 Warm Floor keeps a low, continuous background heat level in underfloor-flagged heaters instead of letting them idle to zero — a *sustaining floor* on the setpoint (or offset/valve %, depending on calibration type), never a ceiling. It never fights the normal heating computation; it only raises what would otherwise be a fully-idle cycle. The passive backoff floor described below never pushes the room above target; the separate, opt-in sustain push (see "Closing the no-op gap" below) can push the *downstream* setpoint sent to the heater above target, but never the target temperature itself.
 
+For Generic Thermostat heaters, an idle cycle also has to release any previous
+downstream pulse. The relay is controlled only by the Generic Thermostat's
+setpoint, so a stale value above the room temperature is still a real heating
+command even when Warm Floor is outside its ON window. When the room is at or
+above target and no sustain push is configured, Warm Floor clamps that stale
+idle value back to the user target. This release is limited to Generic
+Thermostat heaters and does not alter valve or calibration-offset semantics.
+
 ## How much backoff is actually safe
 
 The configured "max backoff" is a ceiling, not a fixed value. Each cycle, BT scales it down based on:

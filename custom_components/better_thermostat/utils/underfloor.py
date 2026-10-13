@@ -919,6 +919,26 @@ def apply_warm_floor_floor(
         result, duty_reason, duty_period_s, duty_on_s = _apply_generic_duty_cycle(
             bt, entity_id, result, structural_scale, demand_factor
         )
+        # A Generic Thermostat turns its relay on from the downstream
+        # setpoint alone.  If the Better Thermostat controller is idle and the
+        # room is already at/above its user target, an old setpoint above the
+        # room temperature is therefore a real heating command, even when
+        # Warm Floor is outside its ON window.  Release that stale command
+        # unless the explicitly configured sustain push is the reason to keep
+        # it above target.  This is deliberately limited to Generic
+        # Thermostat heaters; valve/setpoint devices have their own idle
+        # semantics and must not be clamped here.
+        if (
+            _is_generic_thermostat(trv_state)
+            and duty_reason in {"outside_duty_window", "rising"}
+            and sustain_push_c is None
+            and bt.hvac_action == HVACAction.IDLE
+            and isinstance(cur_temp, (int, float))
+            and cur_temp >= target_temp
+            and result > target_temp
+        ):
+            result = target_temp
+            duty_reason = "idle_release"
         if duty_reason == "duty_cycle_on":
             sustain_push_c = round(result - float(bt.bt_target_temp), 3)
     else:
@@ -955,7 +975,12 @@ def apply_warm_floor_floor(
         if isinstance(current_valve, (int, float)):
             valve_min_pct = round(float(current_valve), 1)
     control_method = None
-    if duty_reason in {"duty_cycle_on", "outside_duty_window", "rising"}:
+    if duty_reason in {
+        "duty_cycle_on",
+        "outside_duty_window",
+        "rising",
+        "idle_release",
+    }:
         control_method = "generic_duty_cycle"
     elif _has_active_valve_balance(trv_state):
         control_method = "valve_minimum"
@@ -967,6 +992,8 @@ def apply_warm_floor_floor(
         reason = "outside_duty_window"
     elif duty_reason == "rising":
         reason = "temperature_rising"
+    elif duty_reason == "idle_release":
+        reason = "idle_release"
     elif valve_min_pct is not None:
         reason = "valve_minimum_applied"
     elif result != computed_value:
