@@ -727,6 +727,8 @@ class TestStateManagerStateAccess:
         mgr.record_preset_state("home", {"home": 22.0}, {"home": 25.0})
 
         assert mgr.active_preset == "home"
+        assert mgr.preset_heat_temperatures == {"home": 22.0}
+        assert mgr.preset_cool_temperatures == {"home": 25.0}
         assert mgr.state.preset_heat_temperatures == {"home": 22.0}
         assert mgr.state.preset_cool_temperatures == {"home": 25.0}
         assert mgr.dirty is True

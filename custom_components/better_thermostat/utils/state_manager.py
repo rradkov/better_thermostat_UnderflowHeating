@@ -773,6 +773,16 @@ class StateManager:
         """Return the last user-selected preset mode."""
         return self._state.active_preset
 
+    @property
+    def preset_heat_temperatures(self) -> dict[str, float]:
+        """Return persisted heating temperatures for each preset."""
+        return self._state.preset_heat_temperatures
+
+    @property
+    def preset_cool_temperatures(self) -> dict[str, float]:
+        """Return persisted cooling temperatures for each preset."""
+        return self._state.preset_cool_temperatures
+
     def record_preset_state(
         self,
         active_preset: str | None,

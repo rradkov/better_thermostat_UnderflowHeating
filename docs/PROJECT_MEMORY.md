@@ -534,3 +534,13 @@ for all supported Home Assistant installations.
 - The six available Generic Thermostat child setpoints were restored to the
   last known room targets (22/22/24/22/23/23). Tino's child is also currently
   unavailable and was not forced. `climate.tatas` was not touched.
+
+### 2026-10-13 — Fix startup crash caused by missing StateManager accessors
+
+- **Incident:** After deploying `8e0eced`, all Better Thermostat entities were
+  `unavailable` although their config entries were reported `loaded`.
+- **Root cause:** `climate.py` read `state_mgr.preset_heat_temperatures` and
+  `state_mgr.preset_cool_temperatures`, but only the fields on `RuntimeState`
+  had been added; the corresponding `StateManager` properties were missing.
+  Startup therefore raised `AttributeError` for every Better Thermostat.
+- **Change:** Added read-only `StateManager` accessors and regression coverage.
