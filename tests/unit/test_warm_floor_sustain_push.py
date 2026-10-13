@@ -271,8 +271,20 @@ def test_stale_raw_sensor_does_not_block_when_derived_slope_is_available():
     assert bt._warm_floor_status["active"] is True
 
 
-def test_generic_thermostat_does_not_heat_a_room_above_the_safe_band(monkeypatch):
+def test_generic_thermostat_maintains_floor_above_the_room_target(monkeypatch):
     bt = _make_bt(sustain_push=0.0, cur_temp=22.6, target_temp=22.0)
+    bt.real_trvs["climate.trv"].integration = "generic_thermostat"
+    monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: True)
+
+    result = apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
+
+    assert result == 23.0
+    assert bt._warm_floor_status["active"] is True
+    assert bt._warm_floor_status["reason"] == "duty_cycle_on"
+
+
+def test_generic_thermostat_stops_at_the_absolute_safety_ceiling(monkeypatch):
+    bt = _make_bt(sustain_push=0.0, cur_temp=29.1, target_temp=22.0)
     bt.real_trvs["climate.trv"].integration = "generic_thermostat"
     monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: True)
 
@@ -280,6 +292,7 @@ def test_generic_thermostat_does_not_heat_a_room_above_the_safe_band(monkeypatch
 
     assert result == 21.5
     assert bt._warm_floor_status["active"] is False
+    assert bt._warm_floor_status["reason"] == "idle_release"
 
 
 def test_generic_thermostat_maintains_floor_while_room_is_rising(monkeypatch):

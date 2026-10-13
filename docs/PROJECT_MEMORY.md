@@ -89,6 +89,26 @@
   but a relay pulse still requires the normal Warm Floor safety envelope to
   allow it. The unrelated `climate.tatas` entity was not queried or changed.
 
+### 2026-10-13 — Modulate Warm Floor above target instead of hard blocking
+
+- **Incident:** The Generic Thermostat duty-cycle path treated a narrow
+  `target + adaptive band` as a hard room-temperature ceiling. Rooms heated by
+  sunlight or residual heat were therefore reported as `outside_duty_window`
+  and could not keep the slab warm, even though Warm Floor is explicitly
+  intended to operate at or above the room target.
+- **Change:** Removed that narrow hard-off gate. Above-target temperature now
+  remains eligible for the normal Eco/Balanced/Keep-it-Hot duty profile, with
+  `temp_slope`, short/one-hour EMA separation, thermal demand, and MPC inputs
+  reducing the cycle intensity as appropriate.
+- **Safety:** Added a broad absolute guard at `target + 5°C`, bounded by the
+  configured actuator maximum. This is an emergency/safety boundary, not the
+  normal Warm Floor operating band; ordinary above-target conditions continue
+  to receive maintenance pulses when the duty phase is ON.
+- **Verification:** Added regression coverage for maintenance at `target +
+  0.6°C` and for stopping at the absolute safety boundary. Focused tests,
+  compilation, and diff validation passed before deployment. The behavior is
+  generic and does not reference or modify `climate.tatas`.
+
 This file is the project decision log and working memory for future changes.
 Before making a design decision, debugging change, configuration change, or
 code change for this project, read this file first. After every change, add a

@@ -772,9 +772,9 @@ def _apply_generic_duty_cycle(
     Generic Thermostat has no valve percentage to floor. Its only actuator is
     the temperature comparison, so the ON window raises the downstream
     setpoint above both the live room temperature and the Better Thermostat
-    target, but only inside a narrow target band. This prevents a room already
-    materially above target from being heated merely because Warm Floor is
-    enabled.
+    target. A room above target reduces maintenance demand through the duty
+    profile and slope/EMA inputs; it is not by itself a reason to disable
+    Warm Floor. Only the absolute safety ceiling and duty phase suppress it.
     """
     trv_state = bt.real_trvs.get(entity_id)
     target = getattr(bt, "bt_target_temp", None)
@@ -790,36 +790,46 @@ def _apply_generic_duty_cycle(
     if current < float(target):
         return result, None, None, None
     # A positive slope is already folded into ``demand_factor`` by the
-    # caller. Keep the maintenance pulse available here; the live ceiling
-    # below is the final overshoot guard.
+    # caller. Keep the maintenance pulse available here; it is modulated by
+    # the duty profile rather than blanket-disabled above target.
 
-    period_s, base_on_s, level_band = _effective_duty_profile(
+    period_s, base_on_s, _level_band = _effective_duty_profile(
         trv_state, demand_factor
     )
-    band = level_band * (0.75 + 0.25 * _clamp(structural_scale, 0.0, 1.0))
-    # A cooling room needs more sustaining time; a rising room was already
-    # rejected above. This keeps the same user-selected level dynamic instead
-    # of using a fixed 5-minute relay pulse for every installation.
+    # A cooling room needs more sustaining time. A rising/solar-heated room
+    # gets a shorter/less frequent profile through demand_factor, but it must
+    # still be able to maintain the slab above the room target.
     on_s = min(period_s, base_on_s)
     # The Generic Thermostat integration commonly exposes a 0.5 °C target
     # step. A +0.1 °C pulse would then be rounded back to the current target
     # and would never turn the relay on. Reserve room for the next valid
-    # device step while retaining the narrow Warm Floor safety band.
+    # device step. The room target is not a hard Warm Floor ceiling: that
+    # would disable the feature exactly when solar gain raises the room above
+    # target. Keep only a broad absolute guard, bounded by the actuator's own
+    # maximum, so an extreme temperature still fails safe.
     target_step = getattr(trv_state, "target_temp_step", None)
     if not isinstance(target_step, (int, float)) or target_step <= 0:
         target_step = getattr(bt, "bt_target_temp_step", None)
     if not isinstance(target_step, (int, float)) or target_step <= 0:
         target_step = 0.5
-    band = max(band, float(target_step) + 0.05)
-    ceiling = float(target) + band
-    if float(current) > ceiling or not _generic_duty_cycle_is_on(period_s, on_s):
+    max_temp = convert_to_float(
+        trv_state.max_temp,
+        getattr(bt, "device_name", None),
+        "warm_floor absolute ceiling",
+    )
+    absolute_ceiling = float(target) + WARM_FLOOR_MAX_BACKOFF_CAP
+    if isinstance(max_temp, (int, float)):
+        absolute_ceiling = min(absolute_ceiling, float(max_temp))
+    if float(current) >= absolute_ceiling or not _generic_duty_cycle_is_on(
+        period_s, on_s
+    ):
         return result, "outside_duty_window", period_s, on_s
 
     # Generic Thermostat turns on only when its target exceeds its measured
     # temperature. Keep the pulse just above the live reading, never above
-    # the sensor-derived warm-floor ceiling.
+    # the absolute Warm Floor safety ceiling.
     pulse_setpoint = min(
-        ceiling,
+        absolute_ceiling,
         max(
             float(current) + 0.1,
             math.ceil((float(current) + 0.001) / float(target_step))
@@ -827,7 +837,7 @@ def _apply_generic_duty_cycle(
         ),
     )
     if pulse_setpoint <= result:
-        if float(result) > ceiling:
+        if float(result) > absolute_ceiling:
             # A stale downstream Generic Thermostat command can be well above
             # the current Warm Floor safety band after a restart or power
             # recovery. Keep the phase diagnostic as a release so the caller
@@ -840,7 +850,7 @@ def _apply_generic_duty_cycle(
         # not mislabel it as ``already_at_floor`` and do not discard the
         # active-phase diagnostic merely because no additional raise was
         # needed.
-        if float(result) > float(target) and float(result) <= ceiling:
+        if float(result) > float(target) and float(result) <= absolute_ceiling:
             return result, "duty_cycle_on", period_s, on_s
         return result, None, period_s, on_s
     return pulse_setpoint, "duty_cycle_on", period_s, on_s
