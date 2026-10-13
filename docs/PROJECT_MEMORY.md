@@ -1139,3 +1139,27 @@ for all supported Home Assistant installations.
   through HACS, restart/reload Home Assistant, then verify fresh status ages,
   Generic Thermostat setpoint changes, real zone relay pulses, and synchronized
   multi-heater zones. No release is requested.
+
+### 2026-10-14 — Verified successful-cycle queue fix in DEV HA
+
+- **Deployment:** HACS installed DEV commit `a82828f` and Home Assistant was
+  restarted. HACS reports `installed_version=available_version=a82828f` with
+  no pending update. No release was created.
+- **Control liveness:** After more than one minute of runtime, all seven Warm
+  Floor status entities had refreshed again with `status_age_s` in the normal
+  tick range (approximately 1–34 seconds). This is the expected behavior that
+  was missing before the queue cleanup fix.
+- **Real pulse:** Kitchen/Dining changed to `active`, `reason=duty_cycle_on`,
+  `duty_phase=on` at 01:05:45 local time. Its two physical Generic Thermostat
+  relays R2 and R3 both changed to `on` at 01:05:45–01:05:48, confirming the
+  multi-heater zone was controlled together by the normal path.
+- **Other zones:** Master, Living/Bathroom, and Office/Guest were in valid
+  duty-cycle OFF windows; Tino and Bathroom FL2 were handling normal room
+  demand below target, so their Warm Floor maintenance record correctly showed
+  `already_at_floor` rather than a maintenance pulse. These are expected
+  decisions, not blockers.
+- **Scope:** No target, preset, configuration, or manual relay action was
+  changed. `climate.tatas` was not queried or touched. R7 remains an external
+  pump automation and was not used as proof of BT control.
+- **Follow-up:** Continue passive observation for long-period ON/OFF edges and
+  restart recovery across all zones; the liveness defect itself is verified.
