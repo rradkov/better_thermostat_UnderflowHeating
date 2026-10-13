@@ -258,6 +258,30 @@ def test_generic_thermostat_releases_the_setpoint_outside_the_on_window(monkeypa
     assert bt._warm_floor_status["active"] is False
 
 
+def test_generic_duty_phase_edge_requests_a_write_once_per_transition(monkeypatch):
+    """A restart or missed tick must not lose the next ON/OFF command."""
+    bt = _make_bt(sustain_push=0.0, cur_temp=22.0, target_temp=22.0)
+    bt.real_trvs["climate.trv"].integration = "generic"
+
+    monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: True)
+    apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
+    assert bt.real_trvs["climate.trv"].warm_floor_duty_phase == "on"
+    assert bt.real_trvs["climate.trv"].warm_floor_force_setpoint_write is True
+
+    # The next evaluation is still in the same phase, so it must not create
+    # another edge; the pending write remains armed until the control layer
+    # successfully sends it.
+    apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
+    assert bt.real_trvs["climate.trv"].warm_floor_force_setpoint_write is True
+
+    bt.real_trvs["climate.trv"].warm_floor_force_setpoint_write = False
+
+    monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: False)
+    apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
+    assert bt.real_trvs["climate.trv"].warm_floor_duty_phase == "off"
+    assert bt.real_trvs["climate.trv"].warm_floor_force_setpoint_write is True
+
+
 def test_stale_raw_sensor_does_not_block_when_derived_slope_is_available():
     stale_time = dt_util.utcnow() - timedelta(
         seconds=WARM_FLOOR_SENSOR_STALE_AFTER_S + 1

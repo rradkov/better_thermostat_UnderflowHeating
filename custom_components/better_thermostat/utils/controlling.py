@@ -1718,7 +1718,14 @@ async def control_trv(self, heater_entity_id=None):
                 _recovery_write = self.real_trvs[
                     heater_entity_id
                 ].recovery_pending
-                if _recovery_write or not matches_any_setpoint(
+                _warm_floor_phase_write = bool(
+                    getattr(
+                        self.real_trvs[heater_entity_id],
+                        "warm_floor_force_setpoint_write",
+                        False,
+                    )
+                )
+                if _recovery_write or _warm_floor_phase_write or not matches_any_setpoint(
                     _temperature, _current_set_temperatures
                 ):
                     old = self.real_trvs[heater_entity_id].last_temperature
@@ -1765,6 +1772,7 @@ async def control_trv(self, heater_entity_id=None):
                             name=f"bt_check_target_temp_{heater_entity_id}",
                         )
                         _written_trv.recovery_pending = False
+                        _written_trv.warm_floor_force_setpoint_write = False
                 else:
                     # The device already holds what the room wants, whoever
                     # put it there: a knob turned while the room was off can

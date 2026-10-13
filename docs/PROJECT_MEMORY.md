@@ -898,3 +898,29 @@ for all supported Home Assistant installations.
   had been added; the corresponding `StateManager` properties were missing.
   Startup therefore raised `AttributeError` for every Better Thermostat.
 - **Change:** Added read-only `StateManager` accessors and regression coverage.
+
+### 2026-10-13 — Make Generic Warm Floor phase edges actionable
+
+- **Observed defect:** Kitchen/Dining could show a deterministic Warm Floor ON
+  phase without producing a new relay command, and Tino could remain stuck on
+  the previous downstream setpoint after an OFF/ON boundary or restart. The
+  status sensor could also recompute a new wall-clock phase while retaining the
+  previous control reason, producing combinations such as `duty_phase=on` with
+  `reason=outside_duty_window`.
+- **Root cause:** The control path skipped a setpoint write whenever the
+  calculated value matched the cached/device-reported value, even when the
+  Generic Thermostat had just crossed a Warm Floor duty boundary. The
+  diagnostic sensor independently recalculated phase instead of exposing the
+  phase and reason from one control evaluation.
+- **Change:** Each Generic Thermostat now records its last evaluated Warm Floor
+  phase and arms one forced setpoint write only on an ON/OFF transition. The
+  controlling layer consumes and clears that flag after the command is sent;
+  each heater has its own flag, so multi-heater zones are handled independently.
+  The status sensor now preserves phase/reason from the same evaluation and
+  exposes `status_age_s` for refresh visibility. The existing rule remains:
+  ON pulses are eligible at or above target, while `idle_release` is only an
+  OFF-window action.
+- **Verification:** 32 focused Warm Floor tests passed, `compileall` passed,
+  and `git diff --check` passed. Deployment and live HA verification are the
+  next required steps. This is generic capability-based logic; `climate.tatas`
+  is excluded and no room-specific behavior was added.

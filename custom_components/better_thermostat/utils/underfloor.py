@@ -995,6 +995,21 @@ def apply_warm_floor_floor(
         result, duty_reason, duty_period_s, duty_on_s = _apply_generic_duty_cycle(
             bt, entity_id, result, structural_scale, demand_factor
         )
+        # The duty window is a real control edge, not merely diagnostic data.
+        # Remember the last evaluated phase per heater so the controlling
+        # layer can send the first ON/OFF command after a restart or a missed
+        # window even when its cached setpoint happens to compare equal.
+        if _is_generic_thermostat(trv_state):
+            duty_phase = (
+                "on" if duty_reason == "duty_cycle_on" else "off"
+                if duty_reason in {"outside_duty_window", "rising"}
+                else None
+            )
+            if duty_phase is not None:
+                previous_phase = getattr(trv_state, "warm_floor_duty_phase", None)
+                trv_state.warm_floor_duty_phase = duty_phase
+                if previous_phase != duty_phase:
+                    trv_state.warm_floor_force_setpoint_write = True
         # A Generic Thermostat turns its relay on from the downstream
         # setpoint alone.  If the Better Thermostat controller is idle and the
         # room is already at/above its user target, an old setpoint above the

@@ -1090,17 +1090,12 @@ class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
         now = dt_util.utcnow().timestamp()
         for entity_id, item in statuses.items():
             snapshot = dict(item)
-            period = snapshot.get("duty_period_s")
-            on_time = snapshot.get("duty_on_s")
-            if period and on_time:
-                elapsed = int(now % period)
-                snapshot["duty_elapsed_s"] = elapsed
-                if elapsed < on_time:
-                    snapshot["duty_phase"] = "on"
-                    snapshot["duty_remaining_s"] = on_time - elapsed
-                else:
-                    snapshot["duty_phase"] = "off"
-                    snapshot["duty_remaining_s"] = period - elapsed
+            # Keep phase/reason from the same control evaluation. Rebuilding
+            # the phase here from wall-clock time made the diagnostic report
+            # ``duty_phase=on`` together with the previous cycle's
+            # ``reason=outside_duty_window`` until the next control pass.
+            # ``status_age_s`` below makes the bounded refresh interval
+            # visible without presenting a mixed decision as current.
             updated_at = snapshot.get("updated_at")
             if updated_at:
                 try:
