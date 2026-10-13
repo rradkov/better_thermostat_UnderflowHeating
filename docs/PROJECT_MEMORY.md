@@ -6,6 +6,115 @@ code change for this project, read this file first. After every change, add a
 dated entry describing what changed, why it changed, and any important
 follow-up.
 
+### 2026-10-13 — Warm Floor must sustain above the room target
+
+- **Required behavior:** Warm Floor is intended to keep the underfloor emitter
+  warm by temporarily commanding the downstream heater above the Better
+  Thermostat room target. Reaching the target alone is not sufficient; the
+  Generic Thermostat pulse must have a higher actuator setpoint to turn the
+  relay on.
+- **Control rule:** Solar gain and a positive temperature slope may reduce or
+  pause the sustaining request to prevent overshoot, but they must not change
+  the fundamental requirement that an allowed Warm Floor ON pulse is above the
+  displayed room target. The room target itself must never be changed.
+- **Scope:** This is a generic capability requirement for all supported
+  underfloor actuators, not a Tino-specific rule and not related to
+  `climate.tatas`.
+
+### 2026-10-13 — Make above-target Generic Thermostat pulses mandatory
+
+- **Incident:** The implementation treated the above-target request as an
+  optional `sustain_push`. With the default value of `0.0`, a Generic
+  Thermostat could remain at the Better Thermostat target and therefore fail
+  to energize its relay during a permitted Warm Floor ON window. If normal
+  calibration had already produced a value above target, the diagnostic could
+  also report `already_at_floor` instead of the current ON phase.
+- **Change:** Generic Thermostat Warm Floor duty cycling now always raises the
+  downstream setpoint by at least one valid device step above the Better
+  Thermostat target during an allowed ON window. If the computed downstream
+  value is already above target and within the safe ceiling, it is still
+  reported as `duty_cycle_on` and `active`. The optional sustain amount only
+  extends the pulse; it is no longer required to make the relay command
+  possible.
+- **Safety:** The room target is never changed. Existing HVAC, window/door,
+  outdoor, stale-sensor, rising-slope, safe-ceiling, and actuator-type guards
+  remain in force. Direct-valve and offset semantics are unchanged.
+- **Verification:** The focused Warm Floor test file passes 26 tests; source
+  compilation and `git diff --check` pass. The only test warning is the known
+  `asyncio_mode` warning caused by disabling the Windows-incompatible HA pytest
+  plugin autoload.
+
+### 2026-10-13 — Warm Floor is slab maintenance above room target
+
+- **Clarification:** Warm Floor is not ordinary room-temperature demand
+  control. When the room is already above the user target, it should still
+  maintain the underfloor slab so the floor does not become cold and require a
+  long, inefficient recovery later.
+- **Solar case:** If sunlight is raising the room temperature, Warm Floor may
+  use shorter or less frequent maintenance pulses, but must continue keeping
+  the slab warm whenever the safety envelope permits. A rising slope is not by
+  itself a reason to disable all floor maintenance; it is an input for
+  reducing the pulse and preventing room overshoot.
+- **No-sun case:** When the room is above target without solar support, Warm
+  Floor should likewise use economical maintenance pulses rather than wait
+  for the room to fall below target. The goal is to prevent slab cooldown and
+  avoid a later high-energy recovery.
+- **Design consequence:** The controller needs to separate room-demand heat
+  from slab-maintenance heat. The room target remains unchanged, Generic
+  Thermostat ON commands remain above that target, and positive slope/solar
+  telemetry should modulate duty intensity rather than act as a blanket OFF
+  gate, subject to explicit safety ceilings.
+- **Scope:** This is generic underfloor capability behavior for all users and
+  does not introduce Tino/Tata entity handling; `climate.tatas` remains out
+  of scope.
+
+### 2026-10-13 — Modulate Warm Floor during positive temperature slope
+
+- **Changed:** A valid positive `temp_slope` no longer disables Warm Floor.
+  The slope now scales down the duty demand progressively, with a minimum
+  maintenance ratio, while the normal safe temperature ceiling still blocks
+  a pulse when the room is materially too warm.
+- **Why:** Sunlight and residual heat can raise the room above target while
+  the slab is losing stored heat. Turning Warm Floor fully off in that state
+  makes the system wait for the room to cool before reheating the floor,
+  causing a slow and inefficient recovery after the sunlight disappears.
+- **Safety:** Unknown/stale sensor data still fails closed, and all existing
+  window/door, outdoor, HVAC, actuator, target-band, and maximum-temperature
+  guards remain active. This is capability-based behavior and does not touch
+  `climate.tatas`.
+- **Verification:** Added rising-room and stronger-slope regression tests;
+  the focused Warm Floor suite must pass before deployment.
+
+### 2026-10-13 — Exact Warm Floor activation boundary and three levels
+
+- **Required boundary:** Warm Floor maintenance is eligible when the room
+  temperature is equal to or above the Better Thermostat target
+  (`current_temperature >= target_temperature`). It must not wait until the
+  room is strictly above target, and it must not activate below target as a
+  substitute for normal room-demand heating.
+- **Required levels:** The public Warm Floor behavior keeps three levels:
+  `Eco`, `Balanced`, and `Keep it Hot`. They control the baseline maintenance
+  period, ON duration, and floor-hold band; live diagnostics and learned
+  demand/slope data may adapt the resulting cycle without removing the three
+  user-selectable intensity choices.
+- **Generic behavior:** During an allowed ON window, the downstream Generic
+  Thermostat setpoint remains above the user target so the relay can energize;
+  the Better Thermostat target itself is never modified.
+
+### 2026-10-13 — Separate normal room demand from Warm Floor demand
+
+- **Changed:** Removed the ordinary `target - current` error from the Warm
+  Floor `demand_factor`. Below-target error is handled by the normal Better
+  Thermostat heating controller and must not make Warm Floor maintenance more
+  aggressive.
+- **Why:** Warm Floor is eligible only at or above the room target. Its demand
+  factor must describe slab-maintenance conditions such as cooling slope,
+  learned heat loss/heating power, and MPC feedback—not normal room heating
+  demand.
+- **Verification:** Added a regression test proving that a below-target room
+  does not increase Warm Floor demand when no cooling or thermal-load signal
+  is present. The three user levels remain the baseline profiles.
+
 ### 2026-10-13 — Feed per-heater MPC feedback into Generic Warm Floor pulses
 
 - **Change:** Generic Thermostat Warm Floor demand now also considers trained

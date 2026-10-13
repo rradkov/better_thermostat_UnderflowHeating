@@ -1,12 +1,9 @@
-"""Warm Floor's "sustain push": closing the no-op gap on non-valve UFH heaters.
+"""Warm Floor's above-target Generic Thermostat duty-cycle behavior.
 
-On four of the eight calibration modes (AI Time Based, External Sensor
-Offset Only, Aggressive, No Calibration), a non-valve device's setpoint is
-already pinned at exactly target once idle - the passive backoff floor
-(``max(computed_value, sustaining_setpoint)``) never has anything to raise.
-Sustain push is opt-in (off by default) and, once every guard passes, pushes
-only the *downstream* setpoint sent to the physical heater a small amount
-above target - ``bt.bt_target_temp`` itself is never touched.
+Generic Thermostat devices need an above-target downstream setpoint during
+the permitted ON window so their relay can turn on. The optional sustain
+amount may extend that pulse, but ``bt.bt_target_temp`` itself is never
+touched.
 """
 
 from __future__ import annotations
@@ -105,13 +102,29 @@ def test_pushes_above_target_once_pinned_setpoint_and_idle_at_target():
     assert bt._warm_floor_status["sustain_push_c"] > 0
 
 
-def test_off_by_default_is_a_strict_no_op():
-    # Custom is the explicit legacy/passive profile; the three named levels
-    # now intentionally run their own maintenance pulses.
+def test_custom_level_still_requires_an_explicit_generic_duty_pulse(monkeypatch):
+    # Generic Thermostat must still receive an above-target ON command even
+    # when the optional configurable sustain amount is zero.
     bt = _make_bt(sustain_push=0.0, warm_floor_level=WARM_FLOOR_LEVEL_CUSTOM)
+    bt.real_trvs["climate.trv"].integration = "generic_thermostat"
+    monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: True)
+
     result = apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
-    assert result == 22.0
-    assert bt._warm_floor_status["sustain_push_c"] is None
+    assert result > bt.bt_target_temp
+    assert bt._warm_floor_status["reason"] == "duty_cycle_on"
+
+
+def test_generic_existing_above_target_result_is_active_during_on_window(monkeypatch):
+    """An already-raised downstream setpoint is still the active pulse."""
+    bt = _make_bt(sustain_push=0.0, cur_temp=22.0, target_temp=22.0)
+    bt.real_trvs["climate.trv"].integration = "generic_thermostat"
+    monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: True)
+
+    result = apply_warm_floor_floor(bt, "climate.trv", 22.5, is_offset=False)
+
+    assert result == 22.5
+    assert bt._warm_floor_status["active"] is True
+    assert bt._warm_floor_status["reason"] == "duty_cycle_on"
 
 
 def test_generic_idle_releases_stale_downstream_setpoint():
@@ -269,6 +282,47 @@ def test_generic_thermostat_does_not_heat_a_room_above_the_safe_band(monkeypatch
     assert bt._warm_floor_status["active"] is False
 
 
+def test_generic_thermostat_maintains_floor_while_room_is_rising(monkeypatch):
+    """Solar/residual heat reduces maintenance, but does not disable it."""
+    bt = _make_bt(sustain_push=0.0, cur_temp=22.2, target_temp=22.0)
+    bt.real_trvs["climate.trv"].integration = "generic_thermostat"
+    bt.temp_slope = 0.08
+    monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: True)
+
+    result = apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
+
+    assert result > bt.bt_target_temp
+    assert bt._warm_floor_status["active"] is True
+    assert bt._warm_floor_status["reason"] == "duty_cycle_on"
+
+
+def test_stronger_rising_slope_reduces_duty_demand_without_blanket_off(monkeypatch):
+    gentle = _make_bt(sustain_push=0.0, cur_temp=22.2, target_temp=22.0)
+    strong = _make_bt(sustain_push=0.0, cur_temp=22.2, target_temp=22.0)
+    gentle.real_trvs["climate.trv"].integration = "generic_thermostat"
+    strong.real_trvs["climate.trv"].integration = "generic_thermostat"
+    gentle.temp_slope = 0.06
+    strong.temp_slope = 0.20
+    gentle.heat_loss_rate = 1.0
+    strong.heat_loss_rate = 1.0
+    gentle.heating_power = 1.0
+    strong.heating_power = 1.0
+    monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: True)
+
+    gentle_result = apply_warm_floor_floor(
+        gentle, "climate.trv", 22.0, is_offset=False
+    )
+    strong_result = apply_warm_floor_floor(
+        strong, "climate.trv", 22.0, is_offset=False
+    )
+
+    assert gentle_result > gentle.bt_target_temp
+    assert strong_result > strong.bt_target_temp
+    assert strong._warm_floor_status["demand_factor"] < gentle._warm_floor_status[
+        "demand_factor"
+    ]
+
+
 def test_warm_floor_level_changes_generic_duty_intensity():
     eco = _make_bt(warm_floor_level=underfloor.WARM_FLOOR_LEVEL_ECO)
     balanced = _make_bt(warm_floor_level=underfloor.WARM_FLOOR_LEVEL_BALANCED)
@@ -317,6 +371,17 @@ def test_generic_duty_profile_adapts_to_falling_temperature():
 
     assert falling_profile[0] < stable_profile[0]
     assert falling_profile[1] > stable_profile[1]
+
+
+def test_warm_floor_demand_ignores_below_target_room_error():
+    """Below-target error belongs to normal heating, not floor maintenance."""
+    below_target = _make_bt(cur_temp=21.0, target_temp=22.0)
+    at_target = _make_bt(cur_temp=22.0, target_temp=22.0)
+
+    below_demand = underfloor._warm_floor_demand_factor(below_target)
+    at_demand = underfloor._warm_floor_demand_factor(at_target)
+
+    assert below_demand == at_demand == 0.0
 
 
 def test_generic_duty_demand_uses_per_heater_mpc_feedback(monkeypatch):

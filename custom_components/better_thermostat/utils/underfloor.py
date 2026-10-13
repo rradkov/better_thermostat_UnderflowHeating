@@ -4,11 +4,11 @@ Underfloor heating has much higher thermal inertia than a radiator TRV: once
 the room is satisfied and Better Thermostat backs a heater fully off, the
 slab keeps cooling for a long time, and recovering from a fully-cold floor
 is slow and energy-costly. Warm Floor keeps a low, continuous background
-heat level in UFH-flagged heaters instead of letting them fully idle. The
-passive backoff floor never pushes the room air above target; the opt-in
-"sustain push" (off by default) pushes only the downstream setpoint sent to
-the physical heater a small amount above target, never ``bt.bt_target_temp``
-itself.
+heat level in UFH-flagged heaters instead of letting them fully idle. For
+Generic Thermostat heaters, the ON phase must command the downstream setpoint
+above ``bt.bt_target_temp``. This is required because the Generic Thermostat
+turns its relay on by comparing its own setpoint with the room temperature.
+The room target itself is never changed.
 
 Everything here is additive: a heater only gets this behavior when its
 per-heater ``heating_type`` advanced option is explicitly set to
@@ -95,6 +95,7 @@ WARM_FLOOR_SUSTAIN_PUSH_CAP: Final = 1.5
 WARM_FLOOR_MIN_BACKOFF_RATIO: Final = 0.1
 # °C/min guards on the live temp_slope signal, see apply_warm_floor_floor().
 OVERSHOOT_SLOPE_GUARD: Final = 0.05
+WARM_FLOOR_MIN_RISING_DUTY_RATIO: Final = 0.15
 UNDERSHOOT_SLOPE_GUARD: Final = 0.02
 # A stale external sensor can't be trusted to prove the room has actually
 # stopped rising - treat it the same as "still gaining" rather than "no
@@ -672,15 +673,12 @@ def _warm_floor_demand_factor(
 ) -> float:
     """Estimate current slab-heating demand from live controller telemetry.
 
-    The selected Warm Floor level remains the baseline. This factor makes all
-    actuator paths more assertive when the room is below target, cooling, or
-    losing heat faster than the learned heating power can replace it.
+    The selected Warm Floor level remains the baseline. This factor adapts
+    maintenance intensity to cooling and to learned thermal load; ordinary
+    room-demand error is deliberately excluded because below-target heating
+    belongs to the normal Better Thermostat controller.
     """
     demand = 0.0
-    target = getattr(bt, "bt_target_temp", None)
-    current = getattr(bt, "cur_temp", None)
-    if isinstance(target, (int, float)) and isinstance(current, (int, float)):
-        demand = max(demand, _clamp((float(target) - float(current)) / 0.5, 0.0, 1.0))
 
     slope = getattr(bt, "temp_slope", None)
     if isinstance(slope, (int, float)) and slope < 0.0:
@@ -756,9 +754,10 @@ def _apply_generic_duty_cycle(
 
     Generic Thermostat has no valve percentage to floor. Its only actuator is
     the temperature comparison, so the ON window raises the downstream
-    setpoint just above the live room temperature, but only inside a narrow
-    target band. This prevents a room already materially above target from
-    being heated merely because Warm Floor is enabled.
+    setpoint above both the live room temperature and the Better Thermostat
+    target, but only inside a narrow target band. This prevents a room already
+    materially above target from being heated merely because Warm Floor is
+    enabled.
     """
     trv_state = bt.real_trvs.get(entity_id)
     target = getattr(bt, "bt_target_temp", None)
@@ -773,9 +772,9 @@ def _apply_generic_duty_cycle(
         return result, None, None, None
     if current < float(target):
         return result, None, None, None
-    temp_slope = getattr(bt, "temp_slope", None)
-    if isinstance(temp_slope, (int, float)) and temp_slope > OVERSHOOT_SLOPE_GUARD:
-        return result, "rising", None, None
+    # A positive slope is already folded into ``demand_factor`` by the
+    # caller. Keep the maintenance pulse available here; the live ceiling
+    # below is the final overshoot guard.
 
     period_s, base_on_s, level_band = _effective_duty_profile(
         trv_state, demand_factor
@@ -811,6 +810,14 @@ def _apply_generic_duty_cycle(
         ),
     )
     if pulse_setpoint <= result:
+        # The normal calibration result (or an explicitly configured sustain
+        # push) may already be above the Better Thermostat target.  It is
+        # still the Warm Floor ON command when the duty window is open; do
+        # not mislabel it as ``already_at_floor`` and do not discard the
+        # active-phase diagnostic merely because no additional raise was
+        # needed.
+        if float(result) > float(target) and float(result) <= ceiling:
+            return result, "duty_cycle_on", period_s, on_s
         return result, None, period_s, on_s
     return pulse_setpoint, "duty_cycle_on", period_s, on_s
 
@@ -866,7 +873,7 @@ def apply_warm_floor_floor(
     structural_scale = _structural_scale(bt, entity_id, calibration_mode)
     solar_scale = _solar_scale(bt, entity_id, calibration_mode)
 
-    # Real-time slope guard: what the room is doing *right now* overrides the
+    # Real-time slope guard: what the room is doing *right now* modulates the
     # structural/solar estimate above. A stale external sensor can't prove
     # the room has actually stopped rising - it gets the same treatment as
     # "still gaining", not the more permissive "no slope data" fallback.
@@ -879,23 +886,32 @@ def apply_warm_floor_floor(
     sensor_stale_without_slope = _external_sensor_is_stale(bt) and not isinstance(
         temp_slope, (int, float)
     )
-    if sensor_stale_without_slope or (
-        isinstance(temp_slope, (int, float)) and temp_slope > OVERSHOOT_SLOPE_GUARD
-    ):
-        # Still actively gaining (residual heat or live solar), or we simply
-        # can't verify - raising the floor now would only risk overshoot.
+    if sensor_stale_without_slope:
+        # We cannot verify whether the room is still gaining. Fail closed for
+        # unknown/stale telemetry, but do not treat a valid positive slope as
+        # proof that the slab should be allowed to cool completely.
         _record_status(
             bt,
             entity_id,
             active=False,
             sustaining_setpoint=None,
-            reason=("sensor_stale" if sensor_stale_without_slope else "temperature_rising"),
+            reason="sensor_stale",
         )
         return computed_value
     if isinstance(temp_slope, (int, float)) and temp_slope < -UNDERSHOOT_SLOPE_GUARD:
         structural_scale = WARM_FLOOR_MIN_BACKOFF_RATIO
 
     demand_factor = _warm_floor_demand_factor(bt, entity_id, calibration_mode)
+    if isinstance(temp_slope, (int, float)) and temp_slope > 0.0:
+        # Positive slope usually means residual heat or solar gain. It should
+        # make maintenance pulses less frequent/shorter, not remove them:
+        # the slab still needs heat so it is ready when the gain disappears.
+        rising_ratio = _clamp(
+            OVERSHOOT_SLOPE_GUARD / float(temp_slope),
+            WARM_FLOOR_MIN_RISING_DUTY_RATIO,
+            1.0,
+        )
+        demand_factor *= rising_ratio
     if demand_factor > 0.0:
         structural_scale = max(
             WARM_FLOOR_MIN_BACKOFF_RATIO,
@@ -917,12 +933,10 @@ def apply_warm_floor_floor(
         # Setpoint semantics: higher = more heat. Warm Floor only ever raises.
         result = max(computed_value, sustaining_setpoint)
 
-        # Sustain push: on the four calibration modes that pin the setpoint
-        # at exactly target once idle, the passive floor above is
-        # structurally a no-op (nothing to raise past target). Opt-in and
-        # off by default (see build_underfloor_advanced_fields()); pushes
-        # only the downstream setpoint sent to the physical heater, never
-        # bt.bt_target_temp itself.
+        # A configured sustain amount may extend the generic ON command, but
+        # the generic duty-cycle pulse below is mandatory even when this
+        # optional amount is zero.  The downstream actuator setpoint may be
+        # above target; bt.bt_target_temp remains the user's room target.
         target_temp = float(bt.bt_target_temp)
         cur_temp = getattr(bt, "cur_temp", None)
         if (
@@ -1031,7 +1045,11 @@ def apply_warm_floor_floor(
     _record_status(
         bt,
         entity_id,
-        active=(result != computed_value or _has_active_valve_balance(trv_state)),
+        active=(
+            duty_reason == "duty_cycle_on"
+            or result != computed_value
+            or _has_active_valve_balance(trv_state)
+        ),
         sustaining_setpoint=sustaining_setpoint,
         sustain_push=sustain_push_c,
         control_method=control_method,
