@@ -37,6 +37,21 @@
 - **Status semantics:** The release setpoint is an OFF command, not an active
   Warm Floor pulse; the diagnostic therefore remains `idle` during this path.
 
+### 2026-10-13 — Verified recovery release in HA
+
+- **Deployment:** HACS installed DEV commit `2793ed3` and Home Assistant was
+  restarted.
+- **Live result:** Tino Better Thermostat returned available at `22.0/22.0`
+  with `hvac_action: idle` and preset `home`. The downstream Generic
+  Thermostat received `21.9°C` and reported `hvac_action: idle`; its relay
+  `switch.tasmota_8` was OFF. Warm Floor reported `idle`, `active: false`,
+  and `reason: idle_release`.
+- **Conclusion:** The recovery path now survives the unavailable transition,
+  performs a real downstream setpoint reassertion, and releases a stale
+  restored relay without changing the user's Better Thermostat target or
+  preset. This verification is specific evidence for a generic capability
+  path; no `climate.tatas` entity was used or changed.
+
 This file is the project decision log and working memory for future changes.
 Before making a design decision, debugging change, configuration change, or
 code change for this project, read this file first. After every change, add a
