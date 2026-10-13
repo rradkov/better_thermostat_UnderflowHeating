@@ -138,6 +138,12 @@ class RuntimeState:
     tpi: dict[str, TpiState] = field(default_factory=dict)
     thermal: ThermalStats = field(default_factory=ThermalStats)
     presets: dict[str, float] = field(default_factory=dict)
+    # The active preset and its user-adjusted maps must survive even when HA
+    # has not published a previous entity state yet (for example during a
+    # config-entry reload).
+    active_preset: str | None = None
+    preset_heat_temperatures: dict[str, float] = field(default_factory=dict)
+    preset_cool_temperatures: dict[str, float] = field(default_factory=dict)
     # User intent is separate from downstream actuator setpoints. Warm Floor
     # may temporarily raise a Generic Thermostat target for a duty-cycle pulse;
     # that value must never become the room target after a reload.
@@ -205,6 +211,14 @@ def _finite_float(value: Any) -> float:
     if not math.isfinite(number):
         raise ValueError(f"{number} is not a finite number")
     return number
+
+
+def _is_finite_number(value: Any) -> bool:
+    """Return whether *value* can be persisted as a finite float."""
+    try:
+        return math.isfinite(float(value))
+    except (TypeError, ValueError, OverflowError):
+        return False
 
 
 def _report_unreadable_field(
@@ -508,6 +522,20 @@ def _deserialize(
             if number is not None:
                 state.user_targets[name] = number
 
+    active_preset = raw.get("active_preset")
+    if isinstance(active_preset, str):
+        state.active_preset = active_preset
+    for section_name, destination in (
+        ("preset_heat_temperatures", state.preset_heat_temperatures),
+        ("preset_cool_temperatures", state.preset_cool_temperatures),
+    ):
+        section = _stored_section(raw, section_name, dropped)
+        if section is not None:
+            for name in section:
+                number = _stored_optional_number(section, section_name, name, dropped)
+                if number is not None:
+                    destination[str(name)] = number
+
     return state
 
 
@@ -562,6 +590,9 @@ def _migrate_v0_to_v1(raw: dict[str, Any]) -> dict[str, Any]:
     raw.setdefault("thermal", {})
     raw.setdefault("presets", {})
     raw.setdefault("user_targets", {})
+    raw.setdefault("active_preset", None)
+    raw.setdefault("preset_heat_temperatures", {})
+    raw.setdefault("preset_cool_temperatures", {})
     return raw
 
 
@@ -736,6 +767,38 @@ class StateManager:
     def user_targets(self) -> dict[str, float]:
         """Return the last targets chosen by the user, not actuator pulses."""
         return self._state.user_targets
+
+    @property
+    def active_preset(self) -> str | None:
+        """Return the last user-selected preset mode."""
+        return self._state.active_preset
+
+    def record_preset_state(
+        self,
+        active_preset: str | None,
+        heat_temperatures: Mapping[str, Any],
+        cool_temperatures: Mapping[str, Any],
+    ) -> None:
+        """Persist the active preset and both user-adjustable preset maps."""
+        heat = {
+            str(name): float(value)
+            for name, value in heat_temperatures.items()
+            if _is_finite_number(value)
+        }
+        cool = {
+            str(name): float(value)
+            for name, value in cool_temperatures.items()
+            if _is_finite_number(value)
+        }
+        if (
+            self._state.active_preset != active_preset
+            or self._state.preset_heat_temperatures != heat
+            or self._state.preset_cool_temperatures != cool
+        ):
+            self._state.active_preset = active_preset
+            self._state.preset_heat_temperatures = heat
+            self._state.preset_cool_temperatures = cool
+            self._dirty = True
 
     def record_user_targets(
         self, heating: float | None, cooling: float | None

@@ -1174,7 +1174,11 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
                 # unavailable state during a config-entry reload. Warm Floor
                 # may have changed a child Generic Thermostat setpoint, but
                 # that actuator pulse must not become the restored room target.
-                self._record_user_targets_to_state()
+                # During startup the live fields still contain defaults.  A
+                # reload can remove the entity before restore_state() runs;
+                # never overwrite the durable snapshot with those defaults.
+                if not self.startup_running:
+                    self._record_user_targets_to_state()
                 self.state_mgr.close()
                 try:
                     self._record_thermal_to_state()
@@ -1201,7 +1205,8 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
                 self._save_cancel()
                 self._save_cancel = None
             if self.state_mgr is not None:
-                self._record_user_targets_to_state()
+                if not self.startup_running:
+                    self._record_user_targets_to_state()
                 self._record_thermal_to_state()
                 await self.state_mgr.flush()
 
@@ -1996,7 +2001,14 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
                 "better_thermostat %s: restoring preset mode...", self.device_name
             )
             # Restore preset mode if present
-            _old_preset = old_state.attributes.get("preset_mode")
+            persisted_preset = (
+                self.state_mgr.active_preset if self.state_mgr is not None else None
+            )
+            _old_preset = (
+                persisted_preset
+                if isinstance(persisted_preset, str)
+                else old_state.attributes.get("preset_mode")
+            )
             if (
                 isinstance(_old_preset, str)
                 and _old_preset in self.preset_mgr.available_modes
@@ -2082,6 +2094,13 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
                             )
                             if heat_temp is not None:
                                 self.preset_mgr.temperatures[preset] = heat_temp
+            if self.state_mgr is not None:
+                for preset, temp in self.state_mgr.preset_heat_temperatures.items():
+                    if preset in self.preset_mgr.temperatures:
+                        self.preset_mgr.temperatures[preset] = temp
+                for preset, temp in self.state_mgr.preset_cool_temperatures.items():
+                    if preset in self._preset_cool_temperatures:
+                        self._preset_cool_temperatures[preset] = temp
             # If we restored a preset (not NONE) and we have a stored temperature for it,
             # ensure target temp matches (unless the restored target was already equal).
             if self.preset_mgr.mode is not None and self.preset_mgr.mode != PRESET_NONE:
@@ -3158,6 +3177,11 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         self.state_mgr.record_user_targets(
             self.bt_target_temp, self.bt_target_cooltemp
         )
+        self.state_mgr.record_preset_state(
+            self.preset_mgr.mode,
+            self.preset_mgr.temperatures,
+            self._preset_cool_temperatures,
+        )
 
     @callback
     def schedule_save_state(self, delay_s: float = 15.0) -> None:
@@ -4204,6 +4228,7 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         )
 
         self._record_user_targets_to_state()
+        self.schedule_save_state()
         self.async_write_ha_state()
         # Only trigger control queue if thermostat is not OFF
         # When OFF, we still save the temperature but don't send it to the physical device
@@ -4391,6 +4416,7 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
             )
 
             self._record_user_targets_to_state()
+            self.schedule_save_state()
             self.async_write_ha_state()
             if (
                 hasattr(self, "control_queue_task")

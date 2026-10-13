@@ -497,3 +497,27 @@ adapter and entity surfaces, and the unit/integration/benchmark test layout.
 The most important project-wide constraint is now explicit: Tino/Tata is a
 diagnostic example only; future decisions must be capability-based and valid
 for all supported Home Assistant installations.
+
+### 2026-10-13 — Preserve targets and presets across startup/unload
+
+- **Incident:** After a restart/reload, all Better Thermostat wrappers could
+  fall to 16°C and lose the active `home` preset. This was not related to
+  `climate.tatas`.
+- **Root cause:** The entity was removed while `startup_running` was still
+  true. Its live fields still contained the initial 5°C default, so the
+  removal callback overwrote the durable snapshot before `restore_state()`
+  ran. The old HA state could also be unavailable, so the active preset and
+  its custom maps were lost.
+- **Change:** Startup/unload callbacks no longer capture live targets while
+  startup restoration is incomplete. The unified state store now persists the
+  active preset plus heating/cooling preset maps, and restoration treats that
+  store as authoritative when HA's previous entity state is unavailable.
+  User target and preset changes schedule a debounced durable save.
+- **Scope:** The logic is capability- and lifecycle-based; it contains no
+  room/device-specific handling and does not touch `climate.tatas`.
+- **Verification:** `compileall`, `git diff --check`, and the synchronous
+  state-manager roundtrip/access tests pass. Full HA async tests could not run
+  on Windows because the installed HA pytest plugin requires POSIX `fcntl`.
+  The restored live HA targets/presets were set back before code deployment:
+  Tino 22, Master 22, Bathroom FL2 24, Office/Guest 22, Kitchen/Dining 23,
+  Living/Bathroom 23; all `home`.

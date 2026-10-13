@@ -232,6 +232,20 @@ class TestSerializeDeserializeRoundtrip:
 
         assert restored.user_targets == {"heating": 21.5, "cooling": 25.0}
 
+    def test_preset_state_roundtrip(self):
+        """Active preset and both preset maps survive a restart."""
+        original = RuntimeState(
+            active_preset="home",
+            preset_heat_temperatures={"home": 22.0, "eco": 19.5},
+            preset_cool_temperatures={"home": 25.0},
+        )
+
+        restored = _deserialize(_serialize(original))
+
+        assert restored.active_preset == "home"
+        assert restored.preset_heat_temperatures == {"home": 22.0, "eco": 19.5}
+        assert restored.preset_cool_temperatures == {"home": 25.0}
+
     def test_full_state_roundtrip(self):
         """Complete state with all sections populated."""
         original = RuntimeState(
@@ -705,6 +719,17 @@ class TestStateManagerStateAccess:
 
         assert mgr.user_targets == {"heating": 21.5, "cooling": 25.0}
         assert mgr._dirty is True
+
+    def test_record_preset_state(self):
+        """Preset changes mark the durable state dirty."""
+        mgr = self._make_manager()
+
+        mgr.record_preset_state("home", {"home": 22.0}, {"home": 25.0})
+
+        assert mgr.active_preset == "home"
+        assert mgr.state.preset_heat_temperatures == {"home": 22.0}
+        assert mgr.state.preset_cool_temperatures == {"home": 25.0}
+        assert mgr.dirty is True
 
     def test_multiple_keys_independent(self):
         """Different MPC keys store independent state."""
