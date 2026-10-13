@@ -89,6 +89,25 @@ def test_status_surfaces_generic_duty_cycle_details():
     assert sensor._attr_extra_state_attributes["duty_on_s"] == 360
 
 
+def test_generic_duty_cycle_off_window_is_idle_not_active():
+    """Enabled Warm Floor must not look active while its relay is paused."""
+    bt = _make_bt_climate(
+        _warm_floor_status={
+            "active": True,
+            "entity_id": "climate.ufh_living_room",
+            "reason": "outside_duty_window",
+            "control_method": "generic_duty_cycle",
+            "duty_period_s": 2040,
+            "duty_on_s": 360,
+        }
+    )
+    sensor = BetterThermostatWarmFloorStatusSensor(bt)
+    sensor._update_state()
+
+    assert sensor._attr_native_value == "idle"
+    assert sensor._attr_extra_state_attributes["enabled"] is True
+
+
 def test_active_status_surfaces_sustain_push_c():
     """The opt-in sustain push amount is its own attribute, separate from
     (and never negative like) backoff_c."""

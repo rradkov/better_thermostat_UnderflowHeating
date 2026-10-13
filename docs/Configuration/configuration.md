@@ -153,7 +153,7 @@ Choosing `Custom` reveals both raw °C fields below so you can set them directly
 
 This never overrides an open window/door, a `call_for_heat=false` weather/outdoor gate, or BT being switched off — Warm Floor only ever raises what would otherwise be a fully-idle cycle, it never fights the normal heating computation or forces heat the room doesn't need.
 
-A **Warm Floor Status** diagnostic sensor is created per instance, showing `active`/`idle`/`disabled` plus the current sustaining setpoint, backoff amount, and sustain push amount.
+A **Warm Floor Status** diagnostic sensor is created per instance. `active` means a sustaining command is currently being applied, `idle` means Warm Floor is enabled but currently paused or guarded (including a Generic Thermostat OFF duty window), and `disabled` means no underfloor heater has reported a decision. The `enabled` attribute distinguishes an enabled feature from the current actuator phase. The sensor also exposes the current sustaining setpoint, backoff amount, and sustain push amount.
 
 ## Boost on window reopen
 

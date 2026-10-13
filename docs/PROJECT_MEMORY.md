@@ -6,6 +6,19 @@ code change for this project, read this file first. After every change, add a
 dated entry describing what changed, why it changed, and any important
 follow-up.
 
+### 2026-10-13 — Make Warm Floor status describe the current actuator phase
+
+- **Incident:** Tino reported `Warm Floor = active` while its Generic
+  Thermostat and physical relay were in the OFF duty window. The status was
+  technically showing that Warm Floor had affected the last calculation, not
+  that an ON command was currently being applied.
+- **Change:** The diagnostic sensor now reports `active` only for a current
+  sustaining command, including the current Generic Thermostat duty phase.
+  OFF-window, release, and temperature-rising decisions report `idle`; a new
+  `enabled` attribute makes the configured/enabled state explicit.
+- **Scope:** Generic sensor semantics for single- and multi-heater instances;
+  no entity-specific logic and no changes to `climate.tatas`.
+
 ### 2026-10-13 — Keep durable active presets authoritative during restore
 
 - **Incident:** After the Better Thermostat entities became available again,

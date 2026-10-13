@@ -1039,14 +1039,13 @@ class BetterThermostatSolarIntensitySensor(_BtSensorBase):
 class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
     """Representation of a Better Thermostat Warm Floor status sensor.
 
-    Reflects ``apply_warm_floor_floor()``'s last decision, published onto the
-    climate entity as ``_warm_floor_status``. ``"disabled"`` means no heater
-    on this instance is configured for underfloor heating (or none has run a
-    calibration cycle yet); ``"idle"`` means Warm Floor evaluated a cycle but
-    a guard (open contact, no call for heat, HVAC off, still gaining, or a
-    stale external sensor) held it off; ``"active"`` means it actually raised
-    the floor this cycle - either the passive backoff floor, or, when
-    ``sustain_push_c`` is set, the opt-in sustain push above target.
+    Reflects ``apply_warm_floor_floor()``'s current decision, published onto
+    the climate entity as ``_warm_floor_status``. ``"disabled"`` means no
+    underfloor heater has reported a decision; ``"idle"`` means Warm Floor is
+    enabled but is not currently applying an ON command (including a Generic
+    Thermostat OFF duty window); ``"active"`` means a sustaining command is
+    currently being applied. The ``enabled`` attribute distinguishes the
+    feature being configured from the current actuator phase.
     """
 
     _attr_translation_key = "warm_floor_status"
@@ -1109,10 +1108,26 @@ class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
 
         status = heater_statuses.get(status.get("entity_id"), status)
 
+        def is_currently_active(item: dict) -> bool:
+            if not item.get("active"):
+                return False
+            reason = item.get("reason")
+            if reason in {
+                "outside_duty_window",
+                "idle_release",
+                "temperature_rising",
+                "rising",
+            }:
+                return False
+            if item.get("control_method") == "generic_duty_cycle":
+                return reason == "duty_cycle_on" and item.get("duty_phase") == "on"
+            return True
+
         self._attr_native_value = "active" if any(
-            item.get("active") for item in statuses.values()
+            is_currently_active(item) for item in heater_statuses.values()
         ) else "idle"
         self._attr_extra_state_attributes = {
+            "enabled": True,
             "heater_count": len(heater_statuses),
             "warm_floor_heaters": heater_statuses,
             "entity_id": status.get("entity_id"),
