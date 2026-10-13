@@ -122,6 +122,26 @@
   ordinary below-target room demand. These are not failures of the new
   above-target eligibility rule.
 
+### 2026-10-13 — Started multi-day Warm Floor and Boost monitoring
+
+- **Monitoring:** Created an active Codex heartbeat that checks all Warm Floor
+  and Boost status entities every six hours, compares multi-heater zones and
+  physical relays/pump, and reports only meaningful failures. It explicitly
+  excludes `climate.tatas` and performs no target, preset, relay, or
+  configuration changes.
+- **Baseline issue:** The initial post-deployment check found that only the
+  Kitchen/Dining entry was refreshing its Warm Floor status; the other six
+  Better Thermostat entries had stale diagnostic timestamps even though their
+  status sensors were still reporting.
+- **Recovery:** Reloaded the six affected Better Thermostat config entries
+  individually without changing user targets or presets. All Warm Floor
+  statuses then refreshed again within roughly 18–30 seconds (Kitchen/Dining
+  within about two minutes), and all Boost statuses were `off` at the baseline
+  check.
+- **Follow-up:** The multi-day observation must verify real ON/OFF pulses,
+  paired relay behavior, Boost transitions, recovery after any restart, and
+  that status timestamps remain fresh without manual reloads.
+
 This file is the project decision log and working memory for future changes.
 Before making a design decision, debugging change, configuration change, or
 code change for this project, read this file first. After every change, add a
