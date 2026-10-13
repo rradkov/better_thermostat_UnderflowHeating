@@ -1041,3 +1041,24 @@ for all supported Home Assistant installations.
   contact was closed, and no safety block was reported.
 - **Scope:** No target, preset, or relay was changed manually. No release was
   created, and `climate.tatas` was not queried or changed.
+
+### 2026-10-13 — Add a Warm Floor liveness watchdog
+
+- **Incident:** Despite the early timer registration in `e4a658d`, all seven
+  Warm Floor statuses later stopped refreshing at the same timestamp for about
+  53 minutes. HACS showed DEV `e4a658d` installed and all config entries
+  `loaded`, so this was a runtime scheduling/control-liveness failure rather
+  than a missing installation.
+- **Change:** Each configured underfloor Better Thermostat now starts a
+  lightweight watchdog. Every minute it checks the newest Warm Floor decision
+  age and the control queue task. If the status is stale it queues one normal
+  control cycle; if the queue task has stopped it recreates that task. The
+  watchdog never selects a setpoint, changes a target/preset, or toggles a
+  relay directly.
+- **Safety:** Normal HVAC, contact, outdoor, stale-data, Warm Floor ceiling,
+  duty-cycle, and actuator guards remain inside the existing control path.
+  The watchdog only restores scheduling and is capability-based for all
+  underfloor heaters; `climate.tatas` remains out of scope.
+- **Verification:** Warm Floor status tests pass (13/13), source compilation
+  and `git diff --check` pass. Deployment and live stale-recovery verification
+  are pending.

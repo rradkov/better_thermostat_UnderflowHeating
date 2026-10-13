@@ -262,6 +262,11 @@ _MODES_WITHOUT_A_HEATING_SETPOINT = frozenset(
 # interval sits well inside the shortest fallback window rather than near it.
 EXTERNAL_TEMPERATURE_KEEPALIVE_INTERVAL = timedelta(minutes=30)
 
+# Warm Floor has its own liveness guard because a config-entry reload or a
+# failed background task must not silently freeze all duty-cycle decisions.
+WARM_FLOOR_WATCHDOG_INTERVAL_S = 60
+WARM_FLOOR_STATUS_STALE_AFTER_S = 90
+
 # How long one TRV may occupy the serial startup sync before the loop moves
 # on to the next one. The budget has to outlast the retry ladder of the write
 # it wraps, because a device that is not reachable in the first seconds after
@@ -1042,6 +1047,64 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         """
         self._spawn_owned(coro_fn(now), name=f"{name}_{self.device_name}")
 
+    def _warm_floor_status_age(self) -> float | None:
+        """Return the age of the newest Warm Floor control decision."""
+        statuses = getattr(self, "_warm_floor_statuses", None)
+        if not isinstance(statuses, dict) or not statuses:
+            return None
+        now = dt_util.utcnow().timestamp()
+        ages = []
+        for status in statuses.values():
+            updated_at = status.get("updated_at") if isinstance(status, dict) else None
+            if not updated_at:
+                continue
+            try:
+                parsed = dt_util.parse_datetime(updated_at)
+                if parsed is not None:
+                    ages.append(max(0.0, now - parsed.timestamp()))
+            except (AttributeError, TypeError, ValueError):
+                continue
+        return min(ages) if ages else None
+
+    async def _warm_floor_watchdog(self) -> None:
+        """Keep Warm Floor scheduling alive after reloads and task failures.
+
+        The watchdog only restores scheduling. The normal control queue still
+        performs every safety check and selects the actual setpoint; no relay
+        or user setting is touched here.
+        """
+        while not self.is_removed:
+            await asyncio.sleep(WARM_FLOOR_WATCHDOG_INTERVAL_S)
+            if self.is_removed or self.startup_running or self.in_maintenance:
+                continue
+
+            control_task = getattr(self, "_control_task", None)
+            if control_task is None or control_task.done():
+                if control_task is not None and not control_task.cancelled():
+                    try:
+                        error = control_task.exception()
+                    except (asyncio.CancelledError, asyncio.InvalidStateError):
+                        error = None
+                    if error is not None:
+                        _LOGGER.error(
+                            "better_thermostat %s: Warm Floor control queue stopped; restarting: %s",
+                            self.device_name,
+                            error,
+                        )
+                self._control_task = self.hass.async_create_background_task(
+                    control_queue(self), name=f"bt_control_queue_{self.device_name}"
+                )
+
+            age_s = self._warm_floor_status_age()
+            if age_s is None or age_s > WARM_FLOOR_STATUS_STALE_AFTER_S:
+                if self.control_queue_task.empty():
+                    _LOGGER.warning(
+                        "better_thermostat %s: Warm Floor status stale (age=%s); requesting control cycle",
+                        self.device_name,
+                        None if age_s is None else round(age_s, 1),
+                    )
+                    self.control_queue_task.put_nowait(self)
+
     async def async_added_to_hass(self):
         """Run when entity about to be added.
 
@@ -1064,6 +1127,11 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         self._control_task = self.hass.async_create_background_task(
             control_queue(self), name=f"bt_control_queue_{self.device_name}"
         )
+        if BetterThermostat._has_generic_warm_floor(self):
+            self._spawn_owned(
+                self._warm_floor_watchdog(),
+                name=f"bt_warm_floor_watchdog_{self.device_name}",
+            )
         if self.window_id is not None:
             self._window_task = self.hass.async_create_background_task(
                 window_queue(self), name=f"bt_window_queue_{self.device_name}"
