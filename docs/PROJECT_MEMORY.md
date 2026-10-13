@@ -1114,3 +1114,28 @@ for all supported Home Assistant installations.
   receive new ON/OFF decisions, and real zone relays must produce valid
   pulses. Multi-heater relays must remain synchronized. No target, preset,
   manual relay state, or release metadata may be changed as part of this fix.
+
+### 2026-10-14 — Fix control queue permanently paused after a successful cycle
+
+- **Observed:** After the `f58d90e` restart-liveness fix, Warm Floor records
+  refreshed only during startup and then stopped together. The control queue
+  task remained present, but no later duty-cycle decisions or relay commands
+  were produced. HA logs contained no Warm Floor exception, which ruled out a
+  relay-specific failure and pointed to an internal queue state problem.
+- **Root cause:** `control_queue()` sets `ignore_states = True` when it takes a
+  request. The flag was cleared only inside the failed-TRV retry branch. A
+  successful control cycle therefore left the queue in its own pause condition
+  forever; every future Warm Floor tick and state-change request was skipped.
+- **Change:** The per-cycle `finally` now always acknowledges the queue item and
+  clears `ignore_states` when maintenance is not active. This applies to every
+  configured thermostat and does not select a setpoint, change a target/preset,
+  or operate a relay directly.
+- **Verification:** Added a regression test proving that two consecutive
+  successful queue items are both processed. The regression subset passed and
+  the focused Warm Floor suites passed 57 tests. The broader control-queue
+  file still contains an unrelated pre-existing dual-role cooling expectation
+  failure; it is not part of this Warm Floor fix.
+- **Deployment target:** Commit and push to the public DEV repository, install
+  through HACS, restart/reload Home Assistant, then verify fresh status ages,
+  Generic Thermostat setpoint changes, real zone relay pulses, and synchronized
+  multi-heater zones. No release is requested.

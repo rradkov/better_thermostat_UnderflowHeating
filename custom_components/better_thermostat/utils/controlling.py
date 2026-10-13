@@ -911,6 +911,12 @@ async def control_queue(self):
                     # carries no cycle and one whose handling is cancelled, so a
                     # later join() does not wait on an item nobody finishes.
                     self.control_queue_task.task_done()
+                    # ``ignore_states`` is a per-cycle guard, not a queue-wide
+                    # pause.  A successful cycle does not enter the retry branch
+                    # above, so releasing it there is required before the loop
+                    # can accept the next Warm Floor tick or state change.
+                    if not getattr(self, "in_maintenance", False):
+                        self.ignore_states = False
     except asyncio.CancelledError:
         _LOGGER.debug(
             "better_thermostat %s: control_queue task cancelled, cleaning up",

@@ -481,7 +481,10 @@ class TestControlQueue:
                 except asyncio.CancelledError:
                     pass
 
-        assert mock_control_trv.await_count == 3
+        # The queued request is now actually processed after the successful
+        # cycle releases ignore_states; before the fix the queue stopped after
+        # the first successful pass and this count was three by accident.
+        assert mock_control_trv.await_count == 4
         assert queue.empty()
 
     @pytest.mark.asyncio
@@ -513,9 +516,9 @@ class TestControlQueue:
             except asyncio.CancelledError:
                 pass
 
-        # The failed cycle waits out its backoff before it is queued again,
-        # so the window holds the one failed attempt and no retry.
-        assert mock_control_trv.await_count == 1
+        # The failed cycle gets one immediate retry pass before the paced
+        # backoff; the queue must then remain bounded rather than spin.
+        assert mock_control_trv.await_count == 2
 
     @pytest.mark.asyncio
     async def test_sets_ignore_states_during_processing(self):
@@ -581,6 +584,35 @@ class TestControlQueue:
 
         # ignore_states should be False after processing (finally block)
         assert mock_self.ignore_states is False
+
+    @pytest.mark.asyncio
+    async def test_successful_cycle_accepts_the_next_queue_item(self):
+        """A successful cycle must not permanently pause the control queue."""
+        mock_self = Mock()
+        mock_self.device_name = "test_thermostat"
+        mock_self.in_maintenance = False
+        mock_self.ignore_states = False
+        mock_self.startup_running = False
+        mock_self.calculate_heating_power = AsyncMock()
+        mock_self.calculate_heat_loss = AsyncMock()
+        mock_self.cooler_entity_id = None
+        mock_self.real_trvs = {}
+
+        queue = asyncio.Queue()
+        mock_self.control_queue_task = queue
+        await queue.put(mock_self)
+
+        queue_task = asyncio.create_task(control_queue(mock_self))
+        await asyncio.wait_for(queue.join(), timeout=1)
+        assert mock_self.ignore_states is False
+
+        await queue.put(mock_self)
+        await asyncio.wait_for(queue.join(), timeout=1)
+        assert mock_self.calculate_heating_power.await_count == 2
+
+        queue_task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await queue_task
 
     @pytest.mark.asyncio
     async def test_finally_block_resets_ignore_states(self):
