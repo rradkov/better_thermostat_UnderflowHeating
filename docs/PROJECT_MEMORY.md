@@ -361,6 +361,17 @@ Warm Floor requirements.
   encode Tino/Tata entity names or installation-specific behavior; `climate.tatas`
   remains explicitly out of Warm Floor scope.
 
+### 2026-10-13 — DEV baseline for Warm Floor recovery fix
+
+- **Confirmed:** The DEV `main` contains the merged Warm Floor recovery and
+  diagnostics fix at commit `267d64c9`, included in merge commit `30626696`.
+- **Purpose:** This is the code now being installed from the public DEV
+  repository for Home Assistant validation before any future production release.
+- **Verification boundary:** Installing the DEV repository overwrites the shared
+  `better_thermostat` integration path in the test Home Assistant. A restart is
+  required before the code is active; the test result must be checked against
+  downstream Generic Thermostat and physical relay histories.
+
 ## Open items
 
 - After deploying the fix, verify one overnight cycle using the histories of
