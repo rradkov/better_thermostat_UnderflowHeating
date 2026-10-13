@@ -6,6 +6,26 @@ code change for this project, read this file first. After every change, add a
 dated entry describing what changed, why it changed, and any important
 follow-up.
 
+### 2026-10-13 — Reassert safe Generic Thermostat state after recovery
+
+- **Incident:** After a power interruption, a Generic Thermostat could return
+  from `unavailable` with the same reported mode and setpoint as before the
+  outage while its relay had restored ON. Better Thermostat saw no ordinary
+  input change and therefore did not run a control cycle to release that
+  stale heating command when the room was idle and at/above target.
+- **Change:** A TRV/climate report that transitions from `unavailable` (or a
+  non-operating `unknown`) to an available state now always queues one full
+  Better Thermostat control cycle, even when mode, setpoint, and temperature
+  values are unchanged.
+- **Safety:** The normal controller and Warm Floor guards still decide the
+  resulting command. This does not force heat; it reasserts normal heating or
+  the Generic Thermostat idle/Warm Floor duty-cycle release as appropriate.
+  The rule is generic for all recovered controlled heaters and does not touch
+  `climate.tatas`.
+- **Verification:** Added a regression test for recovery without an input
+  change. The focused event test and source compilation must pass before
+  deployment.
+
 ### 2026-10-13 — Use short and one-hour EMA in Warm Floor demand
 
 - **Change:** The central Better Thermostat climate state now maintains both

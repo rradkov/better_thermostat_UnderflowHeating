@@ -338,6 +338,22 @@ async def trigger_trv_change(
         return
 
     state_unknown_as_available = trv_state_unknown_as_available(self, entity_id)
+    # A device returning from an unavailable/unknown state may publish the
+    # same mode and setpoint it had before the outage. That report still needs
+    # one complete control cycle: a Generic Thermostat can have restored its
+    # relay ON while Better Thermostat is idle, and no ordinary input change
+    # would otherwise re-send the safe setpoint or Warm Floor release.
+    recovered_from_unavailable = (
+        old_state is not None
+        and (
+            old_state.state == STATE_UNAVAILABLE
+            or (
+                old_state.state == STATE_UNKNOWN
+                and not state_unknown_as_available
+            )
+        )
+        and _org_trv_state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+    )
     if _org_trv_state.state == STATE_UNAVAILABLE or (
         (not state_unknown_as_available) and _org_trv_state.state == STATE_UNKNOWN
     ):
@@ -903,7 +919,14 @@ async def trigger_trv_change(
             if (self.bt_hvac_mode, self.bt_target_cooltemp) != _room_before:
                 _main_change = True
 
-    if _main_change is True and request_cycle:
+    if (_main_change or recovered_from_unavailable) and request_cycle:
+        if recovered_from_unavailable and not _main_change:
+            _LOGGER.debug(
+                "better_thermostat %s: TRV %s recovered from unavailable; "
+                "requesting a control cycle to reassert the safe command",
+                self.device_name,
+                entity_id,
+            )
         self.async_write_ha_state()
         return await self.control_queue_task.put(self)
 

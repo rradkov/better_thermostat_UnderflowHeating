@@ -827,6 +827,13 @@ def _apply_generic_duty_cycle(
         ),
     )
     if pulse_setpoint <= result:
+        if float(result) > ceiling:
+            # A stale downstream Generic Thermostat command can be well above
+            # the current Warm Floor safety band after a restart or power
+            # recovery. Keep the phase diagnostic as a release so the caller
+            # clamps it back to the room target instead of treating it as an
+            # already-valid floor value.
+            return result, "outside_duty_window", period_s, on_s
         # The normal calibration result (or an explicitly configured sustain
         # push) may already be above the Better Thermostat target.  It is
         # still the Warm Floor ON command when the duty window is open; do

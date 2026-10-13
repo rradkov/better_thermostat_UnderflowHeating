@@ -224,6 +224,26 @@ class TestUnavailableInvalidation:
     """An unavailable TRV must not keep feeding a stale internal temperature."""
 
     @pytest.mark.asyncio
+    async def test_recovery_requests_control_cycle_even_without_input_change(
+        self, mock_bt
+    ):
+        """A recovered device is reasserted even when it reports the same values."""
+        old_state = State(ENTITY_ID, "unavailable")
+        recovered = _make_state(attributes={"current_temperature": 18.0})
+        mock_bt.hass.states.get.return_value = recovered
+
+        with patch(
+            "custom_components.better_thermostat.events.trv.convert_inbound_states",
+            return_value=HVACMode.HEAT,
+        ):
+            await trigger_trv_change(
+                mock_bt,
+                _make_event(mock_bt, old_state=old_state, new_state=recovered),
+            )
+
+        mock_bt.control_queue_task.put.assert_awaited_once_with(mock_bt)
+
+    @pytest.mark.asyncio
     async def test_unavailable_trv_invalidates_internal_temperature(self, mock_bt):
         """The stored reading is cleared so calibration stops using it."""
         unavailable = State(ENTITY_ID, "unavailable")
