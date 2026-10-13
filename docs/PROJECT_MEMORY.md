@@ -389,6 +389,21 @@ Warm Floor requirements.
   Python compilation passed. Full pytest remains environment-dependent on
   Windows because the Home Assistant test plugin imports Unix-only `fcntl`.
 
+### 2026-10-13 — DEV deployment of user-target restoration fix
+
+- **Deployment:** HACS updated the public DEV repository from `4c00024` to
+  `715ed3f`; the installed DEV version now matches the available version and
+  has no pending update. Home Assistant was restarted so the custom component
+  loaded the new code.
+- **Verification:** All seven Better Thermostat config entries reported
+  `loaded`, and the system log contained no Better Thermostat error. The Tino
+  Generic Thermostat remained available at approximately 24.8°C while the
+  outer Tino Better Thermostat entity stayed `unavailable`; its relay and the
+  floor pump were ON. This makes the live restore result inconclusive until
+  the separate unavailable outer-entity condition is understood.
+- **Scope:** No temperatures, relays, pump states, production repository, or
+  release metadata were changed manually. Tata's fan-coil remains excluded.
+
 ## Open items
 
 - After deploying the fix, verify one overnight cycle using the histories of
