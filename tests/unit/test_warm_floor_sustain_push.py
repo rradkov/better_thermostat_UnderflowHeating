@@ -324,7 +324,7 @@ def test_generic_duty_demand_uses_per_heater_mpc_feedback(monkeypatch):
     bt = _make_bt()
     bt.heat_loss_rate = 0.0
     bt.heating_power = 1.0
-    mpc_state = MagicMock(loss_est=0.9, gain_est=0.9)
+    mpc_state = MagicMock(loss_est=0.75, gain_est=1.0)
     monkeypatch.setattr(underfloor, "_get_mpc_state", lambda *_: mpc_state)
 
     demand = underfloor._warm_floor_demand_factor(
@@ -333,7 +333,7 @@ def test_generic_duty_demand_uses_per_heater_mpc_feedback(monkeypatch):
         CalibrationMode.MPC_V2_CALIBRATION,
     )
 
-    assert demand == 0.8
+    assert demand == 0.5
 
 
 def test_generic_duty_profile_respects_slow_actuator_travel_time():
