@@ -561,7 +561,7 @@ def _record_status(
     hvac_action = getattr(bt, "hvac_action", None)
     if isinstance(hvac_action, HVACAction):
         hvac_action = hvac_action.value
-    bt._warm_floor_status = {
+    status = {
         "active": bool(active),
         "entity_id": entity_id,
         "sustaining_setpoint_c": sustaining_setpoint,
@@ -580,7 +580,20 @@ def _record_status(
         "hvac_action": hvac_action,
         "valve_min_pct": valve_min_pct,
         "demand_factor": demand_factor,
+        "updated_at": dt_util.utcnow().isoformat(),
     }
+    # Keep one status per controlled heater.  A Better Thermostat may control
+    # several Generic Thermostats; storing only the last call made the
+    # diagnostic sensor look as if the other heaters had not been evaluated.
+    statuses = getattr(bt, "_warm_floor_statuses", None)
+    if not isinstance(statuses, dict):
+        statuses = {}
+        bt._warm_floor_statuses = statuses
+    statuses[entity_id] = status
+
+    # Backwards-compatible view for existing integrations/tests and callers
+    # that expect the historical single-status dictionary.
+    bt._warm_floor_status = status
 
 
 def _external_sensor_is_stale(

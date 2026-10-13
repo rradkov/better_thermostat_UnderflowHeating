@@ -94,6 +94,11 @@ async def _apply_temperature_update(self, new_temp):
         elif new_temp_q < _cur_q:
             self.last_change_direction = -1
     self.cur_temp = new_temp_q
+    # The previous action may have been computed for the old temperature. Do
+    # not expose that stale result while the new control cycle is queued.
+    invalidate = getattr(self, "_invalidate_hvac_action_cache", None)
+    if invalidate is not None:
+        invalidate()
     self.last_known_external_temp = new_temp_q
     # Update EMA (useful if called from timer after delay)
     try:

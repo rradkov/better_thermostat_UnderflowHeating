@@ -103,6 +103,7 @@ from .utils.calibration.pid import (
     resolve_unique_id,
     round_to_bucket,
 )
+from .utils.underfloor import CONF_HEATING_TYPE, HeatingType
 from .utils.const import (
     ATTR_STATE_BATTERIES,
     ATTR_STATE_CALL_FOR_HEAT,
@@ -1092,6 +1093,19 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         self.async_write_ha_state()
         if event is not None:
             await self.control_queue_task.put(self)
+
+    def _has_generic_warm_floor(self) -> bool:
+        """Return whether this instance needs a Warm Floor duty-cycle tick."""
+        for trv in self.real_trvs.values():
+            integration = str(getattr(trv, "integration", "") or "").lower()
+            raw_heating_type = (trv.advanced or {}).get(CONF_HEATING_TYPE)
+            heating_type = getattr(raw_heating_type, "value", raw_heating_type)
+            if (
+                integration in {"generic", "generic_thermostat"}
+                and str(heating_type).lower() == HeatingType.UNDERFLOOR.value
+            ):
+                return True
+        return False
 
     async def _trigger_outdoor_change(self, event=None):
         """Re-evaluate the outdoor-temperature threshold on sensor changes.
@@ -2309,17 +2323,27 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
             active_balance_modes = set()
             active_calibration_modes = set()
 
-        if active_balance_modes or active_calibration_modes:
+        # Call the implementation explicitly so lightweight test doubles that
+        # use a spec cannot turn the boolean gate into a truthy MagicMock.
+        warm_floor_tick_enabled = BetterThermostat._has_generic_warm_floor(self)
+        if active_balance_modes or active_calibration_modes or warm_floor_tick_enabled:
+            tick_interval = (
+                timedelta(minutes=1)
+                if warm_floor_tick_enabled
+                else timedelta(minutes=5)
+            )
             self.async_on_remove(
                 async_track_time_interval(
-                    self.hass, self._trigger_time, timedelta(minutes=5)
+                    self.hass, self._trigger_time, tick_interval
                 )
             )
             _LOGGER.debug(
-                "better_thermostat %s: 5min periodic tick enabled (balance_modes=%s calibration_modes=%s)",
+                "better_thermostat %s: periodic tick enabled (interval=%s balance_modes=%s calibration_modes=%s warm_floor=%s)",
                 self.device_name,
+                tick_interval,
                 sorted(active_balance_modes),
                 sorted(active_calibration_modes),
+                warm_floor_tick_enabled,
             )
         else:
             _LOGGER.debug(
@@ -2946,6 +2970,10 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
             self.attr_hvac_action = self._compute_hvac_action_pure().action
         return self.attr_hvac_action
 
+    def _invalidate_hvac_action_cache(self) -> None:
+        """Force the next state/control boundary to recalculate hvac_action."""
+        self.attr_hvac_action = None
+
     def _should_heat_with_tolerance(
         self, previous_action: HVACAction | None, tol: float
     ) -> bool:
@@ -3084,6 +3112,7 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         hvac_mode_norm = normalize_hvac_mode(hvac_mode)
         if hvac_mode_norm in (HVACMode.HEAT, HVACMode.HEAT_COOL, HVACMode.OFF):
             self.bt_hvac_mode = HVACMode(get_hvac_bt_mode(self, hvac_mode_norm))
+            self._invalidate_hvac_action_cache()
         else:
             _LOGGER.error(
                 "better_thermostat %s: Unsupported hvac_mode %s",
@@ -3499,6 +3528,7 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
             )
             if hvac_mode_norm in (HVACMode.HEAT, HVACMode.HEAT_COOL, HVACMode.OFF):
                 self.bt_hvac_mode = hvac_mode_norm
+                self._invalidate_hvac_action_cache()
             else:
                 _LOGGER.error(
                     "better_thermostat %s: Unsupported hvac_mode %s",
@@ -3559,6 +3589,7 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
 
         # Enforce ordering: cool target should be above heat target in HEAT_COOL.
         self._enforce_cool_above_heat()
+        self._invalidate_hvac_action_cache()
 
         # If a specific preset (Comfort, Eco, …) is active and the user manually
         # changes the target temperature to a value that does not match the
@@ -3786,6 +3817,7 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
             # mode can change without it being looked at again, and
             # async_set_hvac_mode does not re-enforce the ordering.
             self._enforce_cool_above_heat(regardless_of_hvac_mode=True)
+            self._invalidate_hvac_action_cache()
 
             _LOGGER.debug(
                 "better_thermostat %s: After preset change %s -> %s, bt_target_temp=%s, bt_hvac_mode=%s",
