@@ -448,6 +448,26 @@ Warm Floor requirements.
   `1.9.2.1.2`. Treat the manifest/release-directory edits as existing working
   tree changes until their owner confirms the intended release version.
 
+## Deployment verification
+
+### 2026-10-13 — DEV deployment of `0bac469`
+
+- HACS refreshed and installed DEV commit `0bac469` (`Persist user targets
+  before thermostat unload`); no release was created.
+- Home Assistant restarted successfully; all 7 Better Thermostat config entries
+  reported `loaded` and HACS reported the same installed and available commit.
+- The first post-restart observation showed Tino unavailable and the old
+  fallback target of 16°C. Logs confirmed this was expected for this specific
+  transition: the previous version had unloaded before the new persistence code
+  existed, so it had no saved user target and restored the configured minimum.
+- Tino was set back to the user-requested 22°C, then its config entry was
+  reloaded. After reload, the outer thermostat remained `heat` at 22.0°C,
+  proving the new unload persistence path works.
+- The child Generic Thermostat temporarily reported 26.0°C and both the Tino
+  relay and floor-heating pump were on; this is a Warm Floor actuator pulse and
+  must not overwrite the outer user target.
+- No `climate.tatas` entity was changed or used in this verification.
+
 ## Review checkpoint
 
 The repository review on 2026-10-13 covered the root project metadata and
