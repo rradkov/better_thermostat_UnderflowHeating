@@ -115,6 +115,23 @@ follow-up.
   does not increase Warm Floor demand when no cooling or thermal-load signal
   is present. The three user levels remain the baseline profiles.
 
+### 2026-10-13 — DEV deployment of Warm Floor maintenance-demand fix
+
+- **Commit:** `237d9e0` was pushed to DEV `main` with the corrected Warm Floor
+  boundary, three-level profiles, slope modulation, and separation from normal
+  below-target room demand.
+- **HA deployment:** HACS refreshed and installed DEV commit `237d9e0`; the
+  installed and available versions match. Home Assistant was restarted so the
+  integration loaded the new code.
+- **Live verification:** Tino Better Thermostat returned as `heat` at 22.0°C
+  current and 22.0°C target with preset `home`. Its Warm Floor diagnostic is
+  enabled at `level_2` (Balanced); the downstream relay and floor pump were
+  both ON at the observation point. The diagnostic correctly exposed the
+  per-heater record and duty timing.
+- **Logs:** No new Better Thermostat errors were found. Existing warnings about
+  missing local calibration entities remain unrelated to this Warm Floor
+  change. `climate.tatas` was not queried or changed.
+
 ### 2026-10-13 — Feed per-heater MPC feedback into Generic Warm Floor pulses
 
 - **Change:** Generic Thermostat Warm Floor demand now also considers trained
