@@ -372,6 +372,23 @@ Warm Floor requirements.
   required before the code is active; the test result must be checked against
   downstream Generic Thermostat and physical relay histories.
 
+### 2026-10-13 — Separate user targets from Warm Floor actuator pulses
+
+- **Changed:** Persist the user's heating and cooling targets in the unified
+  StateManager and prefer them during startup restoration. When the previous
+  entity state is unavailable, startup no longer derives a room target from
+  child Generic Thermostat setpoints.
+- **Why:** Warm Floor can temporarily raise a downstream Generic Thermostat
+  target during its duty cycle. A reload can expose that temporary value while
+  the Better Thermostat entity is unavailable, causing the value to be restored
+  as the user's room target.
+- **Expected behavior:** User target/preset intent survives restart or config
+  entry reload; Warm Floor may continue to change only downstream actuator
+  setpoints and must never overwrite the room target.
+- **Verification:** Added StateManager round-trip and target-recording tests;
+  Python compilation passed. Full pytest remains environment-dependent on
+  Windows because the Home Assistant test plugin imports Unix-only `fcntl`.
+
 ## Open items
 
 - After deploying the fix, verify one overnight cycle using the histories of

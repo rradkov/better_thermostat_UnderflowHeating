@@ -1869,6 +1869,11 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
     async def _restore_state(self, states: list[State]) -> None:
         """Restore the state saved before the last stop or fall back to defaults."""
         old_state = self._saved_state
+        old_state_usable = old_state is not None and old_state.state not in (
+            STATE_UNAVAILABLE,
+            STATE_UNKNOWN,
+            None,
+        )
         # A missing heating target falls back to the setpoints of the heads
         # that are on. A head that is off, including a no-off device parked at
         # its minimum, holds its off or frost setpoint, not a room target, and
@@ -1918,10 +1923,28 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
                 "better_thermostat %s: restoring target temperature...",
                 self.device_name,
             )
-            # Clamp the saved target, or fall back to the TRV mean.
+            persisted_targets = (
+                self.state_mgr.user_targets if self.state_mgr is not None else {}
+            )
+            persisted_heating = persisted_targets.get("heating")
+            saved_heating = (
+                persisted_heating
+                if persisted_heating is not None
+                else (
+                    saved_heating_target(old_state.attributes)
+                    if old_state_usable
+                    else None
+                )
+            )
+            # An unavailable state has no trustworthy room target. Do not
+            # fall back to child setpoints: Warm Floor may have left a
+            # temporary Generic Thermostat pulse there before the reload.
+            restore_states = (
+                head_states if saved_heating is None and old_state_usable else []
+            )
             _restored_target = restore_target_temperature(
-                saved_heating_target(old_state.attributes),
-                head_states,
+                saved_heating,
+                restore_states,
                 self.bt_min_temp,
                 self.bt_max_temp,
                 self.device_name,
@@ -1941,8 +1964,15 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
             # still unknown from the cooler's own setpoint: a target the user
             # chose outranks the one the device happens to sit on.
             if self.cooler_entity_id is not None:
+                persisted_cooling = persisted_targets.get("cooling")
                 _restored_cool_target = convert_to_float_celsius(
-                    saved_cooling_target(old_state.attributes),
+                    persisted_cooling
+                    if persisted_cooling is not None
+                    else (
+                        saved_cooling_target(old_state.attributes)
+                        if old_state_usable
+                        else None
+                    ),
                     self.device_name,
                     "startup()",
                     self.hass.config.units.temperature_unit,
@@ -2078,6 +2108,13 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
                 "better_thermostat %s: restored preset temperature applied",
                 self.device_name,
             )
+
+            if self.state_mgr is not None and (
+                persisted_heating is not None or old_state_usable
+            ):
+                self.state_mgr.record_user_targets(
+                    self.bt_target_temp, self.bt_target_cooltemp
+                )
 
             _LOGGER.debug(
                 "better_thermostat %s: restoring other attributes...", self.device_name
@@ -3106,6 +3143,14 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
             return
         self.state_mgr.record_thermal(
             getattr(self, "heating_power", None), getattr(self, "heat_loss_rate", None)
+        )
+
+    def _record_user_targets_to_state(self) -> None:
+        """Persist room intent, excluding Warm Floor actuator setpoints."""
+        if self.state_mgr is None:
+            return
+        self.state_mgr.record_user_targets(
+            self.bt_target_temp, self.bt_target_cooltemp
         )
 
     @callback
@@ -4152,6 +4197,7 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
             self.bt_target_cooltemp,
         )
 
+        self._record_user_targets_to_state()
         self.async_write_ha_state()
         # Only trigger control queue if thermostat is not OFF
         # When OFF, we still save the temperature but don't send it to the physical device
@@ -4338,6 +4384,7 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
                 self.bt_hvac_mode,
             )
 
+            self._record_user_targets_to_state()
             self.async_write_ha_state()
             if (
                 hasattr(self, "control_queue_task")

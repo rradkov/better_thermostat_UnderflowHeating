@@ -224,6 +224,14 @@ class TestSerializeDeserializeRoundtrip:
 
         assert restored.presets == {"comfort": 22.0, "eco": 18.5}
 
+    def test_user_targets_roundtrip(self):
+        """User targets survive separately from actuator/runtime state."""
+        original = RuntimeState(user_targets={"heating": 21.5, "cooling": 25.0})
+
+        restored = _deserialize(_serialize(original))
+
+        assert restored.user_targets == {"heating": 21.5, "cooling": 25.0}
+
     def test_full_state_roundtrip(self):
         """Complete state with all sections populated."""
         original = RuntimeState(
@@ -688,6 +696,15 @@ class TestStateManagerStateAccess:
         """Presets property returns empty dict by default."""
         mgr = self._make_manager()
         assert mgr.presets == {}
+
+    def test_record_user_targets(self):
+        """Target persistence keeps user intent independent of Warm Floor pulses."""
+        mgr = self._make_manager()
+
+        mgr.record_user_targets(21.5, 25.0)
+
+        assert mgr.user_targets == {"heating": 21.5, "cooling": 25.0}
+        assert mgr._dirty is True
 
     def test_multiple_keys_independent(self):
         """Different MPC keys store independent state."""

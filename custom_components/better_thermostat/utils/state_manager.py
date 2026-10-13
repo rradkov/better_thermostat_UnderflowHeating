@@ -138,6 +138,10 @@ class RuntimeState:
     tpi: dict[str, TpiState] = field(default_factory=dict)
     thermal: ThermalStats = field(default_factory=ThermalStats)
     presets: dict[str, float] = field(default_factory=dict)
+    # User intent is separate from downstream actuator setpoints. Warm Floor
+    # may temporarily raise a Generic Thermostat target for a duty-cycle pulse;
+    # that value must never become the room target after a reload.
+    user_targets: dict[str, float] = field(default_factory=dict)
 
 
 # Serialization helpers
@@ -495,6 +499,15 @@ def _deserialize(
             if number is not None:
                 state.presets[str(name)] = number
 
+    user_targets_raw = _stored_section(raw, "user_targets", dropped)
+    if user_targets_raw is not None:
+        for name in ("heating", "cooling"):
+            number = _stored_optional_number(
+                user_targets_raw, "user_targets", name, dropped
+            )
+            if number is not None:
+                state.user_targets[name] = number
+
     return state
 
 
@@ -548,6 +561,7 @@ def _migrate_v0_to_v1(raw: dict[str, Any]) -> dict[str, Any]:
     raw.setdefault("tpi", {})
     raw.setdefault("thermal", {})
     raw.setdefault("presets", {})
+    raw.setdefault("user_targets", {})
     return raw
 
 
@@ -717,6 +731,26 @@ class StateManager:
         """Set learned preset temperatures and mark dirty."""
         self._state.presets = value
         self._dirty = True
+
+    @property
+    def user_targets(self) -> dict[str, float]:
+        """Return the last targets chosen by the user, not actuator pulses."""
+        return self._state.user_targets
+
+    def record_user_targets(
+        self, heating: float | None, cooling: float | None
+    ) -> None:
+        """Persist user intent separately from downstream setpoints."""
+        targets: dict[str, float] = {}
+        for key, value in (("heating", heating), ("cooling", cooling)):
+            try:
+                if value is not None and math.isfinite(float(value)):
+                    targets[key] = float(value)
+            except (TypeError, ValueError):
+                continue
+        if targets != self._state.user_targets:
+            self._state.user_targets = targets
+            self._dirty = True
 
     def mark_dirty(self) -> None:
         """Manually mark state as needing persistence."""
