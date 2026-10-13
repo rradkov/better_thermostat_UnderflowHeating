@@ -42,3 +42,13 @@ def test_committed_action_wins_over_the_cache():
 
     assert BetterThermostat.hvac_action.fget(bt) is HVACAction.HEATING
     bt._compute_hvac_action_pure.assert_called_once()
+
+
+def test_input_change_invalidates_cached_action():
+    """Temperature/target/mode event handlers can request a fresh decision."""
+    bt = _bt()
+    bt.attr_hvac_action = HVACAction.HEATING
+
+    BetterThermostat._invalidate_hvac_action_cache(bt)
+
+    assert bt.attr_hvac_action is None

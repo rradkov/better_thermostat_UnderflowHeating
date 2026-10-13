@@ -16,6 +16,7 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory, Platform, UnitOfTemperature
 from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
+from homeassistant.util import dt as dt_util
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity_registry import (
@@ -1055,16 +1056,65 @@ class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_icon = "mdi:heat-wave"
     _unique_id_suffix = "warm_floor_status"
+    _attr_should_poll = True
+
+    async def async_update(self) -> None:
+        """Refresh duty-cycle timing even when the climate state is unchanged."""
+        self._update_state()
 
     def _update_state(self) -> None:
         """Update state from the last Warm Floor decision."""
-        status = getattr(self._bt_climate, "_warm_floor_status", None)
-        if not isinstance(status, dict):
+        statuses = getattr(self._bt_climate, "_warm_floor_statuses", None)
+        if not isinstance(statuses, dict) or not statuses:
+            legacy = getattr(self._bt_climate, "_warm_floor_status", None)
+            statuses = (
+                {legacy.get("entity_id", "unknown"): legacy}
+                if isinstance(legacy, dict)
+                else {}
+            )
+        if not statuses:
             self._attr_native_value = "disabled"
             self._attr_extra_state_attributes = {}
             return
-        self._attr_native_value = "active" if status.get("active") else "idle"
+
+        # The newest record remains the primary legacy view, while every
+        # controlled heater is exposed in the multi-heater attribute.
+        status = max(
+            statuses.values(), key=lambda item: item.get("updated_at", "")
+        )
+        heater_statuses = {}
+        now = dt_util.utcnow().timestamp()
+        for entity_id, item in statuses.items():
+            snapshot = dict(item)
+            period = snapshot.get("duty_period_s")
+            on_time = snapshot.get("duty_on_s")
+            if period and on_time:
+                elapsed = int(now % period)
+                snapshot["duty_elapsed_s"] = elapsed
+                if elapsed < on_time:
+                    snapshot["duty_phase"] = "on"
+                    snapshot["duty_remaining_s"] = on_time - elapsed
+                else:
+                    snapshot["duty_phase"] = "off"
+                    snapshot["duty_remaining_s"] = period - elapsed
+            updated_at = snapshot.get("updated_at")
+            if updated_at:
+                try:
+                    snapshot["status_age_s"] = max(
+                        0, int(now - dt_util.parse_datetime(updated_at).timestamp())
+                    )
+                except (AttributeError, TypeError, ValueError):
+                    pass
+            heater_statuses[entity_id] = snapshot
+
+        status = heater_statuses.get(status.get("entity_id"), status)
+
+        self._attr_native_value = "active" if any(
+            item.get("active") for item in statuses.values()
+        ) else "idle"
         self._attr_extra_state_attributes = {
+            "heater_count": len(heater_statuses),
+            "warm_floor_heaters": heater_statuses,
             "entity_id": status.get("entity_id"),
             "sustaining_setpoint_c": status.get("sustaining_setpoint_c"),
             "backoff_c": status.get("backoff_c"),
@@ -1077,6 +1127,9 @@ class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
             "duty_phase": status.get("duty_phase"),
             "duty_elapsed_s": status.get("duty_elapsed_s"),
             "duty_remaining_s": status.get("duty_remaining_s"),
+            "status_age_s": heater_statuses.get(
+                status.get("entity_id"), {}
+            ).get("status_age_s"),
             "current_temp_c": status.get("current_temp_c"),
             "target_temp_c": status.get("target_temp_c"),
             "hvac_action": status.get("hvac_action"),
