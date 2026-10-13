@@ -1062,3 +1062,20 @@ for all supported Home Assistant installations.
 - **Verification:** Warm Floor status tests pass (13/13), source compilation
   and `git diff --check` pass. Deployment and live stale-recovery verification
   are pending.
+
+### 2026-10-13 — DEV verification of Warm Floor liveness watchdog
+
+- **Deployment:** DEV commit `ea4fed6` was installed through HACS; HACS
+  reported `ea4fed6` as both installed and available. All seven Better
+  Thermostat entries were reloaded successfully.
+- **Recovery result:** Immediately after reload, Master entered
+  `duty_cycle_on` with `status_age_s=0` and its physical relay
+  `switch.tasmota_7` was ON. After a further 45-second observation the status
+  remained fresh at `status_age_s=30` and the relay remained ON.
+- **Multi-heater result:** Kitchen/Dining showed both child heaters active in
+  the same ON phase, with R2 and R3 ON; R7 was also ON as the independent pump
+  automation response. This confirms the watchdog did not break grouped-zone
+  synchronization.
+- **Safety:** Boost statuses remained off during the check. No target, preset,
+  relay, or configuration was manually changed, and `climate.tatas` was not
+  queried or changed. No release was created.
