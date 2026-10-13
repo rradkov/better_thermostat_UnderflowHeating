@@ -36,6 +36,12 @@ def _stored_power(hass_storage, entry) -> float | None:
     return stored["thermal"]["heating_power"]
 
 
+def _stored_user_heating_target(hass_storage, entry) -> float | None:
+    """Return the persisted user heating target, if one was written."""
+    stored = hass_storage[f"{DOMAIN}_{entry.entry_id}_state"]["data"]
+    return stored.get("user_targets", {}).get("heating")
+
+
 async def _let_the_save_run(hass) -> None:
     """Move the clock past the debounce of a scheduled save."""
     async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=30))
@@ -67,6 +73,7 @@ async def test_a_change_pending_at_stop_is_stored(hass, hass_storage, fake_trv):
     """A change still inside the save delay when Home Assistant stops is stored."""
     entry = make_entry()
     bt = await _started_with_a_saved_value(hass, hass_storage, entry)
+    bt.bt_target_temp = 24.7
     bt.heating_power = CHANGED
     bt.schedule_save_state()
 
@@ -76,12 +83,14 @@ async def test_a_change_pending_at_stop_is_stored(hass, hass_storage, fake_trv):
         hass.set_state(CoreState.running)
 
     assert _stored_power(hass_storage, entry) == CHANGED
+    assert _stored_user_heating_target(hass_storage, entry) == 24.7
 
 
 async def test_a_change_pending_at_removal_is_stored(hass, hass_storage, fake_trv):
     """A change still inside the save delay when the entry unloads is stored."""
     entry = make_entry()
     bt = await _started_with_a_saved_value(hass, hass_storage, entry)
+    bt.bt_target_temp = 24.7
     bt.heating_power = CHANGED
     bt.schedule_save_state()
 
@@ -89,6 +98,7 @@ async def test_a_change_pending_at_removal_is_stored(hass, hass_storage, fake_tr
     await hass.async_block_till_done()
 
     assert _stored_power(hass_storage, entry) == CHANGED
+    assert _stored_user_heating_target(hass_storage, entry) == 24.7
 
 
 async def test_a_pending_change_is_saved_once(hass, hass_storage, fake_trv):

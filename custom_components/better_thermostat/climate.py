@@ -1170,6 +1170,11 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
                 self._save_cancel()
                 self._save_cancel = None
             if self.state_mgr is not None:
+                # Capture user intent before Home Assistant publishes the
+                # unavailable state during a config-entry reload. Warm Floor
+                # may have changed a child Generic Thermostat setpoint, but
+                # that actuator pulse must not become the restored room target.
+                self._record_user_targets_to_state()
                 self.state_mgr.close()
                 try:
                     self._record_thermal_to_state()
@@ -1196,6 +1201,7 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
                 self._save_cancel()
                 self._save_cancel = None
             if self.state_mgr is not None:
+                self._record_user_targets_to_state()
                 self._record_thermal_to_state()
                 await self.state_mgr.flush()
 

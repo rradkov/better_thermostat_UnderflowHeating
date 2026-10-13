@@ -404,6 +404,25 @@ Warm Floor requirements.
 - **Scope:** No temperatures, relays, pump states, production repository, or
   release metadata were changed manually. Tata's fan-coil remains excluded.
 
+### 2026-10-13 — Persist user target before reload and shutdown
+
+- **Changed:** Better Thermostat now records the current user heating/cooling
+  targets immediately before a config-entry unload and during Home Assistant's
+  final-write shutdown stage. This closes the gap where the entity became
+  `unavailable` before the new `user_targets` store had been updated.
+- **Why:** When no persisted target was available, startup restored the generic
+  default and bounded it to the configured minimum (16°C in the live Tino
+  case). The child Generic Thermostat's Warm Floor pulse must not be used as a
+  substitute, but a valid user target must also never be lost.
+- **Expected behavior:** After one normal running cycle, reloads and restarts
+  restore the last user target even if the old HA entity state is unavailable;
+  temporary Warm Floor actuator setpoints remain excluded.
+- **Verification:** Source compilation, diff validation, and 46 focused state
+  and restore tests passed. Lifecycle/integration tests are added for storing
+  targets at unload and final write; native Windows HA pytest execution still
+  requires the supported Linux/HA environment because of the `fcntl` plugin
+  dependency.
+
 ## Open items
 
 - After deploying the fix, verify one overnight cycle using the histories of

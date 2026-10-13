@@ -733,6 +733,7 @@ class TestOwnedBackgroundTasks:
         save_on_removal()
         await hass.async_block_till_done()
 
+        owned_bt._record_user_targets_to_state.assert_called_once_with()
         lifecycle = [
             name
             for name, _args, _kwargs in state_mgr.mock_calls
