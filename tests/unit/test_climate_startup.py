@@ -2270,6 +2270,24 @@ class TestRestoreState:
         assert bt.preset_mgr.mode == "comfort"
 
     @pytest.mark.asyncio
+    async def test_durable_preset_is_not_overwritten_by_stale_ha_state(self, bt):
+        """A stale HA ``none`` state must not erase the durable preset."""
+        old = MagicMock()
+        old.state = "heat"
+        old.attributes = {ATTR_TEMPERATURE: 22.0, "preset_mode": "none"}
+        bt._saved_state = old
+        bt.preset_mgr.temperatures = {"none": 20.0, "comfort": 22.0, "eco": 18.0}
+        bt.state_mgr = MagicMock()
+        bt.state_mgr.user_targets = {}
+        bt.state_mgr.active_preset = "comfort"
+        bt.state_mgr.preset_heat_temperatures = {"comfort": 22.0}
+        bt.state_mgr.preset_cool_temperatures = {}
+
+        await BetterThermostat._restore_state(bt, [_make_trv_state()])
+
+        assert bt.preset_mgr.mode == "comfort"
+
+    @pytest.mark.asyncio
     async def test_restores_preset_cool_temperature_mapping(self, bt):
         """Restore user-customized cooling preset temperatures from state."""
         old = MagicMock()

@@ -2206,8 +2206,14 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
                     self.device_name,
                     "startup()",
                 )
-            # Restore preset mode
-            if old_state.attributes.get("preset_mode", None) is not None:
+            # Keep the StateManager's active preset authoritative.  The old HA
+            # state can be a stale ``none`` snapshot from the startup window;
+            # allowing it to overwrite the durable value loses the user's
+            # selected preset after a restart/reload.
+            if (
+                self.state_mgr is None
+                or not isinstance(self.state_mgr.active_preset, str)
+            ) and old_state.attributes.get("preset_mode", None) is not None:
                 restored_preset: str = str(old_state.attributes["preset_mode"])
                 if restored_preset in self.preset_modes:
                     self.preset_mgr.mode = restored_preset

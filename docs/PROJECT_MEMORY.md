@@ -6,6 +6,23 @@ code change for this project, read this file first. After every change, add a
 dated entry describing what changed, why it changed, and any important
 follow-up.
 
+### 2026-10-13 — Keep durable active presets authoritative during restore
+
+- **Incident:** After the Better Thermostat entities became available again,
+  their active presets were all reported as `none`, although the per-preset
+  heating and cooling temperatures were still present.
+- **Root cause:** `_restore_state()` restored the active preset from the
+  durable StateManager, then a legacy restore block later read the stale HA
+  snapshot and overwrote it with `none`.
+- **Change:** The legacy fallback now runs only when StateManager does not have
+  a persisted active preset. A regression test covers a durable `comfort`
+  preset with a stale HA `none` state.
+- **Scope:** Generic lifecycle behavior for all Better Thermostat entities;
+  no room/device-specific logic and no changes to `climate.tatas`.
+- **Verification:** Focused pytest execution is blocked on Windows because the
+  installed Home Assistant pytest plugin imports POSIX-only `fcntl`; compile,
+  diff, and available non-HA checks must still be run before deployment.
+
 ## Project intent
 
 This project extends Better Thermostat for a real Home Assistant installation
