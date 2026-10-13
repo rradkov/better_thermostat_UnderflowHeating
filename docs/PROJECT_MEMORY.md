@@ -974,3 +974,20 @@ for all supported Home Assistant installations.
   zone actuators) demonstrate the BT/Generic Thermostat commands. R7 only
   demonstrates that the independent pump automation followed the active zone
   demand. Do not use R7 alone as proof of BT behavior.
+
+### 2026-10-13 — Refresh Warm Floor status when a heater is unavailable
+
+- **Observed gap:** The periodic control tick could correctly run while an
+  individual heater was unavailable, but `control_trv()` skipped that heater
+  before reaching the Warm Floor calculation. Its diagnostic sensor therefore
+  kept showing the previous ON/OFF decision and an old `updated_at` timestamp.
+- **Change:** Unavailable underfloor heaters now publish a fresh diagnostic
+  snapshot with reason `heater_unavailable` and `active: false` before control
+  returns. This is a status-only update; it does not send a setpoint, toggle a
+  relay, or alter the user's target or preset.
+- **Scope:** The behavior is capability-based for every configured underfloor
+  heater, including multi-heater zones. Radiator/fan-coil heaters are not
+  marked as Warm Floor, and `climate.tatas` remains out of scope.
+- **Verification:** Warm Floor status tests pass (13/13), source compilation
+  and `git diff --check` pass. Deployment to the DEV HA instance is still
+  required before live verification.

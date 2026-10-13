@@ -68,6 +68,9 @@ from custom_components.better_thermostat.utils.hvac_action import (
     COOLER_MODE_HYSTERESIS_K,
     should_cool_with_tolerance,
 )
+from custom_components.better_thermostat.utils.underfloor import (
+    record_warm_floor_blocked_status,
+)
 from custom_components.better_thermostat.utils.watcher import (
     UNAVAILABLE_STATES,
     UNKNOWN_STATES,
@@ -1419,6 +1422,9 @@ async def control_trv(self, heater_entity_id=None):
             _trv = self.hass.states.get(heater_entity_id)
             # Check if TRV is available before attempting to control it
             if _skips_unavailable_trv(self, heater_entity_id, _trv):
+                record_warm_floor_blocked_status(
+                    self, heater_entity_id, "heater_unavailable"
+                )
                 _LOGGER.debug(
                     "better_thermostat %s: TRV %s is unavailable, skipping control. "
                     "Control will resume when TRV becomes available.",

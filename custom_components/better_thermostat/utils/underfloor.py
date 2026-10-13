@@ -602,6 +602,37 @@ def _record_status(
     bt._warm_floor_status = status
 
 
+def record_warm_floor_blocked_status(bt, entity_id: str, reason: str) -> None:
+    """Refresh a Warm Floor diagnostic when control cannot reach the heater.
+
+    A periodic control cycle can legitimately skip an unavailable heater.  Do
+    not leave the status sensor showing the last ON/OFF decision in that case:
+    publish the blocked reason and a fresh timestamp instead.  This is only a
+    diagnostic update; it never sends a device command or changes user intent.
+    """
+    trv_state = getattr(bt, "real_trvs", {}).get(entity_id)
+    if trv_state is None:
+        return
+    raw_heating_type = (trv_state.advanced or {}).get(
+        CONF_HEATING_TYPE, DEFAULT_HEATING_TYPE.value
+    )
+    heating_type = getattr(raw_heating_type, "value", raw_heating_type)
+    try:
+        heating_type = HeatingType(heating_type)
+    except ValueError:
+        heating_type = DEFAULT_HEATING_TYPE
+    if heating_type != HeatingType.UNDERFLOOR:
+        return
+    _record_status(
+        bt,
+        entity_id,
+        active=False,
+        sustaining_setpoint=None,
+        control_method=None,
+        reason=reason,
+    )
+
+
 def _external_sensor_is_stale(
     bt, threshold_s: float = WARM_FLOOR_SENSOR_STALE_AFTER_S
 ) -> bool:

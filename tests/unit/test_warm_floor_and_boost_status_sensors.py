@@ -16,6 +16,9 @@ from custom_components.better_thermostat.sensor import (
     BetterThermostatBoostStatusSensor,
     BetterThermostatWarmFloorStatusSensor,
 )
+from custom_components.better_thermostat.utils.underfloor import (
+    record_warm_floor_blocked_status,
+)
 
 DOMAIN = "better_thermostat"
 
@@ -185,6 +188,24 @@ def test_multi_heater_status_exposes_all_heaters():
     assert attrs["warm_floor_heaters"]["climate.ufh_bathroom"]["reason"] == (
         "outside_duty_window"
     )
+
+
+def test_blocked_heater_refreshes_warm_floor_status():
+    """An unavailable heater must not leave an old duty decision displayed."""
+    trv = MagicMock()
+    trv.advanced = {"heating_type": "underfloor"}
+    bt = _make_bt_climate(
+        real_trvs={"climate.ufh_living_room": trv},
+        bt_target_temp=22.0,
+    )
+    record_warm_floor_blocked_status(
+        bt, "climate.ufh_living_room", "heater_unavailable"
+    )
+
+    status = bt._warm_floor_status
+    assert status["reason"] == "heater_unavailable"
+    assert status["active"] is False
+    assert status["updated_at"]
 
 
 # ---------------------------------------------------------------------------
