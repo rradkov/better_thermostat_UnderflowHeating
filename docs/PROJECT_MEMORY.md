@@ -1006,3 +1006,24 @@ for all supported Home Assistant installations.
 - **Follow-up:** Kitchen/Dining currently exposes only one heater in its
   multi-heater Warm Floor attribute despite both child climates being present;
   this is a separate multi-heater status issue to investigate.
+
+### 2026-10-13 — Register Warm Floor before optional-sensor startup waits
+
+- **Incident:** Master Bedroom produced a valid Warm Floor ON pulse from
+  15:40:59 to 15:46:56, then its relay stayed OFF for more than an hour. The
+  last diagnostic decision remained `outside_duty_window` with a stale
+  timestamp, even though the room was above target and the contact was closed.
+- **Root cause:** The one-minute Warm Floor tick was registered only after
+  `await_optional_sensors()`. A slow/unavailable optional or outdoor sensor
+  could hold startup/reload before that registration, freezing the duty-cycle
+  evaluator and missing later ON windows.
+- **Change:** Warm Floor capability now registers its one-minute tick before
+  the optional-sensor wait, and the later startup path skips duplicate
+  registration. This does not bypass safety checks or directly control relays;
+  it only ensures that normal control cycles continue to be scheduled.
+- **Verification:** Warm Floor status tests pass (13/13), source compilation
+  and `git diff --check` pass. The async registration suite could not run in
+  the Windows environment because the installed Home Assistant pytest plugin
+  imports POSIX-only `fcntl` and disabling it leaves no async test plugin.
+- **Follow-up:** Deploy to DEV and verify Master status ages remain below the
+  one-minute tick interval after reload, then observe a complete ON/OFF cycle.

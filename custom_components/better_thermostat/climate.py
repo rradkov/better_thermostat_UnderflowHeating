@@ -1305,6 +1305,30 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
                 return True
         return False
 
+    def _register_warm_floor_tick(self) -> bool:
+        """Register the one-minute Warm Floor tick exactly once."""
+        if getattr(self, "_warm_floor_tick_registered", False):
+            return True
+        if not BetterThermostat._has_generic_warm_floor(self):
+            return False
+        self.async_on_remove(
+            async_track_time_interval(
+                self.hass,
+                partial(
+                    self._start_owned_timer_work,
+                    self._trigger_time,
+                    "bt_periodic_tick",
+                ),
+                timedelta(minutes=1),
+            )
+        )
+        self._warm_floor_tick_registered = True
+        _LOGGER.debug(
+            "better_thermostat %s: Warm Floor periodic tick registered early",
+            self.device_name,
+        )
+        return True
+
     async def _trigger_outdoor_change(self, event=None):
         """Re-evaluate the outdoor-temperature threshold on sensor changes.
 
@@ -2731,6 +2755,10 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         # logged at DEBUG and the HA repair issue is deferred — slow cloud
         # integrations get time to come online before the user sees a warning.
         self._degraded_grace_until = dt_util.now() + STARTUP_DEGRADED_GRACE_PERIOD
+        # Register Warm Floor before waiting for optional cloud/outdoor
+        # sensors. A slow optional integration must not freeze the duty-cycle
+        # clock after a config-entry reload.
+        self._register_warm_floor_tick()
         await await_optional_sensors(self)
         # That wait can run for the better part of a minute and gives the
         # entity up on its own once the removal starts, so the removal is
@@ -2806,17 +2834,21 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
                 if warm_floor_tick_enabled
                 else timedelta(minutes=5)
             )
-            self.async_on_remove(
-                async_track_time_interval(
-                    self.hass,
-                    partial(
-                        self._start_owned_timer_work,
-                        self._trigger_time,
-                        "bt_periodic_tick",
-                    ),
-                    tick_interval,
+            if not (
+                warm_floor_tick_enabled
+                and getattr(self, "_warm_floor_tick_registered", False) is True
+            ):
+                self.async_on_remove(
+                    async_track_time_interval(
+                        self.hass,
+                        partial(
+                            self._start_owned_timer_work,
+                            self._trigger_time,
+                            "bt_periodic_tick",
+                        ),
+                        tick_interval,
+                    )
                 )
-            )
             _LOGGER.debug(
                 "better_thermostat %s: periodic tick enabled (interval=%s balance_modes=%s calibration_modes=%s warm_floor=%s)",
                 self.device_name,
