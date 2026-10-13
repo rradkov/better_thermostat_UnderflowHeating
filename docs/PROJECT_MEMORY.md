@@ -20,6 +20,23 @@
   must no longer remain physically ON solely because its relay restored during
   an outage while Better Thermostat was idle at/above target.
 
+### 2026-10-13 — Make Generic Thermostat idle release unambiguous
+
+- **Observed after deployment:** Recovery correctly ran and Warm Floor reported
+  `idle_release`, but the Generic Thermostat still reported `heating` at
+  `22.0/22.0` and its relay remained ON. Re-sending an equal setpoint is not
+  an OFF command for every Generic Thermostat configuration, especially with
+  zero hot tolerance.
+- **Change:** The generic Warm Floor idle-release path now sends one valid
+  device step below the Better Thermostat target (bounded by the actuator's
+  minimum), instead of sending the equal target. This is only the downstream
+  actuator setpoint; the user's target and preset are not changed.
+- **Scope and safety:** The rule is generic for ON/OFF Generic Thermostats,
+  preserves the normal safety gates, and does not directly toggle relays or
+  reference `climate.tatas`.
+- **Status semantics:** The release setpoint is an OFF command, not an active
+  Warm Floor pulse; the diagnostic therefore remains `idle` during this path.
+
 This file is the project decision log and working memory for future changes.
 Before making a design decision, debugging change, configuration change, or
 code change for this project, read this file first. After every change, add a

@@ -1001,9 +1001,27 @@ def apply_warm_floor_floor(
             and bt.hvac_action == HVACAction.IDLE
             and isinstance(cur_temp, (int, float))
             and cur_temp >= target_temp
-            and result > target_temp
+            and result >= target_temp
         ):
-            result = target_temp
+            # Generic Thermostat keeps its previous heating action when the
+            # target is exactly equal to the measured temperature, especially
+            # with zero hot tolerance.  Release one valid device step below
+            # the room target so the downstream relay has an unambiguous OFF
+            # condition.  This changes only the downstream actuator command;
+            # the Better Thermostat user target and preset remain unchanged.
+            release_step = getattr(trv_state, "target_temp_step", None)
+            if not isinstance(release_step, (int, float)) or release_step <= 0:
+                release_step = getattr(bt, "bt_target_temp_step", None)
+            if not isinstance(release_step, (int, float)) or release_step <= 0:
+                release_step = 0.5
+            min_temp = convert_to_float(
+                trv_state.min_temp,
+                getattr(bt, "device_name", None),
+                "warm_floor release",
+            )
+            result = target_temp - float(release_step)
+            if isinstance(min_temp, (int, float)):
+                result = max(result, float(min_temp))
             duty_reason = "idle_release"
         if duty_reason == "duty_cycle_on":
             sustain_push_c = round(result - float(bt.bt_target_temp), 3)
@@ -1071,7 +1089,7 @@ def apply_warm_floor_floor(
         entity_id,
         active=(
             duty_reason == "duty_cycle_on"
-            or result != computed_value
+            or (duty_reason != "idle_release" and result != computed_value)
             or _has_active_valve_balance(trv_state)
         ),
         sustaining_setpoint=sustaining_setpoint,

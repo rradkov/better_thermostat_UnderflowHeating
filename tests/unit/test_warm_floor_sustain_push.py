@@ -139,7 +139,7 @@ def test_generic_idle_releases_stale_downstream_setpoint():
 
     result = apply_warm_floor_floor(bt, "climate.trv", 26.0, is_offset=False)
 
-    assert result == 22.0
+    assert result == 21.5
     assert bt._warm_floor_status["reason"] == "idle_release"
 
 
@@ -254,7 +254,7 @@ def test_generic_thermostat_releases_the_setpoint_outside_the_on_window(monkeypa
 
     result = apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
 
-    assert result == 22.0
+    assert result == 21.5
     assert bt._warm_floor_status["active"] is False
 
 
@@ -278,7 +278,7 @@ def test_generic_thermostat_does_not_heat_a_room_above_the_safe_band(monkeypatch
 
     result = apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
 
-    assert result == 22.0
+    assert result == 21.5
     assert bt._warm_floor_status["active"] is False
 
 
