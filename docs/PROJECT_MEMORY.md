@@ -1027,3 +1027,17 @@ for all supported Home Assistant installations.
   imports POSIX-only `fcntl` and disabling it leaves no async test plugin.
 - **Follow-up:** Deploy to DEV and verify Master status ages remain below the
   one-minute tick interval after reload, then observe a complete ON/OFF cycle.
+
+### 2026-10-13 — DEV verification of early Warm Floor tick registration
+
+- **Deployment:** DEV commit `e4a658d` was installed through HACS and all seven
+  Better Thermostat entries were reloaded successfully.
+- **Live result:** Master status initially reported `outside_duty_window` with
+  `status_age_s=3`; after a further 45-second observation it continued to
+  refresh with a new timestamp and `status_age_s=30`. This confirms the tick
+  continues after reload instead of stopping after the initial control cycle.
+- **Current decision:** Master relay `switch.tasmota_7` remained OFF because
+  the current valid duty phase was OFF. The room was above its target, the
+  contact was closed, and no safety block was reported.
+- **Scope:** No target, preset, or relay was changed manually. No release was
+  created, and `climate.tatas` was not queried or changed.
