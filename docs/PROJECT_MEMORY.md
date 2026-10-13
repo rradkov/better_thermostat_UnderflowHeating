@@ -963,3 +963,14 @@ for all supported Home Assistant installations.
   `home`). `climate.tatas` was not touched.
 - **Operational note:** HACS may still display historical production metadata,
   but only the DEV repository is installed. No release was created.
+
+### 2026-10-13 — Clarify pump attribution in live verification
+
+- **Correction:** R7 (`switch.dingtian_relay47253_r7`) is controlled by the
+  home's floor-heating/pump automation, not directly by Better Thermostat.
+  The earlier live report correctly observed R2/R3 and R7 on together, but its
+  wording incorrectly implied that BT had switched R7.
+- **Attribution rule:** For Warm Floor verification, R2/R3 (or the relevant
+  zone actuators) demonstrate the BT/Generic Thermostat commands. R7 only
+  demonstrates that the independent pump automation followed the active zone
+  demand. Do not use R7 alone as proof of BT behavior.
