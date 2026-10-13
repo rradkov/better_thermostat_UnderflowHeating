@@ -347,6 +347,20 @@ Warm Floor requirements.
   Thermostat and physical relay, not only the aggregate status sensor.
 - **Scope:** The unrelated `climate.tatas` fan-coil remains excluded.
 
+### 2026-10-13 — Created separate public DEV repository
+
+- **Changed:** Created `rradkov/better_thermostat_UnderflowHeating-dev` as the
+  development repository and copied the current production `main` into it.
+- **Why:** Changes need a controlled place for implementation, tests, and Home
+  Assistant validation before they are proposed to production `main`.
+- **Workflow:** Feature branches and review happen in DEV first; production
+  changes move through a pull request from DEV `main` to production `main`.
+  Releases are created only from production `main` and must include human-readable
+  change and verification information.
+- **Scope:** The repository remains generic for all supported users. It does not
+  encode Tino/Tata entity names or installation-specific behavior; `climate.tatas`
+  remains explicitly out of Warm Floor scope.
+
 ## Open items
 
 - After deploying the fix, verify one overnight cycle using the histories of
