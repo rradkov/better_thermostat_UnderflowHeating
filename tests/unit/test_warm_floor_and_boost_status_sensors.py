@@ -136,6 +136,38 @@ def test_idle_status_reads_idle():
     assert sensor._attr_native_value == "idle"
 
 
+def test_multi_heater_status_exposes_all_heaters():
+    """A grouped thermostat must not hide the status of later heaters."""
+    bt = _make_bt_climate(
+        _warm_floor_statuses={
+            "climate.ufh_living_room": {
+                "active": True,
+                "entity_id": "climate.ufh_living_room",
+                "updated_at": "2026-10-13T08:00:00+00:00",
+            },
+            "climate.ufh_bathroom": {
+                "active": False,
+                "entity_id": "climate.ufh_bathroom",
+                "reason": "outside_duty_window",
+                "updated_at": "2026-10-13T08:00:01+00:00",
+            },
+        }
+    )
+    sensor = BetterThermostatWarmFloorStatusSensor(bt)
+    sensor._update_state()
+
+    attrs = sensor._attr_extra_state_attributes
+    assert sensor._attr_native_value == "active"
+    assert attrs["heater_count"] == 2
+    assert set(attrs["warm_floor_heaters"]) == {
+        "climate.ufh_living_room",
+        "climate.ufh_bathroom",
+    }
+    assert attrs["warm_floor_heaters"]["climate.ufh_bathroom"]["reason"] == (
+        "outside_duty_window"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Boost status sensor
 # ---------------------------------------------------------------------------
