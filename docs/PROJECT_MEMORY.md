@@ -6,6 +6,20 @@ code change for this project, read this file first. After every change, add a
 dated entry describing what changed, why it changed, and any important
 follow-up.
 
+### 2026-10-13 — Feed per-heater MPC feedback into Generic Warm Floor pulses
+
+- **Change:** Generic Thermostat Warm Floor demand now also considers trained
+  per-heater MPC `loss_est` and `gain_est` when the heater uses an MPC
+  calibration mode. Existing live target error, temperature slope,
+  instance-level heat loss, and heating power inputs remain in the demand
+  calculation.
+- **Why:** The pulse controller should use the most specific valid thermal
+  diagnostics available, while safely ignoring missing or invalid learned
+  values. It must not feed derived status fields back into the controller.
+- **Scope:** Generic, capability-based behavior for all supported MPC-backed
+  heaters; no installation-specific entities and no changes to
+  `climate.tatas`.
+
 ### 2026-10-13 — Make Warm Floor status describe the current actuator phase
 
 - **Incident:** Tino reported `Warm Floor = active` while its Generic

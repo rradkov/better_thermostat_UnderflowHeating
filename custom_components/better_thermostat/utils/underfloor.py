@@ -665,7 +665,11 @@ def _warm_floor_duty_profile(trv_state) -> tuple[int, int, float]:
     )
 
 
-def _warm_floor_demand_factor(bt) -> float:
+def _warm_floor_demand_factor(
+    bt,
+    entity_id: str | None = None,
+    calibration_mode: CalibrationMode | None = None,
+) -> float:
     """Estimate current slab-heating demand from live controller telemetry.
 
     The selected Warm Floor level remains the baseline. This factor makes all
@@ -691,6 +695,30 @@ def _warm_floor_demand_factor(bt) -> float:
         if float(heat_loss) > 0.0 and float(heating_power) > 0.0:
             load_ratio = float(heat_loss) / float(heating_power)
             demand = max(demand, _clamp((load_ratio - 0.5) / 0.5, 0.0, 1.0))
+
+    # MPC keeps a per-heater estimate that is more specific than the
+    # instance-level fallback above. Use it for the Generic Thermostat pulse
+    # when available, so the duty cycle follows the same learned plant data as
+    # the structural Warm Floor floor. Missing or invalid estimates remain a
+    # no-op for non-MPC and not-yet-trained installations.
+    if (
+        entity_id is not None
+        and calibration_mode
+        in (CalibrationMode.MPC_CALIBRATION, CalibrationMode.MPC_V2_CALIBRATION)
+    ):
+        mpc_state = _get_mpc_state(bt, entity_id)
+        mpc_loss = getattr(mpc_state, "loss_est", None) if mpc_state else None
+        mpc_power = getattr(mpc_state, "gain_est", None) if mpc_state else None
+        if (
+            isinstance(mpc_loss, (int, float))
+            and isinstance(mpc_power, (int, float))
+            and float(mpc_loss) > 0.0
+            and float(mpc_power) > 0.0
+        ):
+            mpc_load_ratio = float(mpc_loss) / float(mpc_power)
+            demand = max(
+                demand, _clamp((mpc_load_ratio - 0.5) / 0.5, 0.0, 1.0)
+            )
     return _clamp(demand, 0.0, 1.0)
 
 
@@ -867,7 +895,7 @@ def apply_warm_floor_floor(
     if isinstance(temp_slope, (int, float)) and temp_slope < -UNDERSHOOT_SLOPE_GUARD:
         structural_scale = WARM_FLOOR_MIN_BACKOFF_RATIO
 
-    demand_factor = _warm_floor_demand_factor(bt)
+    demand_factor = _warm_floor_demand_factor(bt, entity_id, calibration_mode)
     if demand_factor > 0.0:
         structural_scale = max(
             WARM_FLOOR_MIN_BACKOFF_RATIO,

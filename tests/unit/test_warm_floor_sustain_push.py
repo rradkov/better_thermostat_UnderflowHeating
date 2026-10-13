@@ -319,6 +319,23 @@ def test_generic_duty_profile_adapts_to_falling_temperature():
     assert falling_profile[1] > stable_profile[1]
 
 
+def test_generic_duty_demand_uses_per_heater_mpc_feedback(monkeypatch):
+    """A trained MPC load ratio must influence the Generic pulse demand."""
+    bt = _make_bt()
+    bt.heat_loss_rate = 0.0
+    bt.heating_power = 1.0
+    mpc_state = MagicMock(loss_est=0.9, gain_est=0.9)
+    monkeypatch.setattr(underfloor, "_get_mpc_state", lambda *_: mpc_state)
+
+    demand = underfloor._warm_floor_demand_factor(
+        bt,
+        "climate.trv",
+        CalibrationMode.MPC_V2_CALIBRATION,
+    )
+
+    assert demand == 0.8
+
+
 def test_generic_duty_profile_respects_slow_actuator_travel_time():
     """A pulse must allow both opening and closing of a thermal actuator."""
     for level in underfloor.WARM_FLOOR_DUTY_PROFILES:
