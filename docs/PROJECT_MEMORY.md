@@ -109,6 +109,19 @@
   compilation, and diff validation passed before deployment. The behavior is
   generic and does not reference or modify `climate.tatas`.
 
+### 2026-10-13 — Verified above-target Warm Floor pulse in HA
+
+- **Deployment:** HACS installed DEV commit `f741669` and Home Assistant was
+  restarted successfully.
+- **Live result:** Office/Guest room entered `duty_cycle_on` with room
+  temperature `23.2°C` and user target `22.0°C`; its Warm Floor status became
+  `active` and physical relay `switch.tasmota_5` became `on`. This confirms
+  the new above-target path produces a real Generic Thermostat pulse.
+- **Other zones:** Tino remained in the intentional `idle_release` path,
+  Kitchen/Living were in their duty OFF phases, and Bathroom FL2 was handling
+  ordinary below-target room demand. These are not failures of the new
+  above-target eligibility rule.
+
 This file is the project decision log and working memory for future changes.
 Before making a design decision, debugging change, configuration change, or
 code change for this project, read this file first. After every change, add a
