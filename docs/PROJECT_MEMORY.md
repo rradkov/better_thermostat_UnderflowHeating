@@ -991,3 +991,18 @@ for all supported Home Assistant installations.
 - **Verification:** Warm Floor status tests pass (13/13), source compilation
   and `git diff --check` pass. Deployment to the DEV HA instance is still
   required before live verification.
+
+### 2026-10-13 — DEV deployment verification for commit `5666d4f`
+
+- **Deployment:** DEV commit `5666d4f` was pushed and installed through HACS.
+  All seven Better Thermostat config entries were reloaded successfully;
+  production was not installed or touched.
+- **Live result:** Every Warm Floor status entity refreshed after reload with
+  `status_age_s` approximately 0–3 seconds. This confirms the installed
+  integration is actively publishing fresh diagnostic snapshots rather than
+  retaining the earlier stale values.
+- **Safety check:** No room target, preset, or relay was changed by the
+  deployment verification. `climate.tatas` was not queried or changed.
+- **Follow-up:** Kitchen/Dining currently exposes only one heater in its
+  multi-heater Warm Floor attribute despite both child climates being present;
+  this is a separate multi-heater status issue to investigate.
