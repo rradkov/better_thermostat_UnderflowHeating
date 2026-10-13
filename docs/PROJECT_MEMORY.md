@@ -940,3 +940,26 @@ for all supported Home Assistant installations.
 - **Verification:** Focused Warm Floor tests remain 32/32 passing after adding
   deterministic phase assertions. A follow-up DEV commit and HA deployment
   are required before treating the live fix as verified.
+
+### 2026-10-13 — DEV deployment and multi-heater live verification
+
+- **Deployment:** DEV commit `9d2e125` was pushed and installed through HACS.
+  The production HACS entry `rradkov/better_thermostat_UnderflowHeating` was
+  removed from the HA installation because it used the same
+  `custom_components/better_thermostat` domain and could overwrite or race the
+  DEV files. DEV is now the single installed Better Thermostat source for this
+  test instance. The seven Better Thermostat config entries are loaded.
+- **Live result:** Tino at 22.0/22.0 is in a valid OFF decision with
+  `reason=idle_release` and `duty_phase=off`; its child Generic Thermostat is
+  holding 21.9°C and the relay is off. Kitchen/Dining later entered a valid ON
+  decision for both heaters: both `climate.dinning_room_thermostat` and
+  `climate.kitchen_thermostat` reported `reason=duty_cycle_on` and
+  `duty_phase=on`, while R2 and R3 and the shared floor pump R7 were physically
+  on. This verifies the multi-heater command path.
+- **Status result:** After the production/DEV collision was removed, the live
+  status correctly kept `idle_release` paired with `duty_phase=off` and
+  `duty_cycle_on` paired with `duty_phase=on`; no mixed diagnostic pair was
+  observed. User target/preset persistence remained intact (`Tino 22`,
+  `home`). `climate.tatas` was not touched.
+- **Operational note:** HACS may still display historical production metadata,
+  but only the DEV repository is installed. No release was created.
