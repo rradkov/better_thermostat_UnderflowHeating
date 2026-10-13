@@ -1291,15 +1291,17 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
             await self.control_queue_task.put(self)
 
     def _has_generic_warm_floor(self) -> bool:
-        """Return whether this instance needs a Warm Floor duty-cycle tick."""
+        """Return whether this instance needs a Warm Floor duty-cycle tick.
+
+        Warm Floor is a capability of the configured heater, not of the
+        adapter label. During startup/reload some adapters do not expose the
+        same integration string used in the config flow, while the normalized
+        ``heating_type`` remains authoritative.
+        """
         for trv in self.real_trvs.values():
-            integration = str(getattr(trv, "integration", "") or "").lower()
             raw_heating_type = (trv.advanced or {}).get(CONF_HEATING_TYPE)
             heating_type = getattr(raw_heating_type, "value", raw_heating_type)
-            if (
-                integration in {"generic", "generic_thermostat"}
-                and str(heating_type).lower() == HeatingType.UNDERFLOOR.value
-            ):
+            if str(heating_type).lower() == HeatingType.UNDERFLOOR.value:
                 return True
         return False
 

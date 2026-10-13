@@ -52,6 +52,24 @@
   preset. This verification is specific evidence for a generic capability
   path; no `climate.tatas` entity was used or changed.
 
+### 2026-10-13 — Register Warm Floor tick by heater capability
+
+- **Incident:** HA history showed no Warm Floor relay transitions for an hour.
+  Warm Floor status timestamps were stale even though the separate EMA timer
+  was still running.
+- **Root cause:** The one-minute control tick was gated by both the adapter
+  integration label and `heating_type=underfloor`. Adapter labels are not a
+  reliable capability contract during startup/reload, so the tick could be
+  skipped even when Warm Floor was configured and active.
+- **Change:** Periodic Warm Floor control is now enabled from the normalized
+  per-heater `heating_type` capability alone. This keeps the behavior generic
+  for all supported adapters and ensures duty-cycle decisions and diagnostic
+  timestamps are recalculated every minute.
+- **Verification target:** After deployment, each configured Warm Floor zone
+  must refresh its `updated_at/status_age_s` and the corresponding downstream
+  relay must receive ON pulses when its calculated duty window and safety
+  ceiling allow them.
+
 This file is the project decision log and working memory for future changes.
 Before making a design decision, debugging change, configuration change, or
 code change for this project, read this file first. After every change, add a

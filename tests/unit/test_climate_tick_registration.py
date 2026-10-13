@@ -17,6 +17,10 @@ from custom_components.better_thermostat.utils.const import (
     CONF_VALVE_MAINTENANCE,
     CalibrationMode,
 )
+from custom_components.better_thermostat.utils.underfloor import (
+    CONF_HEATING_TYPE,
+    HeatingType,
+)
 
 _CLIMATE = "custom_components.better_thermostat.climate"
 SENSOR_ID = "sensor.room_temp"
@@ -121,6 +125,27 @@ async def test_maintenance_tick_skipped_when_no_trv_enables_it():
     track_interval = await _run_finalize_startup(bt)
     callbacks = _registered_callbacks(track_interval, bt)
     assert bt._maintenance_tick not in callbacks
+
+
+@pytest.mark.asyncio
+async def test_warm_floor_tick_uses_heating_capability_not_adapter_label():
+    """An underfloor heater gets the tick even without an adapter label."""
+    bt = _make_bt(
+        {
+            "calibration_mode": CalibrationMode.NO_CALIBRATION.value,
+            CONF_HEATING_TYPE: HeatingType.UNDERFLOOR.value,
+        }
+    )
+    bt.real_trvs[TRV_ID].integration = None
+
+    track_interval = await _run_finalize_startup(bt)
+    callbacks = _registered_callbacks(track_interval, bt)
+
+    assert bt._trigger_time in callbacks
+    periodic_call = next(
+        call for call in track_interval.call_args_list if call.args[1].args[1] == "bt_periodic_tick"
+    )
+    assert periodic_call.args[2].total_seconds() == 60
 
 
 def _make_bt_for_binding(trv_confs):
