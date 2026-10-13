@@ -127,7 +127,7 @@ def test_generic_existing_above_target_result_is_active_during_on_window(monkeyp
     assert bt._warm_floor_status["reason"] == "duty_cycle_on"
 
 
-def test_generic_idle_releases_stale_downstream_setpoint():
+def test_generic_idle_releases_stale_downstream_setpoint(monkeypatch):
     """An idle Generic Thermostat must not keep heating from an old pulse."""
     bt = _make_bt(
         sustain_push=0.0,
@@ -136,6 +136,7 @@ def test_generic_idle_releases_stale_downstream_setpoint():
         warm_floor_level=WARM_FLOOR_LEVEL_CUSTOM,
     )
     bt.real_trvs["climate.trv"].integration = "generic_thermostat"
+    monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: False)
 
     result = apply_warm_floor_floor(bt, "climate.trv", 26.0, is_offset=False)
 
@@ -245,6 +246,8 @@ def test_generic_thermostat_gets_a_short_warm_floor_setpoint_pulse(monkeypatch):
 
     assert result == 22.5
     assert bt._warm_floor_status["control_method"] == "generic_duty_cycle"
+    assert bt._warm_floor_status["reason"] == "duty_cycle_on"
+    assert bt._warm_floor_status["duty_phase"] == "on"
 
 
 def test_generic_thermostat_releases_the_setpoint_outside_the_on_window(monkeypatch):
@@ -256,6 +259,8 @@ def test_generic_thermostat_releases_the_setpoint_outside_the_on_window(monkeypa
 
     assert result == 21.5
     assert bt._warm_floor_status["active"] is False
+    assert bt._warm_floor_status["reason"] == "idle_release"
+    assert bt._warm_floor_status["duty_phase"] == "off"
 
 
 def test_generic_duty_phase_edge_requests_a_write_once_per_transition(monkeypatch):

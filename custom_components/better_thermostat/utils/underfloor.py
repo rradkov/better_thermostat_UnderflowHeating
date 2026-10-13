@@ -552,13 +552,18 @@ def _record_status(
     duty_elapsed_s = None
     duty_remaining_s = None
     if effective_period_s and effective_on_s:
-        duty_elapsed_s = int(dt_util.utcnow().timestamp() % effective_period_s)
-        if duty_elapsed_s < effective_on_s:
+        if reason == "duty_cycle_on":
             duty_phase = "on"
-            duty_remaining_s = effective_on_s - duty_elapsed_s
-        else:
+        elif reason in {
+            "outside_duty_window",
+            "idle_release",
+            "temperature_rising",
+            "rising",
+        }:
             duty_phase = "off"
-            duty_remaining_s = effective_period_s - duty_elapsed_s
+        # The phase/reason pair must describe one control decision. The
+        # status entity shows status_age_s when the next periodic evaluation
+        # has not happened yet; it must not invent a newer wall-clock phase.
     hvac_action = getattr(bt, "hvac_action", None)
     if isinstance(hvac_action, HVACAction):
         hvac_action = hvac_action.value
@@ -1114,7 +1119,15 @@ def apply_warm_floor_floor(
         entity_id,
         active=(
             duty_reason == "duty_cycle_on"
-            or (duty_reason != "idle_release" and result != computed_value)
+            or (
+                duty_reason not in {
+                    "duty_cycle_on",
+                    "outside_duty_window",
+                    "idle_release",
+                    "rising",
+                }
+                and result != computed_value
+            )
             or _has_active_valve_balance(trv_state)
         ),
         sustaining_setpoint=sustaining_setpoint,

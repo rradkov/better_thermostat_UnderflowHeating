@@ -924,3 +924,19 @@ for all supported Home Assistant installations.
   and `git diff --check` passed. Deployment and live HA verification are the
   next required steps. This is generic capability-based logic; `climate.tatas`
   is excluded and no room-specific behavior was added.
+
+### 2026-10-13 — Keep Warm Floor diagnostic phase and reason atomic
+
+- **Follow-up finding during HA verification:** At a duty boundary, the live
+  Tino status could still combine `reason=idle_release` with
+  `duty_phase=on`. The first fix armed the correct command edge, but the
+  status writer independently recalculated the wall-clock phase after the
+  reason had already been selected.
+- **Change:** `_record_status()` now derives `duty_phase` from the same reason
+  used by the control decision (`duty_cycle_on` => ON; OFF/release/rising
+  reasons => OFF). Generic Warm Floor `active` is now false for an OFF-window
+  or release decision even if the structural floor value differs from the
+  ordinary computed value.
+- **Verification:** Focused Warm Floor tests remain 32/32 passing after adding
+  deterministic phase assertions. A follow-up DEV commit and HA deployment
+  are required before treating the live fix as verified.
