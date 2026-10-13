@@ -844,6 +844,11 @@ class BetterThermostatExternalTemp1hEMASensor(_BtSensorBase):
 
     def _update_state(self) -> None:
         """Update state from internal EMA."""
+        central_ema = getattr(self._bt_climate, "external_temp_ema_1h", None)
+        if isinstance(central_ema, (int, float)):
+            self._ema_value = float(central_ema)
+            self._attr_native_value = round(self._ema_value, 2)
+            return
         val = _get_filtered_temp(self._bt_climate)
         if val is not None:
             try:

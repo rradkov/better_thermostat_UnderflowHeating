@@ -941,6 +941,8 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         self.external_temp_ema_tau_s = 300.0
         self.external_temp_ema = None
         self._external_temp_ema_ts = None
+        self.external_temp_ema_1h = None
+        self._external_temp_ema_1h_ts = None
         self.cur_temp_filtered = None
         # Unified state persistence (replaces per-controller stores)
         self.state_mgr: StateManager | None = None
@@ -1841,9 +1843,13 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         if self.cur_temp is not None:
             self.last_known_external_temp = self.cur_temp
             try:
-                from .events.temperature import _update_external_temp_ema
+                from .events.temperature import (
+                    _update_external_temp_ema,
+                    _update_external_temp_ema_1h,
+                )
 
                 _update_external_temp_ema(self, float(self.cur_temp))
+                _update_external_temp_ema_1h(self, float(self.cur_temp))
                 _LOGGER.debug(
                     "better_thermostat %s: initialized external_temp_ema at startup with %.2f",
                     self.device_name,
@@ -1914,6 +1920,14 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
                         self.device_name,
                         _restored_ema,
                     )
+                except ValueError, TypeError:
+                    pass
+            if "external_temp_ema_1h" in old_state.attributes:
+                try:
+                    self.external_temp_ema_1h = float(
+                        old_state.attributes["external_temp_ema_1h"]
+                    )
+                    self._external_temp_ema_1h_ts = monotonic()
                 except ValueError, TypeError:
                     pass
 
@@ -3330,6 +3344,7 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
             ATTR_STATE_ERRORS: json.dumps(self.devices_errors),
             ATTR_STATE_BATTERIES: json.dumps(self.devices_states),
             "external_temp_ema": self.cur_temp_filtered,
+            "external_temp_ema_1h": self.external_temp_ema_1h,
             # Degraded mode: thermostat running with some sensors unavailable
             "degraded_mode": self.degraded_mode,
             "unavailable_sensors": self.unavailable_sensors,
@@ -4608,7 +4623,10 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         if self.startup_running:
             return
 
-        from .events.temperature import _update_external_temp_ema
+        from .events.temperature import (
+            _update_external_temp_ema,
+            _update_external_temp_ema_1h,
+        )
 
         _LOGGER.debug(
             "better_thermostat %s: _async_update_ema_periodic triggered",
@@ -4630,6 +4648,7 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
                 now_ts = monotonic()
 
                 new_ema = _update_external_temp_ema(self, float(last_raw))
+                _update_external_temp_ema_1h(self, float(last_raw))
 
                 if old_ema is not None and old_ts is not None:
                     dt_min = (now_ts - old_ts) / 60.0

@@ -687,6 +687,23 @@ def _warm_floor_demand_factor(
             _clamp(abs(float(slope)) / UNDERSHOOT_SLOPE_GUARD, 0.0, 1.0),
         )
 
+    # The short EMA reacts to the current room movement; the one-hour EMA
+    # provides the slower baseline. Their separation catches sustained
+    # warming/cooling even when the instantaneous slope is flat or noisy.
+    short_ema = getattr(bt, "cur_temp_filtered", None)
+    if not isinstance(short_ema, (int, float)):
+        short_ema = getattr(bt, "external_temp_ema", None)
+    long_ema = getattr(bt, "external_temp_ema_1h", None)
+    if isinstance(short_ema, (int, float)) and isinstance(long_ema, (int, float)):
+        ema_delta = float(short_ema) - float(long_ema)
+        if ema_delta < 0.0:
+            demand = max(demand, _clamp(abs(ema_delta) / 0.5, 0.0, 1.0))
+        elif ema_delta > 0.0:
+            # A warmer short EMA indicates solar/residual warming. Reduce an
+            # already-demanding maintenance cycle, but keep the baseline
+            # selected by Eco/Balanced/Keep it Hot available.
+            demand *= _clamp(0.5 / ema_delta, WARM_FLOOR_MIN_RISING_DUTY_RATIO, 1.0)
+
     heat_loss = getattr(bt, "heat_loss_rate", None)
     heating_power = getattr(bt, "heating_power", None)
     if isinstance(heat_loss, (int, float)) and isinstance(heating_power, (int, float)):

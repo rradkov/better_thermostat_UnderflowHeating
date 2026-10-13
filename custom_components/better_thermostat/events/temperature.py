@@ -85,6 +85,25 @@ def _update_external_temp_ema(self, temp_q: float) -> float:
     return float(ema)
 
 
+def _update_external_temp_ema_1h(self, temp_q: float) -> float:
+    """Update the long-term one-hour EMA used by thermal controllers."""
+    tau_s = 3600.0
+    now_m = monotonic()
+    prev_ts = getattr(self, "_external_temp_ema_1h_ts", None)
+    prev_ema = getattr(self, "external_temp_ema_1h", None)
+
+    if prev_ts is None or prev_ema is None:
+        ema = float(temp_q)
+    else:
+        dt_s = max(0.0, float(now_m) - float(prev_ts))
+        alpha = 1.0 - math.exp(-dt_s / tau_s) if dt_s > 0 else 0.0
+        ema = float(prev_ema) + alpha * (float(temp_q) - float(prev_ema))
+
+    self._external_temp_ema_1h_ts = now_m
+    self.external_temp_ema_1h = float(ema)
+    return float(ema)
+
+
 # Every external-temperature write happens under the filter lock, so one
 # device that never answers would otherwise hold back every later reading and
 # keepalive tick. A write that outlasts this bound counts as refused; the
@@ -478,6 +497,7 @@ async def _commit_temperature_update(self, new_temp):
     # Update EMA (useful if called from timer after delay)
     try:
         _update_external_temp_ema(self, float(new_temp_q))
+        _update_external_temp_ema_1h(self, float(new_temp_q))
     except Exception as exc:
         _LOGGER.debug(
             "better_thermostat %s: EMA update failed (non-critical): %s",

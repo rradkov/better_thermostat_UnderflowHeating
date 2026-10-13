@@ -384,6 +384,26 @@ def test_warm_floor_demand_ignores_below_target_room_error():
     assert below_demand == at_demand == 0.0
 
 
+def test_warm_floor_demand_uses_short_and_one_hour_ema_separation():
+    cooling = _make_bt(cur_temp=22.0, target_temp=22.0)
+    cooling.heat_loss_rate = 0.0
+    cooling.heating_power = 0.0
+    cooling.cur_temp_filtered = 21.5
+    cooling.external_temp_ema_1h = 22.0
+
+    warming = _make_bt(cur_temp=22.0, target_temp=22.0)
+    warming.heat_loss_rate = 0.0
+    warming.heating_power = 0.0
+    warming.cur_temp_filtered = 22.5
+    warming.external_temp_ema_1h = 22.0
+
+    cooling_demand = underfloor._warm_floor_demand_factor(cooling)
+    warming_demand = underfloor._warm_floor_demand_factor(warming)
+
+    assert cooling_demand == 1.0
+    assert warming_demand == 0.0
+
+
 def test_generic_duty_demand_uses_per_heater_mpc_feedback(monkeypatch):
     """A trained MPC load ratio must influence the Generic pulse demand."""
     bt = _make_bt()

@@ -6,6 +6,28 @@ code change for this project, read this file first. After every change, add a
 dated entry describing what changed, why it changed, and any important
 follow-up.
 
+### 2026-10-13 — Use short and one-hour EMA in Warm Floor demand
+
+- **Change:** The central Better Thermostat climate state now maintains both
+  the responsive short temperature EMA and a persistent one-hour EMA. The
+  one-hour EMA sensor reads this central value instead of maintaining a second
+  live calculation; its local calculation remains only as a compatibility
+  fallback for lightweight test doubles.
+- **Control rule:** Warm Floor compares the short EMA with the one-hour EMA.
+  If the short EMA is below the long-term baseline, the room is cooling and
+  maintenance demand is increased. If it is above the baseline, solar or
+  residual heat is likely warming the room and existing maintenance demand is
+  reduced, while the selected Eco/Balanced/Keep it Hot baseline and safety
+  limits remain in force.
+- **Why:** `temp_slope` can be flat or noisy when the source sensor updates
+  infrequently. The EMA separation adds a generic sustained-trend signal using
+  telemetry already maintained by Better Thermostat, without special-casing
+  Tino or touching `climate.tatas`.
+- **Verification:** Added regression coverage for cooling and warming EMA
+  separation. Full sensor test execution still requires the repository's
+  async pytest plugin environment; the synchronous tests and focused Warm
+  Floor tests must pass locally.
+
 ### 2026-10-13 — Warm Floor must sustain above the room target
 
 - **Required behavior:** Warm Floor is intended to keep the underfloor emitter
