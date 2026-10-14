@@ -1,5 +1,21 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-14 — DEV deployment of actuator-phase latching fix
+
+- **Deployment:** DEV commit `851d3f9` was installed through HACS and Home
+  Assistant was restarted so the new Warm Floor code was loaded.
+- **Verification:** HACS reports `installed_version=available_version=851d3f9`
+  with no pending update. After restart, Warm Floor status records exposed the
+  new `actuator_phase`, `actuator_guard`, `phase_recovered`, and minimum-travel
+  diagnostics. Status ages continued refreshing after the restart.
+- **Live result:** Kitchen/Dining entered `duty_cycle_on` with both child
+  heaters in the ON actuator phase; physical relays R2 and R3 were ON and the
+  independent R7 pump automation was ON. Office/Guest was in a valid OFF duty
+  window with its actuator phase held OFF after recovery.
+- **Scope:** No target, preset, manual relay, or configuration was changed by
+  the deployment. `climate.tatas` was not queried or changed. No release was
+  created.
+
 ### 2026-10-13 — Force one downstream setpoint write after recovery
 
 - **Follow-up to:** The unavailable-to-available recovery cycle fix.
