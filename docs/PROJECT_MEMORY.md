@@ -1,5 +1,26 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-14 — Auto bootstrap should start conservatively near target
+
+- **Design refinement:** When the room is only slightly above the Better
+  Thermostat target and Auto has no confirmed recent warming trend, start the
+  Warm Floor baseline at `Keep it Hot`. This protects the slab during the
+  uncertain transition around the target instead of assuming that a low
+  short-term demand is already safe.
+- **Adaptive downgrade:** After a minimum dwell/observation period, move down
+  to `Balanced` when the short EMA remains above the one-hour EMA and the
+  temperature slope is consistently positive. Move further to `Eco` only when
+  warming is sustained or strong solar/residual warming is confirmed.
+- **Recovery:** Stay at `Keep it Hot` when the room is flat/cooling, the
+  one-hour EMA is falling relative to target, heat loss is high, or the
+  heating response is weak. Use hysteresis and minimum dwell times so the
+  policy does not chatter between levels.
+- **Boundary:** This policy selects maintenance intensity only. Warm Floor
+  still sends no command at or below target; the strict
+  `current_temperature > target_temperature` guard remains authoritative.
+- **Status:** Design recorded for discussion and later implementation. No HA
+  configuration, code behavior, target, preset, or relay was changed.
+
 ### 2026-10-14 — Set all reference BT Warm Floor configurations to Auto
 
 - **Change:** Updated the Warm Floor level to `auto` for all seven configured
