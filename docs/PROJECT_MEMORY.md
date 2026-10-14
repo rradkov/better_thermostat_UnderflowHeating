@@ -1,5 +1,23 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-14 — Use EMA separation as an Auto transition trigger
+
+- **Signal:** Auto should explicitly use the separation between the short
+  temperature EMA and the one-hour EMA as a transition signal, not merely as a
+  hidden intensity correction.
+- **Interpretation:** `short EMA > EMA 1h` means the room has recently been
+  warmer than its slower baseline and is a warming/residual-solar candidate;
+  after persistence and a positive slope, it can move from `Keep it Hot` to
+  `Balanced`, then `Eco`. `short EMA < EMA 1h` means recent cooling relative to
+  the baseline and should keep or restore `Keep it Hot`.
+- **Guardrails:** EMA separation alone must not change policy on a single
+  noisy sample. Require a persistence window, a minimum separation, current
+  temperature above target, and hysteresis between up/down transitions.
+- **Tino interpretation:** The observed short EMA around 22.02°C versus EMA
+  1h around 21.75°C is a warming signal, not a reason to select Keep it Hot.
+- **Status:** Design refinement only; no runtime behavior or HA configuration
+  was changed in this step.
+
 ### 2026-10-14 — Auto bootstrap should start conservatively near target
 
 - **Design refinement:** When the room is only slightly above the Better
