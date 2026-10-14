@@ -538,6 +538,39 @@ def test_warm_floor_demand_uses_short_and_one_hour_ema_separation():
     assert warming_demand == 0.0
 
 
+def test_warm_floor_predicts_preheat_before_target_crossing():
+    approaching = _make_bt(cur_temp=22.1, target_temp=22.0)
+    approaching.temp_slope = -0.02
+    approaching.cur_temp_filtered = 22.05
+    approaching.external_temp_ema_1h = 22.2
+    approaching.heat_loss_rate = 0.03
+    approaching.heating_power = 0.0
+
+    warming = _make_bt(cur_temp=22.1, target_temp=22.0)
+    warming.temp_slope = 0.02
+    warming.cur_temp_filtered = 22.2
+    warming.external_temp_ema_1h = 22.0
+    warming.heat_loss_rate = 0.0
+    warming.heating_power = 1.0
+
+    approaching_demand = underfloor._warm_floor_demand_factor(approaching)
+    warming_demand = underfloor._warm_floor_demand_factor(warming)
+
+    assert approaching_demand > warming_demand
+    assert approaching._warm_floor_preheat_risk > 0.0
+    assert warming._warm_floor_preheat_risk == 0.0
+
+
+def test_warm_floor_preheat_risk_is_zero_at_or_below_target():
+    for current in (21.9, 22.0):
+        bt = _make_bt(cur_temp=current, target_temp=22.0)
+        bt.temp_slope = -0.02
+        bt.cur_temp_filtered = current
+        bt.external_temp_ema_1h = current + 0.2
+
+        assert underfloor._warm_floor_preheat_risk(bt) == 0.0
+
+
 def test_generic_duty_demand_uses_per_heater_mpc_feedback(monkeypatch):
     """A trained MPC load ratio must influence the Generic pulse demand."""
     bt = _make_bt()

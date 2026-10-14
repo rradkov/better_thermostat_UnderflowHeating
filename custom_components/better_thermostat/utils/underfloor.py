@@ -625,6 +625,7 @@ def _record_status(
         "hvac_action": hvac_action,
         "valve_min_pct": valve_min_pct,
         "demand_factor": demand_factor,
+        "preheat_risk": getattr(bt, "_warm_floor_preheat_risk", None),
         "outdoor_temp_c": getattr(bt, "_warm_floor_outdoor_temp_c", None),
         "outdoor_temp_source": getattr(bt, "_warm_floor_outdoor_source", None),
         "flow_temp_c": getattr(bt, "_warm_floor_flow_temp_c", None),
@@ -1059,7 +1060,103 @@ def _warm_floor_demand_factor(
             demand = max(
                 demand, _clamp((mpc_load_ratio - 0.5) / 0.5, 0.0, 1.0)
             )
-    return _clamp(demand, 0.0, 1.0)
+    # A predictive maintenance signal lets Warm Floor act before normal
+    # heating has to start, but only while the room is still above target.
+    # It is deliberately derived from relative trend/thermal evidence rather
+    # than a fixed temperature threshold.  The caller still enforces the hard
+    # current_temperature > target_temperature boundary.
+    preheat_risk = _warm_floor_preheat_risk(bt)
+    bt._warm_floor_preheat_risk = preheat_risk
+    return _clamp(max(demand, preheat_risk), 0.0, 1.0)
+
+
+def _warm_floor_preheat_risk(bt) -> float:
+    """Estimate imminent normal-heating risk from relative diagnostics.
+
+    This is not a second heating controller and does not use a fixed room
+    temperature threshold.  It compares the remaining above-target margin with
+    the measured/learned cooling trend.  EMA-1h is converted to a rate using
+    its own one-hour meaning; heat-loss, delivered power, and MPC disturbance
+    provide additional confirmation when available.
+    """
+    current = getattr(bt, "cur_temp", None)
+    target = getattr(bt, "bt_target_temp", None)
+    if not isinstance(current, (int, float)) or not isinstance(target, (int, float)):
+        return 0.0
+    margin = float(current) - float(target)
+    if margin <= 0.0:
+        return 0.0
+
+    short_ema = getattr(bt, "cur_temp_filtered", None)
+    if not isinstance(short_ema, (int, float)):
+        short_ema = getattr(bt, "external_temp_ema", None)
+    long_ema = getattr(bt, "external_temp_ema_1h", None)
+    ema_delta = (
+        float(short_ema) - float(long_ema)
+        if isinstance(short_ema, (int, float))
+        and isinstance(long_ema, (int, float))
+        else None
+    )
+    slope = getattr(bt, "temp_slope", None)
+    slope = float(slope) if isinstance(slope, (int, float)) else None
+
+    # Build a cooling-rate estimate only from signals that point toward the
+    # target. EMA-1h is explicitly a one-hour baseline, so its separation is
+    # converted to the same per-minute unit as temp_slope.
+    cooling_rates: list[float] = []
+    if slope is not None and slope < 0.0:
+        cooling_rates.append(abs(slope))
+    if ema_delta is not None and ema_delta < 0.0:
+        cooling_rates.append(abs(ema_delta) / 60.0)
+
+    heat_loss = getattr(bt, "heat_loss_rate", None)
+    heating_power = getattr(bt, "heating_power", None)
+    if (
+        isinstance(heat_loss, (int, float))
+        and isinstance(heating_power, (int, float))
+        and float(heat_loss) > float(heating_power)
+    ):
+        cooling_rates.append(float(heat_loss) - float(heating_power))
+
+    mpc_disturbance = getattr(bt, "mpc_v2_D_hat_K_per_min", None)
+    if isinstance(mpc_disturbance, (int, float)) and float(mpc_disturbance) > 0.0:
+        cooling_rates.append(float(mpc_disturbance))
+
+    if not cooling_rates:
+        return 0.0
+
+    cooling_rate = max(cooling_rates)
+    # Compare the expected trend over the EMA horizon with the remaining
+    # margin. This is a relative proximity score, not a Celsius threshold.
+    trend_margin = cooling_rate * 60.0
+    proximity = trend_margin / (trend_margin + margin)
+
+    evidence = 0.0
+    if slope is not None and slope < 0.0:
+        evidence = max(evidence, _clamp(abs(slope) / cooling_rate, 0.0, 1.0))
+    if ema_delta is not None and ema_delta < 0.0:
+        evidence = max(
+            evidence,
+            _clamp((abs(ema_delta) / 60.0) / cooling_rate, 0.0, 1.0),
+        )
+    if (
+        isinstance(heat_loss, (int, float))
+        and isinstance(heating_power, (int, float))
+        and float(heat_loss) > float(heating_power)
+    ):
+        evidence = max(
+            evidence,
+            _clamp(
+                (float(heat_loss) - float(heating_power)) / cooling_rate,
+                0.0,
+                1.0,
+            ),
+        )
+    if isinstance(mpc_disturbance, (int, float)) and float(mpc_disturbance) > 0.0:
+        evidence = max(
+            evidence, _clamp(float(mpc_disturbance) / cooling_rate, 0.0, 1.0)
+        )
+    return _clamp(proximity * evidence, 0.0, 1.0)
 
 
 def _warm_floor_rising_factor(bt) -> float:

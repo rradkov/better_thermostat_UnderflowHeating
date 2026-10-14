@@ -1,5 +1,143 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-14 — Warm Floor control objective: target-centered room with zero slope
+
+- **Requirement clarified:** The primary Warm Floor objective is not to keep the
+  room substantially above the Better Thermostat target. It should keep the
+  floor warm while bringing the room toward a narrow band around the target.
+- **Control target:** While the room is above target and Warm Floor is allowed,
+  the controller should reduce positive temperature excess and aim for a
+  `temp_slope` close to `0`, rather than continuously adding heat because the
+  room is already more than approximately 1°C above target.
+- **Boundary:** The existing strict rule remains authoritative: Warm Floor may
+  issue no command when `current_temperature <= target_temperature`; normal
+  heating owns that region. The maintenance controller must therefore operate
+  only in the above-target band and must not fight normal heating.
+- **Proposed behavior:** A large above-target margin with a positive slope
+  should progressively reduce or suspend maintenance intensity, while a room
+  near target with a flat or cooling trend should receive the minimum valid
+  actuator pulse needed to keep the floor warm. The four-minute actuator travel
+  minimum remains mandatory.
+- **Auto interaction:** Auto/Eco/Balanced/Keep it Hot should select the
+  maintenance intensity, but the temperature margin and slope must remain the
+  stronger safety feedback. A mode label must not justify heating a room that
+  is already materially above target.
+- **Status:** Design requirement recorded; runtime implementation and HA
+  configuration are unchanged in this step.
+
+### 2026-10-14 — Normal heating owns the at/below-target region
+
+- **Explicit boundary:** If `current_temperature <= target_temperature`,
+  normal Better Thermostat heating owns the zone. Warm Floor must not issue a
+  maintenance command there, regardless of whether Auto would otherwise prefer
+  Balanced or Keep it Hot.
+- **Meaning of Auto levels:** Eco, Balanced, and Keep it Hot are only relevant
+  while the room is strictly above target and Warm Floor is permitted to run.
+  Keep it Hot means stronger above-target maintenance to prevent the room from
+  reaching the target from above; it never means that Warm Floor replaces the
+  normal heating demand below target.
+- **Status:** Clarification recorded; no runtime implementation or HA change
+  was made in this step.
+
+### 2026-10-14 — Predictive Warm Floor maintenance near target
+
+- **Goal:** Warm Floor should keep the room very close to the configured target
+  while it is still strictly above target, reducing unnecessary crossings into
+  the normal-heating region.
+- **Decision inputs:** The decision must combine the complete available
+  diagnostic picture: current temperature margin, short EMA, one-hour EMA,
+  temperature slope, heat-loss rate, heating power, normalized response,
+  outdoor temperature, configured flow/water temperature, and learned MPC
+  signals when available. Current room temperature and measured trend remain
+  authoritative; the other signals qualify or bias the decision and must not
+  override the target boundary.
+- **Predictive behavior:** When the room is above target but the filtered trend
+  predicts that it will reach target soon, Warm Floor should increase
+  maintenance early enough to avoid normal heating starting. When the room is
+  materially above target and still warming, it should reduce or defer new
+  pulses. Near target, a flat trend uses minimum valid maintenance; a confirmed
+  cooling trend increases maintenance before the target is crossed.
+- **Hard boundary:** At or below target, Warm Floor sends no command. Normal
+  heating owns that state. Forecasting may only affect the preceding
+  above-target maintenance decision.
+- **Timing:** No fixed maximum pause is reintroduced. Pulse and pause remain
+  dynamic, with the actuator's four-minute ON/OFF minimum always enforced.
+- **Robustness:** Missing or stale diagnostics must fall back conservatively;
+  persistence and hysteresis are required so one noisy sample cannot trigger a
+  mode or pulse change.
+- **Status:** Design requirement recorded; runtime implementation and HA
+  configuration are unchanged in this step.
+
+### 2026-10-14 — Near-target thermal-balance decision
+
+- **Requirement refined:** When the room is very close to target, Auto must use
+  all available diagnostics to decide whether the floor needs `Balanced` or
+  `Keep it Hot` maintenance and what interval is appropriate. The objective is
+  for the room to neither continue warming nor begin cooling materially.
+- **Balanced equilibrium:** Prefer Balanced when the temperature margin is
+  small, the short EMA and one-hour EMA are close, the slope is persistently
+  near zero, and the learned/telemetry signals indicate that heat loss and
+  delivered heating are approximately in balance. Keep the minimum valid
+  actuator pulse, but allow the dynamic pause to grow.
+- **Keep-it-Hot recovery:** Prefer Keep it Hot when the room is close to target
+  but the slope or EMA separation shows cooling, heat loss is high, available
+  heating power is weak, outdoor conditions are colder, flow temperature is
+  insufficient for the current response, or MPC predicts an imminent target
+  crossing. Increase maintenance before normal heating must start, while the
+  room remains strictly above target.
+- **Eco exception:** If the room is near target but persistently warming, Auto
+  may select Eco and lengthen the interval; a flat trend alone is not evidence
+  for Eco when the room is close to needing heat.
+- **Status:** Design requirement recorded; runtime implementation and HA
+  configuration are unchanged in this step.
+
+### 2026-10-14 — Continuous interval adaptation toward thermal balance
+
+- **Requirement refined:** Warm Floor must not treat Eco, Balanced, and Keep it
+  Hot as fixed schedules. They are regions of a continuously calculated
+  maintenance controller. The controller should gradually recalculate pulse
+  length, pause length, and effective policy using the diagnostic feedback until
+  the room reaches thermal balance.
+- **Two intervals must be distinguished:** The diagnostic/control reevaluation
+  interval may become shorter when the room is near target or changing quickly.
+  The heating-pulse interval must follow the thermal direction: when the room is
+  above target and still warming, pause longer and reduce maintenance; when it
+  is above target but cooling toward target, shorten the pause gradually so the
+  normal heater does not need to start.
+- **Hysteresis objective:** Use filtered temperature margin, EMA separation,
+  slope, heat-loss/heating-power balance, outdoor/flow inputs, and MPC response
+  to narrow the actual room oscillation around target. Do not reduce hysteresis
+  by repeatedly forcing heat while the room is warming above target.
+- **Mode mapping:** The displayed effective level may move gradually through
+  Eco, Balanced, and Keep it Hot, or jump when evidence is strong, but the
+  underlying intensity and intervals remain continuous and diagnostic-driven.
+- **Hard constraints:** Warm Floor still sends no command at or below target,
+  and every ON/OFF transition must respect the four-minute actuator travel
+  minimum.
+- **Status:** Design requirement recorded; runtime implementation and HA
+  configuration are unchanged in this step.
+
+### 2026-10-14 — Warm Floor may anticipate normal heating before target crossing
+
+- **Clarification:** Warm Floor may continue preventive maintenance until just
+  before normal heating needs to start, provided the room is still strictly
+  above target. This is the predictive transition zone, not an exception to the
+  above-target safety boundary.
+- **Prediction source:** Prefer a validated Better Thermostat/MPC forecast of
+  imminent heating demand when one is exposed. Otherwise derive the forecast
+  from the same live diagnostics: filtered target margin, EMA/EMA-1h, slope,
+  heat loss, heating power, outdoor/flow inputs, and learned MPC response.
+  `call_for_heat` alone is not sufficient because it describes current demand
+  state and may not be a future-demand forecast.
+- **Control:** If the forecast shows that the room will reach target soon,
+  Warm Floor gradually shortens its dynamic pause or raises its effective
+  maintenance level while still above target. If the forecast weakens or the
+  room continues warming, it lengthens the pause again.
+- **Boundary:** Once `current_temperature <= target_temperature`, Warm Floor
+  must stop immediately and normal Better Thermostat heating owns the zone.
+- **Status:** Design requirement recorded; runtime implementation and HA
+  configuration are unchanged in this step.
+
 ### 2026-10-14 — DEV deployment of trend-confirmed Auto policy
 
 - **Deployment:** HACS installed DEV commit `6a4b4e5` and Home Assistant was

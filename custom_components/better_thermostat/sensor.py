@@ -1155,6 +1155,7 @@ class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
             "hvac_action": status.get("hvac_action"),
             "valve_min_pct": status.get("valve_min_pct"),
             "demand_factor": status.get("demand_factor"),
+            "preheat_risk": status.get("preheat_risk"),
         }
 
 
