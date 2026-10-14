@@ -1197,3 +1197,29 @@ for all supported Home Assistant installations.
 - **Generic scope:** The implementation must expose or derive these timings
   from actuator capability/configuration and must not hardcode Tino, room, or
   relay identifiers. `climate.tatas` remains unrelated and out of scope.
+
+### 2026-10-14 — Latch Generic Warm Floor phases for actuator travel
+
+- **Change:** Generic Thermostat Warm Floor now latches each requested ON or
+  OFF phase for the default four-minute actuator travel interval. A new duty
+  calculation may select the next phase only after the current opening or
+  closing movement has completed. Dynamic slope/MPC calculations therefore
+  affect the next cycle instead of interrupting the current actuator movement.
+- **Safety overrides:** Window/contact, outdoor cutoff, HVAC off, normal room
+  demand, below-target operation, and the absolute temperature ceiling may
+  interrupt Warm Floor immediately. The following cycle still observes the
+  required closing interval.
+- **Recovery:** After a restart, the first decision uses the downstream
+  Generic Thermostat's reported `hvac_action` as the best available phase
+  hint and holds that phase for one travel interval before accepting a new
+  Warm Floor transition. Devices without a trustworthy report start from the
+  deterministic duty decision.
+- **Diagnostics:** Warm Floor status now exposes the effective actuator phase,
+  phase start, remaining minimum travel time, guard reason, and whether the
+  phase came from recovery. This separates a requested duty decision from the
+  actuator movement protection that is currently holding it.
+- **Verification:** Added regression tests for ON latching, OFF latching, and
+  restart recovery. The focused Warm Floor/status test set passed 48 tests,
+  source compilation passed, and `git diff --check` passed. No configurable
+  actuator timing fields were added; the default four-minute behavior remains
+  internal and generic.

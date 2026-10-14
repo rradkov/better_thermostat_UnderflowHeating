@@ -564,6 +564,13 @@ def _record_status(
         # The phase/reason pair must describe one control decision. The
         # status entity shows status_age_s when the next periodic evaluation
         # has not happened yet; it must not invent a newer wall-clock phase.
+    phase_started_at = getattr(trv_state, "warm_floor_phase_started_at", None)
+    phase_minimum_until = getattr(trv_state, "warm_floor_phase_minimum_until", None)
+    now = dt_util.utcnow().timestamp()
+    if isinstance(phase_started_at, (int, float)):
+        duty_elapsed_s = max(0, int(now - float(phase_started_at)))
+    if isinstance(phase_minimum_until, (int, float)):
+        duty_remaining_s = max(0, int(float(phase_minimum_until) - now))
     hvac_action = getattr(bt, "hvac_action", None)
     if isinstance(hvac_action, HVACAction):
         hvac_action = hvac_action.value
@@ -581,6 +588,17 @@ def _record_status(
         "duty_phase": duty_phase,
         "duty_elapsed_s": duty_elapsed_s,
         "duty_remaining_s": duty_remaining_s,
+        "actuator_phase": getattr(trv_state, "warm_floor_actuator_phase", None),
+        "actuator_phase_started_at": getattr(
+            trv_state, "warm_floor_phase_started_at", None
+        ),
+        "actuator_minimum_until": getattr(
+            trv_state, "warm_floor_phase_minimum_until", None
+        ),
+        "actuator_guard": getattr(trv_state, "warm_floor_actuator_guard", None),
+        "phase_recovered": bool(
+            getattr(trv_state, "warm_floor_phase_recovered", False)
+        ),
         "current_temp_c": getattr(bt, "cur_temp", None),
         "target_temp_c": target,
         "hvac_action": hvac_action,
@@ -794,6 +812,104 @@ def _effective_duty_profile(
     return period_s, on_s, level_band
 
 
+def _latch_generic_actuator_phase(trv_state, requested_on: bool) -> tuple[bool, str | None]:
+    """Latch a Generic Thermostat phase for the actuator travel time.
+
+    The wall-clock duty profile is only allowed to choose the next phase after
+    the current thermal actuator had time to complete its movement.  This is
+    intentionally runtime state, not a user setting: the public default
+    protects the common four-minute electrothermal actuator.
+    """
+    now = dt_util.utcnow().timestamp()
+    requested_phase = "on" if requested_on else "off"
+    current_phase = getattr(trv_state, "warm_floor_actuator_phase", None)
+    minimum_until = getattr(trv_state, "warm_floor_phase_minimum_until", None)
+
+    # After a restart the runtime latch is gone.  Use the downstream report as
+    # the safest available phase hint and hold it for one complete travel
+    # interval before accepting a new duty decision.
+    if current_phase not in {"on", "off"}:
+        reported_action = getattr(trv_state, "hvac_action", None)
+        if isinstance(reported_action, HVACAction):
+            reported_action = reported_action.value
+        reported_action = str(reported_action or "").lower()
+        if reported_action not in {
+            HVACAction.HEATING.value,
+            HVACAction.IDLE.value,
+            HVACAction.OFF.value,
+        }:
+            # A newly discovered test double/device has no trustworthy
+            # downstream phase to recover.  Start from the deterministic
+            # duty decision; real HA reports one of the states above.
+            current_phase = requested_phase
+            trv_state.warm_floor_actuator_phase = current_phase
+            trv_state.warm_floor_phase_started_at = now
+            trv_state.warm_floor_phase_minimum_until = (
+                now + WARM_FLOOR_ACTUATOR_TRAVEL_S if requested_on else now
+            )
+            trv_state.warm_floor_phase_recovered = False
+            trv_state.warm_floor_actuator_guard = None
+            return requested_on, None
+        current_phase = "on" if reported_action == HVACAction.HEATING.value else "off"
+        trv_state.warm_floor_actuator_phase = current_phase
+        trv_state.warm_floor_phase_started_at = now
+        trv_state.warm_floor_phase_minimum_until = (
+            now + WARM_FLOOR_ACTUATOR_TRAVEL_S
+        )
+        trv_state.warm_floor_phase_recovered = True
+        minimum_until = trv_state.warm_floor_phase_minimum_until
+
+    if isinstance(minimum_until, (int, float)) and now < float(minimum_until):
+        if requested_phase != current_phase:
+            trv_state.warm_floor_actuator_guard = (
+                "minimum_on_hold"
+                if current_phase == "on"
+                else (
+                    "recovery_hold"
+                    if getattr(trv_state, "warm_floor_phase_recovered", False)
+                    else "minimum_off_hold"
+                )
+            )
+            return current_phase == "on", trv_state.warm_floor_actuator_guard
+        trv_state.warm_floor_actuator_guard = "recovery_hold" if (
+            getattr(trv_state, "warm_floor_phase_recovered", False)
+        ) else None
+        return current_phase == "on", trv_state.warm_floor_actuator_guard
+
+    trv_state.warm_floor_phase_recovered = False
+    trv_state.warm_floor_actuator_guard = None
+    if requested_phase != current_phase:
+        trv_state.warm_floor_actuator_phase = requested_phase
+        trv_state.warm_floor_phase_started_at = now
+        trv_state.warm_floor_phase_minimum_until = (
+            now + WARM_FLOOR_ACTUATOR_TRAVEL_S
+        )
+        trv_state.warm_floor_force_setpoint_write = True
+    return requested_on, None
+
+
+def _interrupt_generic_actuator_phase(trv_state, reason: str) -> None:
+    """Abort Warm Floor immediately for a safety or normal-demand reason."""
+    if not _is_generic_thermostat(trv_state):
+        return
+    now = dt_util.utcnow().timestamp()
+    if (
+        getattr(trv_state, "warm_floor_actuator_phase", None) == "off"
+        and isinstance(
+            getattr(trv_state, "warm_floor_phase_minimum_until", None),
+            (int, float),
+        )
+        and now < float(trv_state.warm_floor_phase_minimum_until)
+    ):
+        trv_state.warm_floor_actuator_guard = reason
+        return
+    trv_state.warm_floor_actuator_phase = "off"
+    trv_state.warm_floor_phase_started_at = now
+    trv_state.warm_floor_phase_minimum_until = now + WARM_FLOOR_ACTUATOR_TRAVEL_S
+    trv_state.warm_floor_actuator_guard = reason
+    trv_state.warm_floor_force_setpoint_write = True
+
+
 def _generic_duty_cycle_is_on(period_s: int, on_s: int) -> bool:
     """Return the current deterministic Warm Floor ON/OFF window."""
     phase = dt_util.utcnow().timestamp() % period_s
@@ -822,8 +938,10 @@ def _apply_generic_duty_cycle(
     # Never replace a normal heating command with a maintenance pulse. The
     # pulse is only for the satisfied/idle part of the control cycle.
     if getattr(bt, "hvac_action", None) != HVACAction.IDLE:
+        _interrupt_generic_actuator_phase(trv_state, "normal_heat_demand")
         return result, None, None, None
     if current < float(target):
+        _interrupt_generic_actuator_phase(trv_state, "below_target")
         return result, None, None, None
     # A positive slope is already folded into ``demand_factor`` by the
     # caller. Keep the maintenance pulse available here; it is modulated by
@@ -856,9 +974,17 @@ def _apply_generic_duty_cycle(
     absolute_ceiling = float(target) + WARM_FLOOR_MAX_BACKOFF_CAP
     if isinstance(max_temp, (int, float)):
         absolute_ceiling = min(absolute_ceiling, float(max_temp))
-    if float(current) >= absolute_ceiling or not _generic_duty_cycle_is_on(
-        period_s, on_s
-    ):
+    if float(current) >= absolute_ceiling:
+        # A safety ceiling is allowed to interrupt a pulse immediately.  The
+        # next normal cycle must still observe the full closing interval.
+        _interrupt_generic_actuator_phase(trv_state, "safety_ceiling")
+        return result, "outside_duty_window", period_s, on_s
+
+    requested_on = _generic_duty_cycle_is_on(period_s, on_s)
+    phase_on, _phase_guard = _latch_generic_actuator_phase(
+        trv_state, requested_on
+    )
+    if not phase_on:
         return result, "outside_duty_window", period_s, on_s
 
     # Generic Thermostat turns on only when its target exceeds its measured
@@ -925,12 +1051,15 @@ def apply_warm_floor_floor(
 
     # Never override the window/door OFF gate or the outdoor call-for-heat gate.
     if getattr(bt, "contact_open", False):
+        _interrupt_generic_actuator_phase(trv_state, "contact_open")
         _record_status(bt, entity_id, active=False, sustaining_setpoint=None, reason="contact_open")
         return computed_value
     if getattr(bt, "call_for_heat", True) is False:
+        _interrupt_generic_actuator_phase(trv_state, "outdoor_cutoff")
         _record_status(bt, entity_id, active=False, sustaining_setpoint=None, reason="outdoor_cutoff")
         return computed_value
     if getattr(bt, "bt_hvac_mode", None) == HVACMode.OFF:
+        _interrupt_generic_actuator_phase(trv_state, "hvac_off")
         _record_status(bt, entity_id, active=False, sustaining_setpoint=None, reason="hvac_off")
         return computed_value
 

@@ -283,8 +283,16 @@ def test_generic_duty_phase_edge_requests_a_write_once_per_transition(monkeypatc
 
     monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: False)
     apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
-    assert bt.real_trvs["climate.trv"].warm_floor_duty_phase == "off"
-    assert bt.real_trvs["climate.trv"].warm_floor_force_setpoint_write is True
+    # The requested wall-clock phase is OFF, but the thermal actuator is still
+    # inside its minimum ON travel interval, so the effective phase stays ON.
+    assert bt.real_trvs["climate.trv"].warm_floor_duty_phase == "on"
+    assert (
+        bt.real_trvs["climate.trv"].warm_floor_actuator_guard
+        == "minimum_on_hold"
+    )
+    # No OFF write is armed yet: the current ON phase remains latched until
+    # the actuator's minimum opening interval has elapsed.
+    assert bt.real_trvs["climate.trv"].warm_floor_force_setpoint_write is False
 
 
 def test_stale_raw_sensor_does_not_block_when_derived_slope_is_available():
@@ -474,6 +482,56 @@ def test_generic_duty_profile_respects_slow_actuator_travel_time():
         travel_s = underfloor.WARM_FLOOR_ACTUATOR_TRAVEL_S
         assert on_s >= travel_s
         assert period_s - on_s >= travel_s
+
+
+def test_generic_duty_latches_on_phase_until_actuator_has_opened(monkeypatch):
+    bt = _make_bt(sustain_push=0.0)
+    trv = bt.real_trvs["climate.trv"]
+    trv.integration = "generic_thermostat"
+    monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: True)
+
+    first = apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
+    assert first > bt.bt_target_temp
+
+    monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: False)
+    second = apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
+    assert second > bt.bt_target_temp
+    assert trv.warm_floor_actuator_phase == "on"
+    assert trv.warm_floor_actuator_guard == "minimum_on_hold"
+
+
+def test_generic_duty_latches_off_phase_until_actuator_has_closed(monkeypatch):
+    bt = _make_bt(sustain_push=0.0)
+    trv = bt.real_trvs["climate.trv"]
+    trv.integration = "generic_thermostat"
+    trv.warm_floor_actuator_phase = "off"
+    trv.warm_floor_phase_started_at = dt_util.utcnow().timestamp()
+    trv.warm_floor_phase_minimum_until = (
+        trv.warm_floor_phase_started_at + underfloor.WARM_FLOOR_ACTUATOR_TRAVEL_S
+    )
+    monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: True)
+
+    result = apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
+    assert result == 21.5
+    assert trv.warm_floor_actuator_guard == "minimum_off_hold"
+
+
+def test_generic_duty_recovery_holds_reported_idle_before_new_on(monkeypatch):
+    bt = _make_bt(sustain_push=0.0, hvac_action=HVACAction.IDLE)
+    trv = bt.real_trvs["climate.trv"]
+    trv.integration = "generic_thermostat"
+    trv.hvac_action = HVACAction.IDLE.value
+    monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: True)
+
+    recovered = apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
+    assert recovered == 21.5
+    assert trv.warm_floor_phase_recovered is True
+    assert trv.warm_floor_actuator_guard == "recovery_hold"
+
+    trv.warm_floor_phase_minimum_until = dt_util.utcnow().timestamp() - 1
+    resumed = apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
+    assert resumed > bt.bt_target_temp
+    assert trv.warm_floor_actuator_phase == "on"
 
 
 def test_direct_valve_floor_increases_when_room_is_cooling():

@@ -1142,6 +1142,11 @@ class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
             "duty_phase": status.get("duty_phase"),
             "duty_elapsed_s": status.get("duty_elapsed_s"),
             "duty_remaining_s": status.get("duty_remaining_s"),
+            "actuator_phase": status.get("actuator_phase"),
+            "actuator_phase_started_at": status.get("actuator_phase_started_at"),
+            "actuator_minimum_until": status.get("actuator_minimum_until"),
+            "actuator_guard": status.get("actuator_guard"),
+            "phase_recovered": status.get("phase_recovered"),
             "status_age_s": heater_statuses.get(
                 status.get("entity_id"), {}
             ).get("status_age_s"),

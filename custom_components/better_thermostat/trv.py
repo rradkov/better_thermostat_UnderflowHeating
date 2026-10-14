@@ -96,6 +96,15 @@ class Trv:
     # Thermostat may have restored its relay ON while its setpoint stayed the
     # same during the outage.
     recovery_pending: bool = False
+    # Warm Floor's requested actuator phase is latched for the thermal
+    # actuator travel time.  The duty calculation may change every minute,
+    # but it must not interrupt an in-flight open/close movement.
+    warm_floor_actuator_phase: str | None = None
+    warm_floor_phase_started_at: float | None = None
+    warm_floor_phase_minimum_until: float | None = None
+    warm_floor_actuator_guard: str | None = None
+    warm_floor_phase_recovered: bool = False
+    warm_floor_force_setpoint_write: bool = False
     # The setpoint BT last sent; the device's own at startup.
     last_temperature: float | None = None
     # The setpoint in °C the device last confirmed, the device's own at
