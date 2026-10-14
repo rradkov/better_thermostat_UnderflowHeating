@@ -32,7 +32,7 @@ def _make_bt(
     *,
     sustain_push: float = 0.3,
     hvac_action=HVACAction.IDLE,
-    cur_temp: float = 22.0,
+    cur_temp: float = 22.2,
     target_temp: float = 22.0,
     sensor_last_updated=None,
     calibration_mode: str = CalibrationMode.HEATING_POWER_CALIBRATION.value,
@@ -116,7 +116,7 @@ def test_custom_level_still_requires_an_explicit_generic_duty_pulse(monkeypatch)
 
 def test_generic_existing_above_target_result_is_active_during_on_window(monkeypatch):
     """An already-raised downstream setpoint is still the active pulse."""
-    bt = _make_bt(sustain_push=0.0, cur_temp=22.0, target_temp=22.0)
+    bt = _make_bt(sustain_push=0.0, cur_temp=22.2, target_temp=22.0)
     bt.real_trvs["climate.trv"].integration = "generic_thermostat"
     monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: True)
 
@@ -165,6 +165,33 @@ def test_does_not_fire_before_the_room_actually_reaches_target():
     assert result == 22.0
 
 
+def test_warm_floor_requires_strictly_above_target_for_every_actuator_path():
+    """Normal heating owns below-target and equal-target states."""
+    for current, reason in ((21.9, "below_target"), (22.0, "at_target")):
+        bt = _make_bt(cur_temp=current, target_temp=22.0, sustain_push=0.3)
+        trv = bt.real_trvs["climate.trv"]
+        trv.calibration_balance = {"apply_valve": True, "valve_percent": 0}
+        result = apply_warm_floor_floor(bt, "climate.trv", 20.0, is_offset=False)
+
+        assert result == 20.0
+        assert trv.calibration_balance["valve_percent"] == 0
+        assert bt._warm_floor_status["active"] is False
+        assert bt._warm_floor_status["reason"] == reason
+
+
+def test_below_target_interrupts_a_latched_generic_warm_floor_phase():
+    bt = _make_bt(cur_temp=21.9, target_temp=22.0, sustain_push=0.0)
+    trv = bt.real_trvs["climate.trv"]
+    trv.integration = "generic_thermostat"
+    trv.warm_floor_actuator_phase = "on"
+
+    result = apply_warm_floor_floor(bt, "climate.trv", 20.0, is_offset=False)
+
+    assert result == 20.0
+    assert trv.warm_floor_actuator_phase == "off"
+    assert trv.warm_floor_actuator_guard == "below_target"
+
+
 def test_does_not_fire_when_computed_value_is_already_below_target():
     """computed_value < target means the passive floor isn't structurally a
     no-op - the ordinary backoff floor is the right mechanism, not this one."""
@@ -175,7 +202,7 @@ def test_does_not_fire_when_computed_value_is_already_below_target():
 
 
 def test_respects_the_configured_max_temp_ceiling():
-    bt = _make_bt(sustain_push=1.5, target_temp=29.5, cur_temp=29.5, max_temp=30.0)
+    bt = _make_bt(sustain_push=1.5, target_temp=29.5, cur_temp=29.6, max_temp=30.0)
     result = apply_warm_floor_floor(bt, "climate.trv", 29.5, is_offset=False)
     assert result == 30.0
 
@@ -238,7 +265,7 @@ def test_never_touches_bt_target_temp():
 
 def test_generic_thermostat_gets_a_short_warm_floor_setpoint_pulse(monkeypatch):
     """ON/OFF helpers need a target above the live temperature to turn on."""
-    bt = _make_bt(sustain_push=0.0, cur_temp=22.0, target_temp=22.0)
+    bt = _make_bt(sustain_push=0.0, cur_temp=22.2, target_temp=22.0)
     bt.real_trvs["climate.trv"].integration = "generic_thermostat"
     monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: True)
 
@@ -251,7 +278,7 @@ def test_generic_thermostat_gets_a_short_warm_floor_setpoint_pulse(monkeypatch):
 
 
 def test_generic_thermostat_releases_the_setpoint_outside_the_on_window(monkeypatch):
-    bt = _make_bt(sustain_push=0.0, cur_temp=22.0, target_temp=22.0)
+    bt = _make_bt(sustain_push=0.0, cur_temp=22.2, target_temp=22.0)
     bt.real_trvs["climate.trv"].integration = "generic"
     monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: False)
 
@@ -265,7 +292,7 @@ def test_generic_thermostat_releases_the_setpoint_outside_the_on_window(monkeypa
 
 def test_generic_duty_phase_edge_requests_a_write_once_per_transition(monkeypatch):
     """A restart or missed tick must not lose the next ON/OFF command."""
-    bt = _make_bt(sustain_push=0.0, cur_temp=22.0, target_temp=22.0)
+    bt = _make_bt(sustain_push=0.0, cur_temp=22.2, target_temp=22.0)
     bt.real_trvs["climate.trv"].integration = "generic"
 
     monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: True)
@@ -378,17 +405,15 @@ def test_warm_floor_level_changes_generic_duty_intensity():
     balanced = _make_bt(warm_floor_level=underfloor.WARM_FLOOR_LEVEL_BALANCED)
     keep_hot = _make_bt(warm_floor_level=underfloor.WARM_FLOOR_LEVEL_KEEP_HOT)
 
-    eco_profile = underfloor._warm_floor_duty_profile(eco.real_trvs["climate.trv"])
-    balanced_profile = underfloor._warm_floor_duty_profile(
+    eco_profile = underfloor._warm_floor_level_intensity(eco.real_trvs["climate.trv"])
+    balanced_profile = underfloor._warm_floor_level_intensity(
         balanced.real_trvs["climate.trv"]
     )
-    keep_hot_profile = underfloor._warm_floor_duty_profile(
+    keep_hot_profile = underfloor._warm_floor_level_intensity(
         keep_hot.real_trvs["climate.trv"]
     )
 
-    assert eco_profile[0] > balanced_profile[0] > keep_hot_profile[0]
-    assert eco_profile[1] < balanced_profile[1] < keep_hot_profile[1]
-    assert eco_profile[2] < balanced_profile[2] < keep_hot_profile[2]
+    assert eco_profile < balanced_profile < keep_hot_profile
 
 
 def test_warm_floor_level_increases_direct_valve_floor_when_raised():
@@ -408,15 +433,19 @@ def test_warm_floor_level_increases_direct_valve_floor_when_raised():
 
 
 def test_generic_duty_profile_adapts_to_falling_temperature():
-    stable = _make_bt(cur_temp=22.0, target_temp=22.0)
-    falling = _make_bt(cur_temp=22.0, target_temp=22.0)
+    stable = _make_bt(cur_temp=22.2, target_temp=22.0)
+    falling = _make_bt(cur_temp=22.2, target_temp=22.0)
     falling.temp_slope = -0.02
 
     stable_profile = underfloor._effective_duty_profile(
-        stable.real_trvs["climate.trv"], underfloor._warm_floor_demand_factor(stable)
+        stable,
+        stable.real_trvs["climate.trv"],
+        underfloor._warm_floor_demand_factor(stable),
     )
     falling_profile = underfloor._effective_duty_profile(
-        falling.real_trvs["climate.trv"], underfloor._warm_floor_demand_factor(falling)
+        falling,
+        falling.real_trvs["climate.trv"],
+        underfloor._warm_floor_demand_factor(falling),
     )
 
     assert falling_profile[0] < stable_profile[0]
@@ -473,15 +502,149 @@ def test_generic_duty_demand_uses_per_heater_mpc_feedback(monkeypatch):
 
 def test_generic_duty_profile_respects_slow_actuator_travel_time():
     """A pulse must allow both opening and closing of a thermal actuator."""
-    for level in underfloor.WARM_FLOOR_DUTY_PROFILES:
+    for level in underfloor.WARM_FLOOR_LEVEL_INTENSITY:
         bt = _make_bt(warm_floor_level=level)
         period_s, on_s, _ = underfloor._effective_duty_profile(
-            bt.real_trvs["climate.trv"], 1.0
+            bt, bt.real_trvs["climate.trv"], 1.0
         )
 
         travel_s = underfloor.WARM_FLOOR_ACTUATOR_TRAVEL_S
         assert on_s >= travel_s
         assert period_s - on_s >= travel_s
+
+
+def test_generic_duty_profile_is_dynamic_for_rising_ema_and_target_margin():
+    stable = _make_bt(cur_temp=22.2, target_temp=22.0)
+    rising = _make_bt(cur_temp=23.5, target_temp=22.0)
+    rising.temp_slope = 0.08
+    rising.cur_temp_filtered = 23.2
+    rising.external_temp_ema_1h = 22.5
+
+    stable_profile = underfloor._effective_duty_profile(
+        stable,
+        stable.real_trvs["climate.trv"],
+        underfloor._warm_floor_demand_factor(stable),
+    )
+    rising_profile = underfloor._effective_duty_profile(
+        rising,
+        rising.real_trvs["climate.trv"],
+        underfloor._warm_floor_demand_factor(rising),
+    )
+
+    assert rising_profile[2] < stable_profile[2]
+    assert rising_profile[1] < stable_profile[1]
+    assert rising_profile[0] > stable_profile[0]
+
+
+def test_dynamic_duty_profiles_converge_when_cooling_demand_is_high():
+    profiles = []
+    for level in (
+        underfloor.WARM_FLOOR_LEVEL_ECO,
+        underfloor.WARM_FLOOR_LEVEL_BALANCED,
+        underfloor.WARM_FLOOR_LEVEL_KEEP_HOT,
+    ):
+        bt = _make_bt(warm_floor_level=level)
+        bt.temp_slope = -0.05
+        bt.heat_loss_rate = 1.0
+        bt.heating_power = 1.0
+        profiles.append(
+            underfloor._effective_duty_profile(
+                bt,
+                bt.real_trvs["climate.trv"],
+                underfloor._warm_floor_demand_factor(bt),
+            )
+        )
+
+    # Diagnostics, rather than the level's old fixed clock schedule, drive
+    # the profiles toward a sustained maintenance response.
+    assert all(profile[2] > 0.9 for profile in profiles)
+    assert profiles[0][2] > underfloor.WARM_FLOOR_LEVEL_INTENSITY[
+        underfloor.WARM_FLOOR_LEVEL_ECO
+    ]
+
+
+def test_dynamic_duty_profile_keeps_a_minimum_maintenance_cadence():
+    bt = _make_bt(cur_temp=25.0, target_temp=22.0)
+    bt.temp_slope = 0.20
+    bt.cur_temp_filtered = 25.0
+    bt.external_temp_ema_1h = 22.0
+
+    period_s, on_s, intensity = underfloor._effective_duty_profile(
+        bt,
+        bt.real_trvs["climate.trv"],
+        0.0,
+    )
+
+    assert intensity >= underfloor.WARM_FLOOR_DUTY_MIN_INTENSITY
+    assert period_s - on_s >= underfloor.WARM_FLOOR_DUTY_MIN_PAUSE_S
+    assert on_s >= underfloor.WARM_FLOOR_ACTUATOR_TRAVEL_S
+
+
+def test_warm_floor_prefers_configured_outdoor_sensor_over_weather_entity():
+    bt = _make_bt(level=underfloor.WARM_FLOOR_LEVEL_BALANCED)
+    bt.outdoor_sensor = "sensor.outdoor"
+    bt.weather_entity = "weather.home"
+
+    def state_for(entity_id):
+        state = MagicMock()
+        state.attributes = {"unit_of_measurement": "°C"}
+        state.state = "0.0" if entity_id == "sensor.outdoor" else "20.0"
+        return state
+
+    bt.hass.states.get.side_effect = state_for
+    demand = underfloor._warm_floor_demand_factor(bt)
+
+    assert demand > 0.0
+    assert bt._warm_floor_outdoor_temp_c == 0.0
+    assert bt._warm_floor_outdoor_source == "outdoor_sensor"
+
+
+def test_warm_floor_uses_weather_entity_when_outdoor_sensor_is_unavailable():
+    bt = _make_bt(level=underfloor.WARM_FLOOR_LEVEL_BALANCED)
+    bt.weather_entity = "weather.home"
+
+    def state_for(entity_id):
+        state = MagicMock()
+        if entity_id == "weather.home":
+            state.state = "sunny"
+            state.attributes = {"temperature": 5.0, "temperature_unit": "°C"}
+        else:
+            state.state = "unavailable"
+            state.attributes = {}
+        return state
+
+    bt.hass.states.get.side_effect = state_for
+    demand = underfloor._warm_floor_demand_factor(bt)
+
+    assert demand > 0.0
+    assert bt._warm_floor_outdoor_temp_c == 5.0
+    assert bt._warm_floor_outdoor_source == "weather_entity"
+
+
+def test_warm_floor_water_sensor_precedes_static_fallback():
+    bt = _make_bt(level=underfloor.WARM_FLOOR_LEVEL_BALANCED)
+    bt.flow_temp_sensor = "sensor.buffer"
+    bt.flow_temp_static_c = 45.0
+
+    state = MagicMock(state="31.6", attributes={"unit_of_measurement": "°C"})
+    bt.hass.states.get.return_value = state
+    demand = underfloor._warm_floor_demand_factor(bt)
+
+    assert demand > 0.0
+    assert bt._warm_floor_flow_temp_c == 31.6
+    assert bt._warm_floor_flow_source == "flow_temp_sensor"
+
+
+def test_auto_warm_floor_moves_between_policies_from_live_demand():
+    bt = _make_bt(warm_floor_level=underfloor.WARM_FLOOR_LEVEL_AUTO)
+    trv = bt.real_trvs["climate.trv"]
+    bt.hass.states.get.return_value = None
+
+    underfloor._effective_duty_profile(bt, trv, 0.0)
+    assert bt._warm_floor_auto_policy == underfloor.WARM_FLOOR_LEVEL_ECO
+
+    underfloor._effective_duty_profile(bt, trv, 1.0)
+    assert bt._warm_floor_auto_policy == underfloor.WARM_FLOOR_LEVEL_KEEP_HOT
 
 
 def test_generic_duty_latches_on_phase_until_actuator_has_opened(monkeypatch):
@@ -535,8 +698,8 @@ def test_generic_duty_recovery_holds_reported_idle_before_new_on(monkeypatch):
 
 
 def test_direct_valve_floor_increases_when_room_is_cooling():
-    stable = _make_bt(cur_temp=22.0, target_temp=22.0)
-    falling = _make_bt(cur_temp=22.0, target_temp=22.0)
+    stable = _make_bt(cur_temp=22.2, target_temp=22.0)
+    falling = _make_bt(cur_temp=22.2, target_temp=22.0)
     falling.temp_slope = -0.02
     for bt in (stable, falling):
         bt.real_trvs["climate.trv"].calibration_balance = {
@@ -554,8 +717,8 @@ def test_direct_valve_floor_increases_when_room_is_cooling():
 
 
 def test_setpoint_floor_moves_toward_target_when_room_is_cooling():
-    stable = _make_bt(cur_temp=22.0, target_temp=22.0, sustain_push=0.0)
-    falling = _make_bt(cur_temp=22.0, target_temp=22.0, sustain_push=0.0)
+    stable = _make_bt(cur_temp=22.2, target_temp=22.0, sustain_push=0.0)
+    falling = _make_bt(cur_temp=22.2, target_temp=22.0, sustain_push=0.0)
     falling.temp_slope = -0.02
 
     stable_result = apply_warm_floor_floor(stable, "climate.trv", 20.0, is_offset=False)

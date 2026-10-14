@@ -9,13 +9,13 @@ Two related features aimed at rooms with high thermal inertia (underfloor heatin
 
 A radiator TRV backing off to 0% between heat calls is nearly free to recover from — it's a small metal object with little thermal mass. An underfloor slab is the opposite: once it's let go fully cold, bringing it back up costs a long, energy-heavy recovery, and the room feels the dip the whole time.
 
-Warm Floor keeps a low, continuous background heat level in underfloor-flagged heaters instead of letting them idle to zero — a *sustaining floor* on the setpoint (or offset/valve %, depending on calibration type), never a ceiling. For Generic Thermostat heaters, the duty-cycle ON phase must send the downstream setpoint above the Better Thermostat room target; otherwise the Generic Thermostat cannot turn its relay on while the room is already at target. This never changes the user-facing target.
+Warm Floor keeps a low, continuous background heat level in underfloor-flagged heaters instead of letting them idle to zero — a *sustaining floor* on the setpoint (or offset/valve %, depending on calibration type), never a ceiling. It is eligible only while the measured room temperature is strictly above the Better Thermostat room target. At or below target, normal BT heating owns the actuator and Warm Floor returns the normal command unchanged. For Generic Thermostat heaters, the duty-cycle ON phase must send the downstream setpoint above the Better Thermostat room target; otherwise the Generic Thermostat cannot turn its relay on. This never changes the user-facing target.
 
 For Generic Thermostat heaters, an idle cycle also has to release any previous
 downstream pulse. The relay is controlled only by the Generic Thermostat's
 setpoint, so a stale value above the room temperature is still a real heating
-command even when Warm Floor is outside its ON window. When the room is at or
-above target and no sustain push is configured, Warm Floor clamps that stale
+command even when Warm Floor is outside its ON window. When the room is
+strictly above target and no sustain push is configured, Warm Floor clamps that stale
 idle value back to the user target. This release is limited to Generic
 Thermostat heaters and does not alter valve or calibration-offset semantics.
 
@@ -29,6 +29,8 @@ The configured "max backoff" is a ceiling, not a fixed value. Each cycle, BT sca
 - **The room's real-time trend** — the structural/solar estimate is a longer-run average; the live rate of change modulates the maintenance duty in both directions. Still actively gaining → pulses become shorter/less frequent, but are not suppressed solely because the room is rising; the safe upper band still prevents overshoot. Falling faster than the structural model expects → the floor clamps to its tightest setting immediately, regardless of what the longer-run numbers say.
 - **Short versus one-hour temperature EMA** — the short EMA follows recent room movement, while the one-hour EMA is a slower thermal baseline. When the short EMA is below the one-hour value, Warm Floor treats the room as undergoing sustained cooling even if the instantaneous slope is flat and increases maintenance demand. When it is above the baseline, solar or residual heat is likely helping and the existing maintenance demand is reduced, without removing the selected level or bypassing safety limits.
 - **The external sensor's own freshness** — some real-world temperature sensors only report hourly, or on a ~0.5°C change, which can leave `temp_slope` reading artificially flat for long stretches even while the room is genuinely still moving. If the sensor's last real update is more than ~20 minutes old, BT can't trust that flatness as evidence the room has actually settled - it's treated the same as "still actively gaining," the same suppression as the live-trend guard above, not the more permissive "no trend data available" fallback that applies when a *fresh* reading simply has no slope to report yet.
+
+For Generic Thermostat heaters, the three Warm Floor levels are baseline intensities, not fixed timers. Each control tick converts the selected baseline plus the live thermal demand into a new ON duration and pause. The calculation respects the actuator's minimum travel time, increases maintenance when cooling, heat loss, heating power, or MPC data show a real load, and reduces it when the slope/EMA shows warming or the room is further above target. The wall-clock window is only the mechanism needed to operate a slow ON/OFF actuator; its values are dynamic outputs, not level presets.
 
 ## Closing the no-op gap: sustain push
 

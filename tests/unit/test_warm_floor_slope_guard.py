@@ -36,6 +36,7 @@ def _make_bt(*, temp_slope, **overrides) -> MagicMock:
     bt.call_for_heat = True
     bt.bt_hvac_mode = HVACMode.HEAT
     bt.bt_target_temp = 22.0
+    bt.cur_temp = 22.2
     bt.temp_slope = temp_slope
     # A very well-insulated, strong-emitter room, so the *structural* scale
     # alone would allow the full configured backoff - isolating the slope
@@ -64,10 +65,12 @@ def _make_bt(*, temp_slope, **overrides) -> MagicMock:
     return bt
 
 
-def test_still_gaining_suppresses_the_raise_entirely():
-    """Room actively rising past the guard threshold -> no floor-raise this cycle."""
+def test_still_gaining_keeps_only_a_reduced_floor_above_target():
+    """Solar/residual warming reduces intensity without disabling Warm Floor."""
     bt = _make_bt(temp_slope=OVERSHOOT_SLOPE_GUARD + 0.01)
-    assert apply_warm_floor_floor(bt, "climate.trv", 10.0, is_offset=False) == 10.0
+    result = apply_warm_floor_floor(bt, "climate.trv", 10.0, is_offset=False)
+    assert 10.0 < result < bt.bt_target_temp
+    assert bt._warm_floor_status["active"] is True
 
 
 def test_actively_falling_forces_the_tightest_floor():

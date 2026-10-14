@@ -42,7 +42,7 @@ def _make_bt(
     bt.heat_loss_rate = 0.01
     bt.heating_power = 0.05
     bt.state_mgr = None
-    bt.cur_temp = 20.0
+    bt.cur_temp = 22.2
     bt.hvac_action = "idle"
     # Fresh by default - a stale external sensor is its own dedicated test
     # file (test_warm_floor_sustain_push.py); every existing case here
@@ -160,7 +160,7 @@ def test_offset_path_caps_instead_of_flooring():
 def test_wired_into_calculate_calibration_setpoint():
     """The floor actually reaches calculate_calibration_setpoint()'s return value."""
     bt = _make_bt()
-    bt.cur_temp = 22.0
+    bt.cur_temp = 22.2
     bt.hvac_action = "idle"
     bt.name = "better_thermostat"
     result = calculate_calibration_setpoint(bt, "climate.trv")

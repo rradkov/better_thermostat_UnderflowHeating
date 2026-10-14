@@ -1,5 +1,205 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-14 — Implement outdoor/water inputs and Auto Warm Floor baseline
+
+- **Outdoor input:** Warm Floor now resolves the current value from the
+  existing BT `outdoor_sensor`, falling back to the configured
+  `weather_entity` state temperature. It is a bounded feed-forward heat-loss
+  hint and is never used as the normal HVAC cutoff decision.
+- **Water input:** Warm Floor now resolves the existing BT
+  `flow_temp_sensor`, then `flow_temp_static_c` fallback. The value is a
+  bounded capacity hint; room response remains authoritative, and missing
+  water data keeps the previous telemetry-only fallback.
+- **Auto:** Added `Auto` as a fourth Warm Floor selection. It smoothly moves
+  between Eco, Balanced, and Keep it Hot baselines according to the live
+  demand factor, which includes room telemetry plus configured outdoor/water
+  hints. The strict `current_temperature > target_temperature` guard remains
+  unchanged.
+- **Diagnostics:** Warm Floor status now records outdoor/water values and
+  sources, plus the resolved Auto policy, so the decision is explainable.
+- **Verification:** Focused Warm Floor/config tests passed 68 tests with
+  plugin autoload disabled in this Windows environment. The older
+  `test_warm_floor_maintenance.py` file still targets a superseded API from
+  the pre-dynamic implementation and remains a separate test maintenance
+  item. No commit, deployment, or release was made.
+
+### 2026-10-14 — Document Warm Floor additions in the project README
+
+- **Change:** Updated the public `README.md` to explain the fork's Warm Floor
+  behavior and the newly implemented outdoor-temperature, water-temperature,
+  and Auto features in user-facing language.
+- **Included:** The README now documents the strict above-target boundary,
+  dynamic three-level duty cycle, actuator travel protection, optional input
+  fallbacks, Auto policy selection, diagnostics, multi-heater behavior, and
+  heat-source neutrality.
+- **Reason:** People evaluating or installing the project must understand what
+  was added without reading implementation details or relying on this private
+  project memory.
+- **Status:** Documentation only in this step; no commit, deployment, or
+  release was made.
+
+### 2026-10-14 — Water-temperature input may be sensor, manual value, or absent
+
+- **Requirement clarified:** A user may not have a water-temperature sensor, but
+  may still know or manually enter a representative water/buffer temperature.
+- **Input priority:** Use the configured live water-temperature sensor when it
+  is valid and available; otherwise use the configured manual/static value;
+  otherwise disable the water correction and keep the current telemetry-only
+  Warm Floor fallback.
+- **Semantics:** A manual value is a fallback estimate, not a live measurement.
+  Diagnostics and documentation must label it accordingly, and the controller
+  must not infer real-time water changes from it.
+- **Control role:** The value only modifies Warm Floor intensity together with
+  room temperature, slope, EMA, heat loss, heating power, and learned data. It
+  never bypasses the strict `current_temperature > target_temperature` guard.
+- **Generic scope:** The implementation must remain heat-source-neutral and
+  must not hardcode `sensor.h_coil_2_temperature`. For the reference
+  installation, that entity may be selected as the live input, while other
+  users may select a different sensor or a manual value.
+- **Configuration reuse:** The sensor entity and manual/static temperature
+  already exist in Better Thermostat configuration as `flow_temp_sensor` and
+  `flow_temp_static_c`. Warm Floor must reuse these existing fields instead of
+  introducing duplicate configuration options.
+- **Outdoor-temperature reuse:** Better Thermostat already provides the
+  configured `outdoor_sensor` and `weather_entity` sources, plus resolved
+  current/EMA outdoor-temperature state. Warm Floor must consume that existing
+  BT-resolved signal rather than adding a second outdoor-temperature setting.
+  The Warm Floor calculation should use the current/smoothed value for thermal
+  demand, not the separate multi-day outdoor threshold decision used for HVAC
+  cutoff behavior.
+- **Status:** Design requirement recorded; no code, commit, deployment, or
+  release was made in this turn.
+
+### 2026-10-14 — Future water-temperature signal for Warm Floor
+
+- **Design requirement:** Warm Floor should account for the actual water/flow
+  temperature when that capability is available, because the same room and
+  floor can receive substantially different heat during day and night.
+- **Source-neutral implementation:** Water temperature must be an optional
+  capacity modifier, not a heat-source assumption or a universal threshold.
+  The logic must work with heat pumps, boilers, district heating, electric
+  boilers, solar buffers, and other systems. If no water sensor exists, the
+  current telemetry-only behavior remains the fallback.
+- **Signal quality:** Flow temperature alone is useful but incomplete. A future
+  implementation should prefer floor temperature when available, then flow +
+  return temperature/Delta-T, then flow temperature alone, while continuing to
+  validate the result against room slope, EMA, heat loss, heating power, and
+  learned MPC data. High water temperature must not imply that the floor is
+  warm if there is no flow or the actuator is closed.
+- **Control role:** The signal should modify Auto/level intensity and
+  available heating-power estimation, never bypass the strict
+  `current_temperature > target_temperature` Warm Floor guard.
+- **Status:** Recorded as a future design requirement; no water-temperature
+  control change has been implemented yet.
+
+### 2026-10-14 — Auto mode concept and heat-source neutrality
+
+- **Future Auto mode:** Auto should keep the floor warm continuously enough to
+  reduce cold-slab recovery and avoid large catch-up requests. It should infer
+  the active policy from live conditions: strong solar/residual warming selects
+  an Eco-like baseline; fading sun and stable conditions move through
+  Balanced; confirmed cooling, high heat loss, or weak heating response moves
+  toward Keep it Hot. Transitions need smoothing and hysteresis so the mode
+  does not chatter. The strict rule remains: Warm Floor may send commands only
+  while `current_temperature > target_temperature`.
+- **Global heat-source neutrality:** The entire project, not only Auto or Warm
+  Floor, must support underfloor systems heated by heat pumps, boilers,
+  district heating, electric boilers, solar buffers, and other sources. No
+  controller behavior, level, duty calculation, or safety decision may assume
+  a particular heat source or require a heat-pump-specific flow temperature.
+- **MPC v2 distinction:** An optional flow/water sensor may still be used as a
+  plant-model input when a user chooses MPC v2. Its fallback prior is a model
+  parameter, not a project-wide assumption and must never leak into generic
+  Warm Floor behavior or other calibration modes.
+- **Current implementation finding:** The Generic Warm Floor duty calculation
+  does not directly use water/flow temperature. It uses slope, short/one-hour
+  EMA, heat loss, heating power, and learned MPC Loss/Gain/Ka/solar data when
+  available. The configured flow/water sensor currently feeds the MPC v2 plant
+  model only; any Warm Floor influence is indirect through learned/controller
+  outputs. This distinction must be preserved unless a future generic,
+  capability-based water-temperature feature is designed.
+- **Status:** Concept recorded for later implementation; no Auto option or
+  water-temperature change has been implemented in this turn.
+
+### 2026-10-14 — Remove fixed maximum Warm Floor pause
+
+- **Requirement:** Keep the three levels fully dynamic; do not impose a fixed
+  maximum pause between maintenance pulses.
+- **Change:** Removed `WARM_FLOOR_DUTY_MAX_PAUSE_S`. Pause duration now follows
+  the dynamically calculated intensity with a continuous response curve. The
+  only hard timing constraint left is the actuator travel minimum needed to
+  open and close slow electrothermal relays. The minimum dynamic intensity
+  remains so solar/residual warming cannot reduce maintenance to zero.
+- **Verification:** The focused Warm Floor suite remains covered by the next
+  test run; no commit, Home Assistant deployment, or release was made.
+
+### 2026-10-14 — Make the three Warm Floor levels telemetry-driven
+
+- **Requirement:** Eco, Balanced, and Keep it Hot must not be fixed clock
+  schedules. They are user-selected baseline intensities; live diagnostics
+  determine the actual Generic Thermostat ON and pause durations.
+- **Old behavior:** The levels used fixed profiles of approximately 4+43,
+  6+28, and 8+13 minutes. Heat-loss telemetry could only make those profiles
+  somewhat more assertive, so the observed cycle still looked time-based.
+- **Change:** Replaced the fixed profile table with baseline intensities. Each
+  control tick now combines the selected level with cooling demand from slope,
+  short/one-hour EMA separation, heat loss/heating power, and learned MPC data.
+  Positive slope, warmer EMA, and a larger margin above target reduce the
+  resulting intensity. ON and pause are then recalculated within the physical
+  actuator bounds; the four-minute travel minimum remains as a mechanical
+  safety constraint, not a level schedule.
+- **Safety:** The strict `current_temperature > target_temperature` guard is
+  unchanged and still runs before every Warm Floor command. `climate.tatas`
+  remains unrelated. A dynamic minimum intensity prevents
+  solar/residual-warming telemetry from reducing maintenance to zero; there is
+  no fixed maximum pause. Only the four-minute ON/OFF travel minimum protects
+  slow electrothermal travel. No fixed `WARM_FLOOR_DUTY_PROFILES` table
+  remains.
+- **Verification:** 77 focused Warm Floor tests passed, all 81 Python files
+  passed AST parsing, JSON validation passed, and `git diff --check` passed.
+  No commit, Home Assistant deployment, or release was made.
+
+### 2026-10-14 — Full audit for stale Warm Floor boundary logic
+
+- **Audit scope:** Reviewed all Warm Floor execution routes, helper calls,
+  calibration entry points, Generic Thermostat handling, direct-valve handling,
+  offset handling, diagnostics, tests, documentation, and English UI text.
+- **Result:** No executable Warm Floor path remains that activates at or below
+  target. All three entry paths call `apply_warm_floor_floor()`, whose strict
+  `current_temperature > target_temperature` guard runs before backoff,
+  sustain push, duty-cycle, offset, or valve-floor calculations.
+- **Residuals corrected:** Updated one stale `at/above` code comment and one
+  duplicated configuration description. Remaining `>= target` references are
+  intentionally unrelated normal-heating, cooling, boost, MPC, or target-reached
+  logic, or are historical notes explicitly marked as superseded.
+- **Verification:** 74 focused Warm Floor tests passed; all 81 Python files
+  passed AST parsing; JSON and `git diff --check` validation passed. No commit,
+  Home Assistant deployment, or release was made.
+
+### 2026-10-14 — Enforce strict above-target Warm Floor boundary
+
+- **Requirement clarified:** Warm Floor is allowed only when the measured room
+  temperature is strictly above the Better Thermostat target
+  (`current_temperature > target_temperature`). At or below target, normal
+  Better Thermostat heating owns the actuator; Warm Floor must not add a
+  passive floor, sustain push, valve floor, or duty-cycle pulse.
+- **Gap found:** Generic duty-cycle code rejected only `current < target`, and
+  the shared Warm Floor path allowed passive setpoint/valve flooring for other
+  actuator types at or below target. This contradicted the current project
+  requirement even though earlier historical notes had described `>= target`.
+- **Change:** Added one capability-independent guard before all Warm Floor
+  calculations. It returns the normal computed command, records
+  `below_target`, `at_target`, or `temperature_unavailable`, and interrupts a
+  Generic Thermostat Warm Floor phase when required. The Generic duty helper
+  also independently uses the strict `>` check as defense in depth.
+- **Verification:** Warm Floor calibration and sustain/duty tests pass (49
+  tests) with explicit below-target, equal-target, direct-valve, and latched
+  Generic Thermostat coverage. This supersedes the earlier `>= target`
+  activation note; the three user levels remain unchanged.
+- **Scope:** Capability-based for all configured underfloor heaters. No
+  installation entity names are used, `climate.tatas` remains unrelated, and
+  no HA deployment or release has been made yet.
+
 ### 2026-10-14 — DEV deployment of actuator-phase latching fix
 
 - **Deployment:** DEV commit `851d3f9` was installed through HACS and Home
@@ -111,7 +311,7 @@
   `target + adaptive band` as a hard room-temperature ceiling. Rooms heated by
   sunlight or residual heat were therefore reported as `outside_duty_window`
   and could not keep the slab warm, even though Warm Floor is explicitly
-  intended to operate at or above the room target.
+  intended to operate above the room target.
 - **Change:** Removed that narrow hard-off gate. Above-target temperature now
   remains eligible for the normal Eco/Balanced/Keep-it-Hot duty profile, with
   `temp_slope`, short/one-hour EMA separation, thermal demand, and MPC inputs
@@ -285,13 +485,12 @@ follow-up.
 - **Verification:** Added rising-room and stronger-slope regression tests;
   the focused Warm Floor suite must pass before deployment.
 
-### 2026-10-13 — Exact Warm Floor activation boundary and three levels
+### 2026-10-13 — Historical activation boundary and three levels (superseded)
 
-- **Required boundary:** Warm Floor maintenance is eligible when the room
-  temperature is equal to or above the Better Thermostat target
-  (`current_temperature >= target_temperature`). It must not wait until the
-  room is strictly above target, and it must not activate below target as a
-  substitute for normal room-demand heating.
+- **Historical boundary:** This earlier note allowed Warm Floor when the room
+  temperature was equal to or above target. That boundary was superseded on
+  2026-10-14 by the stricter project rule: Warm Floor is allowed only strictly
+  above target (`current_temperature > target_temperature`).
 - **Required levels:** The public Warm Floor behavior keeps three levels:
   `Eco`, `Balanced`, and `Keep it Hot`. They control the baseline maintenance
   period, ON duration, and floor-hold band; live diagnostics and learned
@@ -307,7 +506,7 @@ follow-up.
   Floor `demand_factor`. Below-target error is handled by the normal Better
   Thermostat heating controller and must not make Warm Floor maintenance more
   aggressive.
-- **Why:** Warm Floor is eligible only at or above the room target. Its demand
+- **Why:** Warm Floor is eligible only strictly above the room target. Its demand
   factor must describe slab-maintenance conditions such as cooling slope,
   learned heat loss/heating power, and MPC feedback—not normal room heating
   demand.
@@ -934,7 +1133,7 @@ for all supported Home Assistant installations.
   each heater has its own flag, so multi-heater zones are handled independently.
   The status sensor now preserves phase/reason from the same evaluation and
   exposes `status_age_s` for refresh visibility. The existing rule remains:
-  ON pulses are eligible at or above target, while `idle_release` is only an
+  ON pulses are eligible strictly above target, while `idle_release` is only an
   OFF-window action.
 - **Verification:** 32 focused Warm Floor tests passed, `compileall` passed,
   and `git diff --check` passed. Deployment and live HA verification are the

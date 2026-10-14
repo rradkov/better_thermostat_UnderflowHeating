@@ -37,6 +37,7 @@ from custom_components.better_thermostat.utils.const import (
 )
 from custom_components.better_thermostat.utils.helpers import (
     convert_to_float,
+    convert_to_float_celsius,
     normalize_calibration_mode,
 )
 
@@ -101,16 +102,28 @@ UNDERSHOOT_SLOPE_GUARD: Final = 0.02
 # stopped rising - treat it the same as "still gaining" rather than "no
 # protection needed". Fixed, no config field (see _external_sensor_is_stale).
 WARM_FLOOR_SENSOR_STALE_AFTER_S: Final = 1200.0
-# Generic Thermostat is an on/off actuator. Keep a short, deterministic
-# sustaining window so it can warm the slab without requiring a valve entity.
-WARM_FLOOR_DUTY_PERIOD_S: Final = 20 * 60
-WARM_FLOOR_DUTY_ON_S: Final = 5 * 60
 # Typical electrothermal UFH actuators need several minutes to travel fully
 # in either direction.  A shorter ON/OFF window is not merely inefficient:
 # the actuator may not move far enough to produce any useful heat.
 WARM_FLOOR_ACTUATOR_TRAVEL_S: Final = 4 * 60
-WARM_FLOOR_DUTY_MIN_ON_BAND_C: Final = 0.15
-WARM_FLOOR_DUTY_MAX_ON_BAND_C: Final = 0.30
+# These are physical bounds for the dynamic controller, not level schedules.
+# The selected level supplies only a baseline intensity. The actual ON and
+# pause durations are recalculated from live telemetry on every control tick.
+WARM_FLOOR_DUTY_MIN_PAUSE_S: Final = WARM_FLOOR_ACTUATOR_TRAVEL_S
+WARM_FLOOR_DUTY_MIN_ON_S: Final = WARM_FLOOR_ACTUATOR_TRAVEL_S
+WARM_FLOOR_DUTY_MAX_ON_S: Final = 12 * 60
+WARM_FLOOR_DUTY_MIN_INTENSITY: Final = 0.15
+WARM_FLOOR_DUTY_PAUSE_RESPONSE_S: Final = 15 * 60
+# Broad, source-neutral normalisation bounds for an optional water/buffer
+# temperature. They are deliberately only a bounded capacity hint; room
+# response remains the authoritative feedback signal.
+WARM_FLOOR_WATER_LOW_C: Final = 20.0
+WARM_FLOOR_WATER_HIGH_C: Final = 50.0
+WARM_FLOOR_WATER_WEIGHT: Final = 0.60
+# Outdoor temperature is a feed-forward heat-loss hint, not an HVAC cutoff.
+WARM_FLOOR_OUTDOOR_WARM_C: Final = 20.0
+WARM_FLOOR_OUTDOOR_COLD_C: Final = -5.0
+WARM_FLOOR_OUTDOOR_WEIGHT: Final = 0.50
 
 # "Ниво на топъл под" / Warm Floor Level: a single dial that resolves to a
 # (max_backoff, sustain_push) pair at config-normalize time, so
@@ -122,28 +135,25 @@ WARM_FLOOR_LEVEL_ECO: Final = "level_1"
 WARM_FLOOR_LEVEL_BALANCED: Final = "level_2"
 WARM_FLOOR_LEVEL_KEEP_HOT: Final = "level_3"
 WARM_FLOOR_LEVEL_CUSTOM: Final = "custom"
+WARM_FLOOR_LEVEL_AUTO: Final = "auto"
 DEFAULT_WARM_FLOOR_LEVEL: Final = WARM_FLOOR_LEVEL_BALANCED
 
 WARM_FLOOR_LEVEL_PRESETS: Final[dict[str, tuple[float, float]]] = {
     WARM_FLOOR_LEVEL_ECO: (3.0, 0.0),
     WARM_FLOOR_LEVEL_BALANCED: (1.5, 0.0),
     WARM_FLOOR_LEVEL_KEEP_HOT: (0.5, 0.3),
+    WARM_FLOOR_LEVEL_AUTO: (1.5, 0.0),
 }
 
-# Generic Thermostat duty profiles. The Warm Floor level is the user's
-# intensity control. The period is the complete cycle (ON + pause), so these
-# starting values intentionally include the actuator travel time: an
-# electrothermal actuator needs roughly four minutes to open and another four
-# minutes to close. The live slope and learned heat-loss/heating-power values
-# may still make the cycle more assertive when the room is losing heat.
-WARM_FLOOR_DUTY_PROFILES: Final[dict[str, tuple[int, int, float]]] = {
-    # Requested starting profile: 4 min ON + about 43 min pause.
-    WARM_FLOOR_LEVEL_ECO: (47 * 60, 4 * 60, 0.15),
-    # Requested starting profile: 6 min ON + about 28 min pause.
-    WARM_FLOOR_LEVEL_BALANCED: (34 * 60, 6 * 60, 0.30),
-    # Requested starting profile: 8 min ON + about 13 min pause.
-    WARM_FLOOR_LEVEL_KEEP_HOT: (21 * 60, 8 * 60, 0.55),
-    WARM_FLOOR_LEVEL_CUSTOM: (34 * 60, 6 * 60, 0.30),
+# Warm Floor levels are baselines, not fixed ON/OFF schedules. A higher level
+# remains more assertive under the same telemetry, while cooling/load signals
+# can make all levels converge toward a longer maintenance pulse. Positive
+# slope, warmer short EMA, and a larger margin above target reduce intensity.
+WARM_FLOOR_LEVEL_INTENSITY: Final[dict[str, float]] = {
+    WARM_FLOOR_LEVEL_ECO: 0.20,
+    WARM_FLOOR_LEVEL_BALANCED: 0.45,
+    WARM_FLOOR_LEVEL_KEEP_HOT: 0.70,
+    WARM_FLOOR_LEVEL_CUSTOM: 0.45,
 }
 
 
@@ -213,6 +223,7 @@ def build_underfloor_advanced_fields(
                 WARM_FLOOR_LEVEL_ECO,
                 WARM_FLOOR_LEVEL_BALANCED,
                 WARM_FLOOR_LEVEL_KEEP_HOT,
+                WARM_FLOOR_LEVEL_AUTO,
                 WARM_FLOOR_LEVEL_CUSTOM,
             ],
             mode=selector.SelectSelectorMode.DROPDOWN,
@@ -537,10 +548,6 @@ def _record_status(
         warm_floor_level = trv_state.advanced.get(
             CONF_WARM_FLOOR_LEVEL, DEFAULT_WARM_FLOOR_LEVEL
         )
-        if _is_generic_thermostat(trv_state):
-            status_duty_period_s, status_duty_on_s, _ = _warm_floor_duty_profile(
-                trv_state
-            )
     backoff_c = None
     if isinstance(target, (int, float)) and isinstance(
         sustaining_setpoint, (int, float)
@@ -604,6 +611,11 @@ def _record_status(
         "hvac_action": hvac_action,
         "valve_min_pct": valve_min_pct,
         "demand_factor": demand_factor,
+        "outdoor_temp_c": getattr(bt, "_warm_floor_outdoor_temp_c", None),
+        "outdoor_temp_source": getattr(bt, "_warm_floor_outdoor_source", None),
+        "flow_temp_c": getattr(bt, "_warm_floor_flow_temp_c", None),
+        "flow_temp_source": getattr(bt, "_warm_floor_flow_source", None),
+        "auto_policy": getattr(bt, "_warm_floor_auto_policy", None),
         "updated_at": dt_util.utcnow().isoformat(),
     }
     # Keep one status per controlled heater.  A Better Thermostat may control
@@ -711,12 +723,91 @@ def _is_generic_thermostat(trv_state) -> bool:
     return integration in {"generic", "generic_thermostat"}
 
 
-def _warm_floor_duty_profile(trv_state) -> tuple[int, int, float]:
-    """Return period, base ON time and hold band for the configured level."""
+def _warm_floor_state_temperature(
+    bt, entity_id: str | None, *, weather: bool = False
+) -> float | None:
+    """Read one configured temperature source without changing BT state."""
+    hass = getattr(bt, "hass", None)
+    if hass is None or not isinstance(entity_id, str) or not entity_id:
+        return None
+    try:
+        state = hass.states.get(entity_id)
+    except Exception:
+        return None
+    if state is None or state.state in {"unknown", "unavailable", None}:
+        return None
+    value = state.state
+    unit = state.attributes.get("unit_of_measurement") if state.attributes else None
+    if weather and state.attributes:
+        value = state.attributes.get("temperature")
+        unit = state.attributes.get("temperature_unit", unit)
+    return convert_to_float_celsius(
+        value,
+        getattr(bt, "device_name", "Better Thermostat"),
+        "warm_floor.temperature_source",
+        unit_of_measurement=unit,
+    )
+
+
+def _warm_floor_outdoor_temperature(bt) -> tuple[float | None, str | None]:
+    """Resolve the current outdoor temperature from existing BT configuration."""
+    sensor = getattr(bt, "outdoor_sensor", None)
+    value = _warm_floor_state_temperature(bt, sensor)
+    if value is not None:
+        return value, "outdoor_sensor"
+    weather = getattr(bt, "weather_entity", None)
+    value = _warm_floor_state_temperature(bt, weather, weather=True)
+    if value is not None:
+        return value, "weather_entity"
+    return None, None
+
+
+def _warm_floor_flow_temperature(bt) -> tuple[float | None, str | None]:
+    """Resolve configured live water temperature, then its static fallback."""
+    sensor = getattr(bt, "flow_temp_sensor", None)
+    value = _warm_floor_state_temperature(bt, sensor)
+    if value is not None:
+        return value, "flow_temp_sensor"
+    static = getattr(bt, "flow_temp_static_c", None)
+    if isinstance(static, (int, float)) and math.isfinite(float(static)):
+        return float(static), "flow_temp_static_c"
+    return None, None
+
+
+def _warm_floor_level_intensity(
+    bt_or_trv, trv_state=None, demand_factor: float = 0.0
+) -> float:
+    """Return the selected level's baseline, or a smoothed Auto baseline."""
+    # Keep the small public test/helper API backwards compatible: older
+    # callers passed only the TRV state. Auto needs the BT instance, while
+    # fixed levels do not.
+    bt = bt_or_trv if trv_state is not None else None
+    if trv_state is None:
+        trv_state = bt_or_trv
     level = trv_state.advanced.get(CONF_WARM_FLOOR_LEVEL, DEFAULT_WARM_FLOOR_LEVEL)
-    return WARM_FLOOR_DUTY_PROFILES.get(
+    if str(level) == WARM_FLOOR_LEVEL_AUTO:
+        if bt is None:
+            return WARM_FLOOR_LEVEL_INTENSITY[DEFAULT_WARM_FLOOR_LEVEL]
+        if demand_factor >= 0.65:
+            desired = WARM_FLOOR_LEVEL_INTENSITY[WARM_FLOOR_LEVEL_KEEP_HOT]
+            policy = WARM_FLOOR_LEVEL_KEEP_HOT
+        elif demand_factor >= 0.30:
+            desired = WARM_FLOOR_LEVEL_INTENSITY[WARM_FLOOR_LEVEL_BALANCED]
+            policy = WARM_FLOOR_LEVEL_BALANCED
+        else:
+            desired = WARM_FLOOR_LEVEL_INTENSITY[WARM_FLOOR_LEVEL_ECO]
+            policy = WARM_FLOOR_LEVEL_ECO
+        previous = getattr(bt, "_warm_floor_auto_intensity", None)
+        if isinstance(previous, (int, float)):
+            desired = float(previous) + 0.25 * (desired - float(previous))
+        bt._warm_floor_auto_intensity = desired
+        bt._warm_floor_auto_policy = policy
+        return desired
+    if bt is not None:
+        bt._warm_floor_auto_policy = None
+    return WARM_FLOOR_LEVEL_INTENSITY.get(
         str(level),
-        WARM_FLOOR_DUTY_PROFILES[DEFAULT_WARM_FLOOR_LEVEL],
+        WARM_FLOOR_LEVEL_INTENSITY[DEFAULT_WARM_FLOOR_LEVEL],
     )
 
 
@@ -733,6 +824,35 @@ def _warm_floor_demand_factor(
     belongs to the normal Better Thermostat controller.
     """
     demand = 0.0
+
+    outdoor_temp, outdoor_source = _warm_floor_outdoor_temperature(bt)
+    flow_temp, flow_source = _warm_floor_flow_temperature(bt)
+    bt._warm_floor_outdoor_temp_c = outdoor_temp
+    bt._warm_floor_outdoor_source = outdoor_source
+    bt._warm_floor_flow_temp_c = flow_temp
+    bt._warm_floor_flow_source = flow_source
+
+    # These are deliberately bounded feed-forward hints. They never start
+    # Warm Floor by themselves and never override the strict above-target
+    # guard in apply_warm_floor_floor(). The room's measured response below
+    # remains the authoritative feedback signal.
+    if isinstance(outdoor_temp, (int, float)):
+        outdoor_coldness = _clamp(
+            (WARM_FLOOR_OUTDOOR_WARM_C - float(outdoor_temp))
+            / (WARM_FLOOR_OUTDOOR_WARM_C - WARM_FLOOR_OUTDOOR_COLD_C),
+            0.0,
+            1.0,
+        )
+        demand = max(demand, WARM_FLOOR_OUTDOOR_WEIGHT * outdoor_coldness)
+
+    if isinstance(flow_temp, (int, float)):
+        water_capacity = _clamp(
+            (float(flow_temp) - WARM_FLOOR_WATER_LOW_C)
+            / (WARM_FLOOR_WATER_HIGH_C - WARM_FLOOR_WATER_LOW_C),
+            0.0,
+            1.0,
+        )
+        demand = max(demand, WARM_FLOOR_WATER_WEIGHT * (1.0 - water_capacity))
 
     slope = getattr(bt, "temp_slope", None)
     if isinstance(slope, (int, float)) and slope < 0.0:
@@ -791,25 +911,66 @@ def _warm_floor_demand_factor(
     return _clamp(demand, 0.0, 1.0)
 
 
+def _warm_floor_rising_factor(bt) -> float:
+    """Reduce maintenance intensity while live telemetry shows warming."""
+    factor = 1.0
+    slope = getattr(bt, "temp_slope", None)
+    if isinstance(slope, (int, float)) and slope > 0.0:
+        factor *= _clamp(
+            1.0 - float(slope) / 0.10 * 0.65,
+            WARM_FLOOR_MIN_RISING_DUTY_RATIO,
+            1.0,
+        )
+
+    short_ema = getattr(bt, "cur_temp_filtered", None)
+    if not isinstance(short_ema, (int, float)):
+        short_ema = getattr(bt, "external_temp_ema", None)
+    long_ema = getattr(bt, "external_temp_ema_1h", None)
+    if isinstance(short_ema, (int, float)) and isinstance(long_ema, (int, float)):
+        ema_delta = float(short_ema) - float(long_ema)
+        if ema_delta > 0.0:
+            factor *= _clamp(1.0 - ema_delta / 0.5 * 0.45, 0.45, 1.0)
+
+    current = getattr(bt, "cur_temp", None)
+    target = getattr(bt, "bt_target_temp", None)
+    if isinstance(current, (int, float)) and isinstance(target, (int, float)):
+        excess = max(0.0, float(current) - float(target))
+        factor *= _clamp(1.0 - excess / 2.0 * 0.35, 0.65, 1.0)
+    return _clamp(factor, WARM_FLOOR_MIN_RISING_DUTY_RATIO, 1.0)
+
+
 def _effective_duty_profile(
-    trv_state, demand_factor: float
+    bt, trv_state, demand_factor: float
 ) -> tuple[int, int, float]:
-    """Adapt the level's duty profile to the current heating demand."""
-    base_period_s, base_on_s, level_band = _warm_floor_duty_profile(trv_state)
+    """Calculate a dynamic ON/pause profile from level and live telemetry."""
     demand_factor = _clamp(demand_factor, 0.0, 1.0)
-    period_s = max(
-        2 * WARM_FLOOR_ACTUATOR_TRAVEL_S,
-        int(round(base_period_s * (1.0 - 0.35 * demand_factor))),
+    level_intensity = _warm_floor_level_intensity(bt, trv_state, demand_factor)
+    # Cooling/load demand raises the selected baseline toward full intensity.
+    intensity = level_intensity + (1.0 - level_intensity) * demand_factor
+    intensity *= _warm_floor_rising_factor(bt)
+    # Even under strong solar/residual warming, keep a minimum maintenance
+    # cadence so the slab is never abandoned for a long period. This is a
+    # lower bound on dynamic intensity, not a fixed level schedule.
+    intensity = _clamp(intensity, WARM_FLOOR_DUTY_MIN_INTENSITY, 1.0)
+
+    on_s = int(
+        round(
+            WARM_FLOOR_DUTY_MIN_ON_S
+            + (WARM_FLOOR_DUTY_MAX_ON_S - WARM_FLOOR_DUTY_MIN_ON_S)
+            * intensity
+        )
     )
-    on_s = max(
-        WARM_FLOOR_ACTUATOR_TRAVEL_S,
-        int(round(base_on_s * (1.0 + demand_factor))),
+    # There is deliberately no configured maximum pause. The pause follows
+    # the current dynamic intensity continuously; only the actuator travel
+    # time is a hard mechanical minimum between pulses.
+    pause_s = int(
+        round(
+            WARM_FLOOR_DUTY_MIN_PAUSE_S
+            + WARM_FLOOR_DUTY_PAUSE_RESPONSE_S * (1.0 - intensity) ** 2
+        )
     )
-    # Leave enough OFF time for the actuator to close completely before the
-    # next pulse. This prevents a rapid ON/OFF command sequence from being
-    # mechanically invisible to slow thermal actuators.
-    on_s = min(on_s, period_s - WARM_FLOOR_ACTUATOR_TRAVEL_S)
-    return period_s, on_s, level_band
+    period_s = on_s + pause_s
+    return period_s, on_s, intensity
 
 
 def _latch_generic_actuator_phase(trv_state, requested_on: bool) -> tuple[bool, str | None]:
@@ -940,15 +1101,17 @@ def _apply_generic_duty_cycle(
     if getattr(bt, "hvac_action", None) != HVACAction.IDLE:
         _interrupt_generic_actuator_phase(trv_state, "normal_heat_demand")
         return result, None, None, None
-    if current < float(target):
-        _interrupt_generic_actuator_phase(trv_state, "below_target")
+    if current <= float(target):
+        _interrupt_generic_actuator_phase(
+            trv_state, "below_target" if current < float(target) else "at_target"
+        )
         return result, None, None, None
     # A positive slope is already folded into ``demand_factor`` by the
     # caller. Keep the maintenance pulse available here; it is modulated by
     # the duty profile rather than blanket-disabled above target.
 
-    period_s, base_on_s, _level_band = _effective_duty_profile(
-        trv_state, demand_factor
+    period_s, base_on_s, _intensity = _effective_duty_profile(
+        bt, trv_state, demand_factor
     )
     # A cooling room needs more sustaining time. A rising/solar-heated room
     # gets a shorter/less frequent profile through demand_factor, but it must
@@ -1063,6 +1226,39 @@ def apply_warm_floor_floor(
         _record_status(bt, entity_id, active=False, sustaining_setpoint=None, reason="hvac_off")
         return computed_value
 
+    # Warm Floor is a maintenance feature, never a second heating controller.
+    # Normal Better Thermostat heating owns every state at or below target;
+    # Warm Floor is permitted only while the measured room temperature is
+    # strictly above the user's target. Apply this guard before calculating
+    # backoff, sustain push, valve floor, or a Generic Thermostat duty pulse so
+    # no actuator type can receive a maintenance command in the normal-demand
+    # region.
+    current_temp = getattr(bt, "cur_temp", None)
+    target_temp = getattr(bt, "bt_target_temp", None)
+    if not isinstance(current_temp, (int, float)) or not isinstance(
+        target_temp, (int, float)
+    ):
+        _interrupt_generic_actuator_phase(trv_state, "temperature_unavailable")
+        _record_status(
+            bt,
+            entity_id,
+            active=False,
+            sustaining_setpoint=None,
+            reason="temperature_unavailable",
+        )
+        return computed_value
+    if float(current_temp) <= float(target_temp):
+        reason = "below_target" if float(current_temp) < float(target_temp) else "at_target"
+        _interrupt_generic_actuator_phase(trv_state, reason)
+        _record_status(
+            bt,
+            entity_id,
+            active=False,
+            sustaining_setpoint=None,
+            reason=reason,
+        )
+        return computed_value
+
     calibration_mode = normalize_calibration_mode(
         trv_state.advanced.get("calibration_mode")
     )
@@ -1142,7 +1338,7 @@ def apply_warm_floor_floor(
             computed_value >= target_temp
             and bt.hvac_action == HVACAction.IDLE
             and isinstance(cur_temp, (int, float))
-            and cur_temp >= target_temp
+            and cur_temp > target_temp
             and not _has_active_valve_balance(trv_state)
         ):
             push_amount = _sustain_push_amount(bt, entity_id, structural_scale)
@@ -1177,7 +1373,7 @@ def apply_warm_floor_floor(
                     trv_state.warm_floor_force_setpoint_write = True
         # A Generic Thermostat turns its relay on from the downstream
         # setpoint alone.  If the Better Thermostat controller is idle and the
-        # room is already at/above its user target, an old setpoint above the
+        # room is already strictly above its user target, an old setpoint above the
         # room temperature is therefore a real heating command, even when
         # Warm Floor is outside its ON window.  Release that stale command
         # unless the explicitly configured sustain push is the reason to keep
@@ -1190,7 +1386,7 @@ def apply_warm_floor_floor(
             and sustain_push_c is None
             and bt.hvac_action == HVACAction.IDLE
             and isinstance(cur_temp, (int, float))
-            and cur_temp >= target_temp
+            and cur_temp > target_temp
             and result >= target_temp
         ):
             # Generic Thermostat keeps its previous heating action when the

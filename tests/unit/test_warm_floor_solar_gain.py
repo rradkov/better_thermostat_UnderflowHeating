@@ -40,6 +40,7 @@ def _make_bt(*, mpc_state: MpcState, solar_intensity: float, **overrides) -> Mag
     bt.call_for_heat = True
     bt.bt_hvac_mode = HVACMode.HEAT
     bt.bt_target_temp = 22.0
+    bt.cur_temp = 22.2
     bt.temp_slope = None
     bt.heat_loss_rate = mpc_state.loss_est
     bt.heating_power = mpc_state.gain_est

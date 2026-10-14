@@ -807,6 +807,8 @@ class TestControlTrvAvailablePath:
         trv = _default_trv_config(integration="generic_thermostat")
         mock_self = _make_mock_self(
             trv_state=HVACMode.HEAT,
+            cur_temp=22.5,
+            bt_target_temp=22.0,
             trv_attrs={"temperature": 22.0},
             real_trvs={"climate.trv1": trv},
         )
