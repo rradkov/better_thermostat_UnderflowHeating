@@ -1633,7 +1633,7 @@ def apply_warm_floor_floor(
             and sustain_push_c is None
             and bt.hvac_action == HVACAction.IDLE
             and isinstance(cur_temp, (int, float))
-            and cur_temp > target_temp
+            and cur_temp >= target_temp
             and result >= target_temp
         ):
             # Generic Thermostat keeps its previous heating action when the

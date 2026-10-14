@@ -1,5 +1,20 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-15 — Release stale Generic Thermostat command at exact target
+
+- **Observed:** After Warm Floor became eligible at the exact target, Tino could
+  show Better Thermostat idle and Warm Floor outside its duty window while the
+  downstream Generic Thermostat still held a 30°C setpoint and kept its relay
+  on.
+- **Root cause:** Stale-command release required `current_temperature > target`,
+  so equality skipped the release path.
+- **Change:** Release a stale Generic Thermostat Warm Floor command when
+  `current_temperature >= target_temperature`, during an OFF/rising duty phase,
+  while BT is idle and no sustain push is active. The command is moved one
+  valid device step below target; the user's target and preset are unchanged.
+- **Verification:** Add exact-target regression coverage and verify the
+  downstream setpoint, HVAC action, and relay after the DEV deployment.
+
 ### 2026-10-14 — Allow Warm Floor maintenance at exact target
 
 - **Requirement correction:** Warm Floor may operate when
