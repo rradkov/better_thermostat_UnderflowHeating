@@ -1163,3 +1163,18 @@ for all supported Home Assistant installations.
   pump automation and was not used as proof of BT control.
 - **Follow-up:** Continue passive observation for long-period ON/OFF edges and
   restart recovery across all zones; the liveness defect itself is verified.
+
+### 2026-10-14 — Multi-heater Warm Floor zones may alternate safely
+
+- **Design clarification:** Multiple underfloor heaters in one Better
+  Thermostat zone do not have to be ON at exactly the same instant. Independent
+  duty-cycle decisions are acceptable when the heaters alternate and the zone
+  still receives regular Warm Floor maintenance.
+- **Acceptance rule:** Treat alternating relays as healthy behavior when there
+  is no excessive gap with both heaters OFF, each active decision produces its
+  corresponding real relay response, and the shared floor/pump demand remains
+  adequate. Do not force simultaneous ON commands merely to make the status
+  look synchronized.
+- **Scope:** This is a generic multi-heater rule. It does not reference room
+  names, relay IDs, or `climate.tatas`, and it does not change the current
+  control implementation by itself.
