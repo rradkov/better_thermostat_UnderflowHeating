@@ -1,5 +1,21 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-14 — DEV deployment of trend-confirmed Auto policy
+
+- **Deployment:** HACS installed DEV commit `6a4b4e5` and Home Assistant was
+  restarted successfully. HACS reports `installed_version=available_version`
+  `6a4b4e5`; all seven Better Thermostat entries are `loaded`.
+- **Live verification:** Tino, Master, Office/Guest, Living/Bathroom, and the
+  configured Warm Floor heaters started with fresh status ages and
+  `auto_policy: level_3` (`Keep it Hot`), as intended by the conservative
+  bootstrap. Living/Bathroom showed the expected independent multi-heater
+  phase behavior. Bathroom FL2 remained under normal below-target heating and
+  the fan-coil remained HVAC off.
+- **Safety:** No target, preset, relay, or manual configuration was changed.
+  `climate.tatas` was not queried or changed. Kitchen/Dining remained
+  `unavailable`/disabled as a separate existing runtime state; it was not
+  manually altered. No release was created.
+
 ### 2026-10-14 — Implement conservative, trend-confirmed Auto policy
 
 - **Change:** Auto now bootstraps at `Keep it Hot` when it first becomes active,
