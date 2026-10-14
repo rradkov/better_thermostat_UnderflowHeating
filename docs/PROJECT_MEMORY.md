@@ -1178,3 +1178,22 @@ for all supported Home Assistant installations.
 - **Scope:** This is a generic multi-heater rule. It does not reference room
   names, relay IDs, or `climate.tatas`, and it does not change the current
   control implementation by itself.
+
+### 2026-10-14 — Respect actuator travel time in Warm Floor pulses
+
+- **Hardware constraint:** The underfloor thermal actuators used in the
+  reference installation need approximately four minutes of continuous ON
+  time to open and approximately four minutes of continuous OFF time to
+  close. This is an actuator capability, not a room-specific preference.
+- **Control implication:** A calculated Warm Floor ON pulse shorter than the
+  configured opening time may not open the valve meaningfully. Likewise, an
+  OFF interval shorter than the configured closing time may leave the valve
+  partially open. Duty-cycle calculations must therefore account for
+  configurable actuator opening/closing times before issuing pulses.
+- **Multi-heater implication:** Alternating heaters remains acceptable only
+  when each selected pulse is long enough for its actuator and the resulting
+  sequence still provides the required floor maintenance. Short pulses must
+  not be treated as successful heating merely because a relay changed state.
+- **Generic scope:** The implementation must expose or derive these timings
+  from actuator capability/configuration and must not hardcode Tino, room, or
+  relay identifiers. `climate.tatas` remains unrelated and out of scope.
