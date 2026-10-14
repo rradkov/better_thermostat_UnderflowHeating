@@ -165,18 +165,45 @@ def test_does_not_fire_before_the_room_actually_reaches_target():
     assert result == 22.0
 
 
-def test_warm_floor_requires_strictly_above_target_for_every_actuator_path():
-    """Normal heating owns below-target and equal-target states."""
-    for current, reason in ((21.9, "below_target"), (22.0, "at_target")):
-        bt = _make_bt(cur_temp=current, target_temp=22.0, sustain_push=0.3)
-        trv = bt.real_trvs["climate.trv"]
-        trv.calibration_balance = {"apply_valve": True, "valve_percent": 0}
-        result = apply_warm_floor_floor(bt, "climate.trv", 20.0, is_offset=False)
+def test_warm_floor_stays_disabled_below_target_for_every_actuator_path():
+    """Normal heating owns the below-target region."""
+    bt = _make_bt(cur_temp=21.9, target_temp=22.0, sustain_push=0.3)
+    trv = bt.real_trvs["climate.trv"]
+    trv.calibration_balance = {"apply_valve": True, "valve_percent": 0}
+    result = apply_warm_floor_floor(bt, "climate.trv", 20.0, is_offset=False)
 
-        assert result == 20.0
-        assert trv.calibration_balance["valve_percent"] == 0
-        assert bt._warm_floor_status["active"] is False
-        assert bt._warm_floor_status["reason"] == reason
+    assert result == 20.0
+    assert trv.calibration_balance["valve_percent"] == 0
+    assert bt._warm_floor_status["active"] is False
+    assert bt._warm_floor_status["reason"] == "below_target"
+
+
+def test_warm_floor_maintains_an_idle_generic_room_at_target(monkeypatch):
+    """At target, an idle generic heater may maintain a zero-slope floor."""
+    bt = _make_bt(cur_temp=22.0, target_temp=22.0, sustain_push=0.3)
+    bt.real_trvs["climate.trv"].integration = "generic_thermostat"
+    bt.temp_slope = 0.0
+    monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: True)
+
+    result = apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
+
+    assert result > bt.bt_target_temp
+    assert bt._warm_floor_status["active"] is True
+    assert bt._warm_floor_status["reason"] == "duty_cycle_on"
+
+
+def test_warm_floor_auto_selects_keep_hot_at_target_when_not_warming():
+    """Auto protects the slab at the exact target until warming is proven."""
+    bt = _make_bt(cur_temp=22.0, target_temp=22.0)
+    bt.cur_temp_filtered = 22.0
+    bt.external_temp_ema = 22.0
+    bt.external_temp_ema_1h = 22.0
+    bt.temp_slope = 0.0
+
+    assert (
+        underfloor._warm_floor_auto_candidate(bt, demand_factor=0.0)
+        == underfloor.WARM_FLOOR_LEVEL_KEEP_HOT
+    )
 
 
 def test_below_target_interrupts_a_latched_generic_warm_floor_phase():

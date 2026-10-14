@@ -1,5 +1,25 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-14 — Allow Warm Floor maintenance at exact target
+
+- **Requirement correction:** Warm Floor may operate when
+  `current_temperature >= target_temperature`. The below-target region remains
+  owned by normal Better Thermostat heating.
+- **Exact-target behavior:** When the room is exactly at target and idle, Auto
+  starts from Keep it Hot while the live slope, EMA/EMA 1h, heat loss,
+  heating power, outdoor temperature, flow temperature, and MPC signals
+  continuously determine the actual ON/pause duty cycle. The goal is a stable
+  room with `temp_slope` near zero and a warm slab, not a fixed temperature
+  overshoot.
+- **Auto explanation:** A room can be above target and still select Keep it
+  Hot when the diagnostics show cooling/load risk. The level is a baseline;
+  the dynamic duty profile remains responsible for reducing heat as the room
+  warms or the margin grows.
+- **Implementation:** The equality boundary is now eligible for Warm Floor,
+  Generic Thermostat pulses can turn on at exact target, and Auto treats an
+  exact-target non-warming room as Keep it Hot until warming is confirmed.
+
+
 ### 2026-10-14 — Warm Floor control objective: target-centered room with zero slope
 
 - **Requirement clarified:** The primary Warm Floor objective is not to keep the

@@ -841,7 +841,7 @@ def _warm_floor_auto_candidate(bt, demand_factor: float) -> str:
         return WARM_FLOOR_LEVEL_KEEP_HOT
     if (
         isinstance(margin, (int, float))
-        and 0.0 < margin <= WARM_FLOOR_AUTO_NEAR_TARGET_MARGIN_C
+        and margin <= WARM_FLOOR_AUTO_NEAR_TARGET_MARGIN_C
         and not warming
     ):
         return WARM_FLOOR_LEVEL_KEEP_HOT
@@ -881,10 +881,10 @@ def _warm_floor_auto_policy(bt, demand_factor: float) -> str:
         WARM_FLOOR_LEVEL_KEEP_HOT,
     }
     if current not in valid:
-        # Bootstrap conservatively. The first eligible above-target window
+        # Bootstrap conservatively. The first eligible at/above-target window
         # gets a strong baseline, then later ticks may step down after proof
-        # of warming. This state is policy-only; the caller still enforces
-        # current_temperature > target_temperature before sending anything.
+        # of warming. This state is policy-only; the caller still blocks the
+        # below-target region before sending anything.
         current = WARM_FLOOR_LEVEL_KEEP_HOT
         bt._warm_floor_auto_policy = current
         bt._warm_floor_auto_policy_since = now
@@ -985,8 +985,8 @@ def _warm_floor_demand_factor(
     bt._warm_floor_flow_source = flow_source
 
     # These are deliberately bounded feed-forward hints. They never start
-    # Warm Floor by themselves and never override the strict above-target
-    # guard in apply_warm_floor_floor(). The room's measured response below
+    # Warm Floor below target by themselves and never override the
+    # below-target guard in apply_warm_floor_floor(). The room's measured response below
     # remains the authoritative feedback signal.
     if isinstance(outdoor_temp, (int, float)):
         outdoor_coldness = _clamp(
@@ -1064,7 +1064,7 @@ def _warm_floor_demand_factor(
     # heating has to start, but only while the room is still above target.
     # It is deliberately derived from relative trend/thermal evidence rather
     # than a fixed temperature threshold.  The caller still enforces the hard
-    # current_temperature > target_temperature boundary.
+    # below-target boundary.
     preheat_risk = _warm_floor_preheat_risk(bt)
     bt._warm_floor_preheat_risk = preheat_risk
     return _clamp(max(demand, preheat_risk), 0.0, 1.0)
@@ -1333,7 +1333,7 @@ def _apply_generic_duty_cycle(
     Generic Thermostat has no valve percentage to floor. Its only actuator is
     the temperature comparison, so the ON window raises the downstream
     setpoint above both the live room temperature and the Better Thermostat
-    target. A room above target reduces maintenance demand through the duty
+    target. A room at/above target reduces maintenance demand through the duty
     profile and slope/EMA inputs; it is not by itself a reason to disable
     Warm Floor. Only the absolute safety ceiling and duty phase suppress it.
     """
@@ -1349,10 +1349,8 @@ def _apply_generic_duty_cycle(
     if getattr(bt, "hvac_action", None) != HVACAction.IDLE:
         _interrupt_generic_actuator_phase(trv_state, "normal_heat_demand")
         return result, None, None, None
-    if current <= float(target):
-        _interrupt_generic_actuator_phase(
-            trv_state, "below_target" if current < float(target) else "at_target"
-        )
+    if current < float(target):
+        _interrupt_generic_actuator_phase(trv_state, "below_target")
         return result, None, None, None
     # A positive slope is already folded into ``demand_factor`` by the
     # caller. Keep the maintenance pulse available here; it is modulated by
@@ -1475,9 +1473,10 @@ def apply_warm_floor_floor(
         return computed_value
 
     # Warm Floor is a maintenance feature, never a second heating controller.
-    # Normal Better Thermostat heating owns every state at or below target;
-    # Warm Floor is permitted only while the measured room temperature is
-    # strictly above the user's target. Apply this guard before calculating
+    # Normal Better Thermostat heating owns the below-target region. At the
+    # exact target, an idle room may receive a maintenance pulse so the slab
+    # can hold a near-zero slope without waiting for a recovery cycle. Apply
+    # this guard before calculating
     # backoff, sustain push, valve floor, or a Generic Thermostat duty pulse so
     # no actuator type can receive a maintenance command in the normal-demand
     # region.
@@ -1495,8 +1494,8 @@ def apply_warm_floor_floor(
             reason="temperature_unavailable",
         )
         return computed_value
-    if float(current_temp) <= float(target_temp):
-        reason = "below_target" if float(current_temp) < float(target_temp) else "at_target"
+    if float(current_temp) < float(target_temp):
+        reason = "below_target"
         _interrupt_generic_actuator_phase(trv_state, reason)
         _record_status(
             bt,
@@ -1586,7 +1585,7 @@ def apply_warm_floor_floor(
             computed_value >= target_temp
             and bt.hvac_action == HVACAction.IDLE
             and isinstance(cur_temp, (int, float))
-            and cur_temp > target_temp
+            and cur_temp >= target_temp
             and not _has_active_valve_balance(trv_state)
         ):
             push_amount = _sustain_push_amount(bt, entity_id, structural_scale)
