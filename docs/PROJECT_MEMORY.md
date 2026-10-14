@@ -1,5 +1,22 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-14 — DEV deployment of outdoor/water/Auto Warm Floor changes
+
+- **Deployment:** HACS installed DEV commit `ffb8f80` from
+  `rradkov/better_thermostat_UnderflowHeating-dev`, then Home Assistant was
+  restarted so the integration code was loaded.
+- **Verification:** HACS reports `installed_version=available_version=ffb8f80`.
+  All seven Better Thermostat config entries are `loaded` after the restart.
+  Warm Floor status entities are publishing fresh diagnostics, including
+  outdoor source/value and flow-temperature source/value where configured.
+- **Live observations:** Master, Tino, Living/Bathroom, and Office/Guest
+  generic heaters are above target and currently in valid OFF/recovery phases;
+  Bathroom FL2 is below target and normal heating owns the actuator; the
+  Office/Guest fan-coil is HVAC off; Kitchen/Dining is disabled in its current
+  configuration. No state was manually forced during verification.
+- **Scope:** No target, preset, relay, or configuration was changed manually.
+  `climate.tatas` was not queried or changed. No release was created.
+
 ### 2026-10-14 — Implement outdoor/water inputs and Auto Warm Floor baseline
 
 - **Outdoor input:** Warm Floor now resolves the current value from the
