@@ -1,5 +1,39 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-14 — Candidate signals for a more precise Auto policy
+
+- **Primary policy signals:** current temperature margin above target,
+  short-vs-one-hour EMA separation, slope and its persistence. These describe
+  what the room is actually doing and should drive Keep it Hot → Balanced →
+  Eco transitions and the reverse path.
+- **Thermal confirmation:** `heat_loss_rate / heating_power`, normalized
+  heating power, and learned MPC loss/gain/thermal-response values can confirm
+  whether the room is cooling despite heating or warming without active heat.
+  They should be bounded and should not override the room-temperature guard.
+- **Feed-forward hints:** configured outdoor sensor/weather temperature and
+  configured flow-temperature sensor/static fallback can bias the decision for
+  cold weather or low water capacity. They are not sufficient by themselves to
+  select a policy and remain heat-source-neutral.
+- **Optional solar context:** weather condition, sun elevation/time-to-sunset,
+  or a configured solar/irradiance signal could strengthen the warming-side
+  transition, but only as optional bounded evidence. The controller must still
+  trust measured room slope/EMA over a weather label or forecast.
+- **Safety/state gates:** `hvac_action`, `call_for_heat`, window/door state,
+  unavailable data, actuator phase/recovery, and absolute temperature ceiling
+  should block or constrain Warm Floor, not independently choose Eco or Keep it
+  Hot. Humidity is useful for diagnostics but is not a reliable floor-demand
+  signal.
+- **Decision model:** combine the signals with confidence/quality checks,
+  persistence and hysteresis. If evidence conflicts, prefer the safer stronger
+  maintenance level while the room is above target; at or below target normal
+  heating remains authoritative and Warm Floor sends no command.
+- **Reference observation:** Tino currently has outdoor 12.6°C, flow 29.3°C,
+  positive slope and short EMA above EMA 1h; this is mixed but warming evidence,
+  so it should not be promoted to Keep it Hot solely because EMA 1h is below
+  target.
+- **Status:** Analysis/design only; no runtime or HA configuration change was
+  made in this step.
+
 ### 2026-10-14 — Use EMA separation as an Auto transition trigger
 
 - **Signal:** Auto should explicitly use the separation between the short
