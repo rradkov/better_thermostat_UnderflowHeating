@@ -1,5 +1,25 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-14 — Implement conservative, trend-confirmed Auto policy
+
+- **Change:** Auto now bootstraps at `Keep it Hot` when it first becomes active,
+  then changes at most one level at a time after minimum dwell and persistence
+  windows. Confirmed warming moves `Keep it Hot` → `Balanced` → `Eco`; confirmed
+  cooling or high thermal demand moves back toward `Keep it Hot`.
+- **Signals:** The policy candidate uses short-vs-one-hour EMA separation and
+  temperature slope as primary direction evidence, while the existing demand
+  factor incorporates heat loss, heating power, outdoor temperature, flow
+  temperature, and applicable MPC data. Strong warming can request Eco, but it
+  still takes two confirmed transitions from the initial Keep it Hot state.
+- **Safety:** EMA/slope can select maintenance intensity only. The strict
+  `current_temperature > target_temperature` Warm Floor guard, HVAC/contact
+  gates, actuator travel protection, and absolute ceiling remain unchanged.
+  No heat source or installation entity is hardcoded.
+- **Verification:** Added bootstrap, warming-transition, and cooling-recovery
+  tests. The focused Warm Floor/config suite passed 70 tests; compilation and
+  `git diff --check` passed. HA deployment is the next step; no release was
+  created in this change.
+
 ### 2026-10-14 — Candidate signals for a more precise Auto policy
 
 - **Primary policy signals:** current temperature margin above target,

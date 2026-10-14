@@ -25,6 +25,7 @@ from __future__ import annotations
 from enum import StrEnum
 import logging
 import math
+from time import monotonic
 from typing import Any, Final
 
 from homeassistant.components.climate.const import HVACAction, HVACMode
@@ -155,6 +156,19 @@ WARM_FLOOR_LEVEL_INTENSITY: Final[dict[str, float]] = {
     WARM_FLOOR_LEVEL_KEEP_HOT: 0.70,
     WARM_FLOOR_LEVEL_CUSTOM: 0.45,
 }
+
+# Auto is deliberately conservative when it first takes ownership near the
+# room target.  A slow slab is cheaper to keep warm than to recover from cold,
+# but the policy must step down only after the room proves that it is warming.
+WARM_FLOOR_AUTO_NEAR_TARGET_MARGIN_C: Final = 0.25
+WARM_FLOOR_AUTO_EMA_WARMING_DELTA_C: Final = 0.10
+WARM_FLOOR_AUTO_EMA_STRONG_WARMING_DELTA_C: Final = 0.25
+WARM_FLOOR_AUTO_EMA_COOLING_DELTA_C: Final = -0.10
+WARM_FLOOR_AUTO_WARMING_SLOPE_K_MIN: Final = 0.005
+WARM_FLOOR_AUTO_COOLING_SLOPE_K_MIN: Final = -0.005
+WARM_FLOOR_AUTO_POLICY_CONFIRM_S: Final = 10 * 60
+WARM_FLOOR_AUTO_STRONGER_CONFIRM_S: Final = 5 * 60
+WARM_FLOOR_AUTO_MIN_DWELL_S: Final = 15 * 60
 
 
 # ---------------------------------------------------------------------------
@@ -774,6 +788,150 @@ def _warm_floor_flow_temperature(bt) -> tuple[float | None, str | None]:
     return None, None
 
 
+def _warm_floor_auto_candidate(bt, demand_factor: float) -> str:
+    """Select an Auto policy candidate from room response and demand.
+
+    EMA separation and slope are the primary direction signals. Demand,
+    outdoor temperature, and flow temperature remain confirmation/forward
+    hints through ``demand_factor``; none of them bypasses the strict
+    above-target guard in the caller.
+    """
+    current = getattr(bt, "cur_temp", None)
+    target = getattr(bt, "bt_target_temp", None)
+    margin = (
+        float(current) - float(target)
+        if isinstance(current, (int, float)) and isinstance(target, (int, float))
+        else None
+    )
+    short_ema = getattr(bt, "cur_temp_filtered", None)
+    if not isinstance(short_ema, (int, float)):
+        short_ema = getattr(bt, "external_temp_ema", None)
+    long_ema = getattr(bt, "external_temp_ema_1h", None)
+    ema_delta = (
+        float(short_ema) - float(long_ema)
+        if isinstance(short_ema, (int, float))
+        and isinstance(long_ema, (int, float))
+        else None
+    )
+    slope = getattr(bt, "temp_slope", None)
+
+    cooling = (
+        isinstance(ema_delta, (int, float))
+        and ema_delta <= WARM_FLOOR_AUTO_EMA_COOLING_DELTA_C
+    ) or (
+        isinstance(slope, (int, float))
+        and slope <= WARM_FLOOR_AUTO_COOLING_SLOPE_K_MIN
+    ) or demand_factor >= 0.65
+    warming = (
+        isinstance(ema_delta, (int, float))
+        and ema_delta >= WARM_FLOOR_AUTO_EMA_WARMING_DELTA_C
+        and isinstance(slope, (int, float))
+        and slope >= WARM_FLOOR_AUTO_WARMING_SLOPE_K_MIN
+    )
+    strong_warming = (
+        warming
+        and isinstance(ema_delta, (int, float))
+        and ema_delta >= WARM_FLOOR_AUTO_EMA_STRONG_WARMING_DELTA_C
+        and isinstance(slope, (int, float))
+        and slope >= 0.01
+    )
+
+    if cooling:
+        return WARM_FLOOR_LEVEL_KEEP_HOT
+    if (
+        isinstance(margin, (int, float))
+        and 0.0 < margin <= WARM_FLOOR_AUTO_NEAR_TARGET_MARGIN_C
+        and not warming
+    ):
+        return WARM_FLOOR_LEVEL_KEEP_HOT
+    if strong_warming and demand_factor < 0.65:
+        return WARM_FLOOR_LEVEL_ECO
+    if warming and demand_factor < 0.65:
+        return WARM_FLOOR_LEVEL_BALANCED
+    if demand_factor >= 0.30:
+        return WARM_FLOOR_LEVEL_BALANCED
+    return WARM_FLOOR_LEVEL_ECO
+
+
+def _warm_floor_auto_step(current: str, candidate: str) -> str:
+    """Move at most one Auto policy level per confirmed transition."""
+    order = [
+        WARM_FLOOR_LEVEL_ECO,
+        WARM_FLOOR_LEVEL_BALANCED,
+        WARM_FLOOR_LEVEL_KEEP_HOT,
+    ]
+    try:
+        current_index = order.index(current)
+        candidate_index = order.index(candidate)
+    except ValueError:
+        return WARM_FLOOR_LEVEL_KEEP_HOT
+    if candidate_index == current_index:
+        return current
+    return order[current_index + (1 if candidate_index > current_index else -1)]
+
+
+def _warm_floor_auto_policy(bt, demand_factor: float) -> str:
+    """Return a hysteretic, conservative Auto policy."""
+    now = monotonic()
+    current = getattr(bt, "_warm_floor_auto_policy", None)
+    valid = {
+        WARM_FLOOR_LEVEL_ECO,
+        WARM_FLOOR_LEVEL_BALANCED,
+        WARM_FLOOR_LEVEL_KEEP_HOT,
+    }
+    if current not in valid:
+        # Bootstrap conservatively. The first eligible above-target window
+        # gets a strong baseline, then later ticks may step down after proof
+        # of warming. This state is policy-only; the caller still enforces
+        # current_temperature > target_temperature before sending anything.
+        current = WARM_FLOOR_LEVEL_KEEP_HOT
+        bt._warm_floor_auto_policy = current
+        bt._warm_floor_auto_policy_since = now
+        bt._warm_floor_auto_candidate = current
+        bt._warm_floor_auto_candidate_since = now
+        return current
+
+    candidate = _warm_floor_auto_candidate(bt, demand_factor)
+    if candidate == current:
+        bt._warm_floor_auto_candidate = current
+        bt._warm_floor_auto_candidate_since = now
+        return current
+
+    pending = getattr(bt, "_warm_floor_auto_candidate", None)
+    if pending != candidate:
+        bt._warm_floor_auto_candidate = candidate
+        bt._warm_floor_auto_candidate_since = now
+        return current
+
+    candidate_since = getattr(bt, "_warm_floor_auto_candidate_since", now)
+    policy_since = getattr(bt, "_warm_floor_auto_policy_since", now)
+    current_index = [
+        WARM_FLOOR_LEVEL_ECO,
+        WARM_FLOOR_LEVEL_BALANCED,
+        WARM_FLOOR_LEVEL_KEEP_HOT,
+    ].index(current)
+    candidate_index = [
+        WARM_FLOOR_LEVEL_ECO,
+        WARM_FLOOR_LEVEL_BALANCED,
+        WARM_FLOOR_LEVEL_KEEP_HOT,
+    ].index(candidate)
+    confirmation_s = (
+        WARM_FLOOR_AUTO_STRONGER_CONFIRM_S
+        if candidate_index > current_index
+        else WARM_FLOOR_AUTO_POLICY_CONFIRM_S
+    )
+    if (
+        now - candidate_since >= confirmation_s
+        and now - policy_since >= WARM_FLOOR_AUTO_MIN_DWELL_S
+    ):
+        current = _warm_floor_auto_step(current, candidate)
+        bt._warm_floor_auto_policy = current
+        bt._warm_floor_auto_policy_since = now
+        bt._warm_floor_auto_candidate = current
+        bt._warm_floor_auto_candidate_since = now
+    return current
+
+
 def _warm_floor_level_intensity(
     bt_or_trv, trv_state=None, demand_factor: float = 0.0
 ) -> float:
@@ -788,15 +946,8 @@ def _warm_floor_level_intensity(
     if str(level) == WARM_FLOOR_LEVEL_AUTO:
         if bt is None:
             return WARM_FLOOR_LEVEL_INTENSITY[DEFAULT_WARM_FLOOR_LEVEL]
-        if demand_factor >= 0.65:
-            desired = WARM_FLOOR_LEVEL_INTENSITY[WARM_FLOOR_LEVEL_KEEP_HOT]
-            policy = WARM_FLOOR_LEVEL_KEEP_HOT
-        elif demand_factor >= 0.30:
-            desired = WARM_FLOOR_LEVEL_INTENSITY[WARM_FLOOR_LEVEL_BALANCED]
-            policy = WARM_FLOOR_LEVEL_BALANCED
-        else:
-            desired = WARM_FLOOR_LEVEL_INTENSITY[WARM_FLOOR_LEVEL_ECO]
-            policy = WARM_FLOOR_LEVEL_ECO
+        policy = _warm_floor_auto_policy(bt, demand_factor)
+        desired = WARM_FLOOR_LEVEL_INTENSITY[policy]
         previous = getattr(bt, "_warm_floor_auto_intensity", None)
         if isinstance(previous, (int, float)):
             desired = float(previous) + 0.25 * (desired - float(previous))

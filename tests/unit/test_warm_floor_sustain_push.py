@@ -416,6 +416,61 @@ def test_warm_floor_level_changes_generic_duty_intensity():
     assert eco_profile < balanced_profile < keep_hot_profile
 
 
+def test_auto_bootstraps_keep_hot_before_confirming_warming(monkeypatch):
+    bt = _make_bt(warm_floor_level=underfloor.WARM_FLOOR_LEVEL_AUTO)
+    bt.cur_temp_filtered = 22.1
+    bt.external_temp_ema = 22.1
+    bt.external_temp_ema_1h = 21.7
+    bt.temp_slope = 0.02
+    clock = [0.0]
+    monkeypatch.setattr(underfloor, "monotonic", lambda: clock[0])
+
+    first = underfloor._warm_floor_level_intensity(
+        bt, bt.real_trvs["climate.trv"], demand_factor=0.4
+    )
+
+    assert bt._warm_floor_auto_policy == underfloor.WARM_FLOOR_LEVEL_KEEP_HOT
+    assert first == underfloor.WARM_FLOOR_LEVEL_INTENSITY[
+        underfloor.WARM_FLOOR_LEVEL_KEEP_HOT
+    ]
+
+    # Strong warming is first confirmed, then the policy moves down only one
+    # level after the minimum dwell and confirmation windows.
+    clock[0] = underfloor.WARM_FLOOR_AUTO_MIN_DWELL_S
+    underfloor._warm_floor_level_intensity(
+        bt, bt.real_trvs["climate.trv"], demand_factor=0.4
+    )
+    clock[0] += underfloor.WARM_FLOOR_AUTO_POLICY_CONFIRM_S
+    underfloor._warm_floor_level_intensity(
+        bt, bt.real_trvs["climate.trv"], demand_factor=0.4
+    )
+    assert bt._warm_floor_auto_policy == underfloor.WARM_FLOOR_LEVEL_BALANCED
+
+
+def test_auto_returns_to_keep_hot_after_confirmed_cooling(monkeypatch):
+    bt = _make_bt(warm_floor_level=underfloor.WARM_FLOOR_LEVEL_AUTO)
+    bt.cur_temp_filtered = 21.7
+    bt.external_temp_ema = 21.7
+    bt.external_temp_ema_1h = 21.9
+    bt.temp_slope = -0.01
+    bt._warm_floor_auto_policy = underfloor.WARM_FLOOR_LEVEL_BALANCED
+    bt._warm_floor_auto_policy_since = 0.0
+    bt._warm_floor_auto_candidate = underfloor.WARM_FLOOR_LEVEL_BALANCED
+    bt._warm_floor_auto_candidate_since = 0.0
+    clock = [underfloor.WARM_FLOOR_AUTO_MIN_DWELL_S]
+    monkeypatch.setattr(underfloor, "monotonic", lambda: clock[0])
+
+    underfloor._warm_floor_level_intensity(
+        bt, bt.real_trvs["climate.trv"], demand_factor=0.4
+    )
+    clock[0] += underfloor.WARM_FLOOR_AUTO_MIN_DWELL_S + 1
+    underfloor._warm_floor_level_intensity(
+        bt, bt.real_trvs["climate.trv"], demand_factor=0.4
+    )
+
+    assert bt._warm_floor_auto_policy == underfloor.WARM_FLOOR_LEVEL_KEEP_HOT
+
+
 def test_warm_floor_level_increases_direct_valve_floor_when_raised():
     def valve_floor(level: str) -> int:
         bt = _make_bt(warm_floor_level=level)
@@ -635,15 +690,34 @@ def test_warm_floor_water_sensor_precedes_static_fallback():
     assert bt._warm_floor_flow_source == "flow_temp_sensor"
 
 
-def test_auto_warm_floor_moves_between_policies_from_live_demand():
+def test_auto_warm_floor_bootstraps_and_moves_with_confirmed_trend(monkeypatch):
     bt = _make_bt(warm_floor_level=underfloor.WARM_FLOOR_LEVEL_AUTO)
     trv = bt.real_trvs["climate.trv"]
     bt.hass.states.get.return_value = None
+    clock = [0.0]
+    monkeypatch.setattr(underfloor, "monotonic", lambda: clock[0])
 
     underfloor._effective_duty_profile(bt, trv, 0.0)
-    assert bt._warm_floor_auto_policy == underfloor.WARM_FLOOR_LEVEL_ECO
+    assert bt._warm_floor_auto_policy == underfloor.WARM_FLOOR_LEVEL_KEEP_HOT
 
-    underfloor._effective_duty_profile(bt, trv, 1.0)
+    bt.cur_temp_filtered = 22.4
+    bt.external_temp_ema = 22.4
+    bt.external_temp_ema_1h = 22.0
+    bt.temp_slope = 0.02
+    clock[0] = underfloor.WARM_FLOOR_AUTO_MIN_DWELL_S
+    underfloor._effective_duty_profile(bt, trv, 0.2)
+    clock[0] += underfloor.WARM_FLOOR_AUTO_POLICY_CONFIRM_S
+    underfloor._effective_duty_profile(bt, trv, 0.2)
+    assert bt._warm_floor_auto_policy == underfloor.WARM_FLOOR_LEVEL_BALANCED
+
+    bt.cur_temp_filtered = 21.8
+    bt.external_temp_ema = 21.8
+    bt.external_temp_ema_1h = 22.0
+    bt.temp_slope = -0.02
+    clock[0] += 1
+    underfloor._effective_duty_profile(bt, trv, 0.2)
+    clock[0] += underfloor.WARM_FLOOR_AUTO_MIN_DWELL_S + 1
+    underfloor._effective_duty_profile(bt, trv, 0.2)
     assert bt._warm_floor_auto_policy == underfloor.WARM_FLOOR_LEVEL_KEEP_HOT
 
 
