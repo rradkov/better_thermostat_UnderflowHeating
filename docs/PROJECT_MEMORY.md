@@ -1,5 +1,20 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-14 — Set all reference BT Warm Floor configurations to Auto
+
+- **Change:** Updated the Warm Floor level to `auto` for all seven configured
+  Better Thermostat entries: Tino, Master, Office/Guest Thermostat,
+  Living/Bathroom, Kitchen/Dining, Bathroom FL2, and Office/Guest Fan-Coil.
+- **Method:** Used each integration's validated options flow and submitted
+  only `warm_floor_level=auto`; no target, preset, sensor, heater list, or
+  relay command was sent.
+- **Verification:** Every Warm Floor status entity now reports
+  `warm_floor_level: auto`. The live Auto policy resolves dynamically (for
+  example `level_2` or `level_3`) from the current diagnostics. User targets
+  and presets remained unchanged.
+- **Scope:** `climate.tatas` was not queried or changed. No release was
+  created; this is a Home Assistant configuration change only.
+
 ### 2026-10-14 — DEV deployment of outdoor/water/Auto Warm Floor changes
 
 - **Deployment:** HACS installed DEV commit `ffb8f80` from
