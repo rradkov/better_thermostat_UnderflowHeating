@@ -158,6 +158,8 @@ A **Warm Floor Status** diagnostic sensor is created per instance. `active` mean
 
 ## Boost on window reopen
 
+Boost is optional and deliberately separate from Warm Floor: it never drives a Warm Floor relay, a switch, or the Better Thermostat's normal heater. It only commands the configured Secondary climate entity. There is no installation-specific default device.
+
 If you've configured a **Secondary climate device** (top of the first step), you can also use it for cooling and fast recovery after a window reopens — most fan-coil/hydronic units, heat pumps and air conditioners already run in both directions, so the same device can boost-heat a cold room back to temperature after airing it out.
 
 **Enable Boost on window reopen** — shown once a Secondary climate device is configured. When on, if the room temperature drifts by more than the configured threshold while a window is open, closing the window arms a boost: colder than the threshold arms a **heat** boost, warmer arms a **cool** boost (checked against what the secondary device actually reports supporting). Either way it targets your normal target temperature, temporarily taking the secondary device over from its normal duty. Once the boost ends, the device is restored to exactly the mode, temperature, and fan setting it had the moment the boost took over.
@@ -174,6 +176,15 @@ If you've configured a **Secondary climate device** (top of the first step), you
 
 **Boost cooldown (minutes)** — default `15`, range `0–120`. Minimum time after a boost ends before another one can arm, so a room that keeps drifting past the threshold (e.g. repeated window in/out) doesn't short-cycle the shared device.
 
-A **Boost Status** diagnostic sensor is created per instance, showing `off`/`heating`/`cooling` plus how long the current boost has been running.
+A **Boost Status** diagnostic sensor is created per instance. Its states are:
 
-**Manually testing it** — the `better_thermostat.test_boost` service arms a boost cycle on demand (pick `heat` or `cool`) so you can confirm the wiring — target device, fan mode, threshold reachability — without needing to actually open and close a window.
+- `disabled` — Boost is switched off, or no Secondary climate device is configured. This is not an idle Boost cycle.
+- `off` — Boost is enabled and correctly configured, but no cycle is armed.
+- `pending` — a cycle is armed but the Secondary device is currently unavailable; it is cancelled after the safety pending timeout.
+- `heating` / `cooling` — the Boost is actively commanding the reported HVAC direction.
+
+The attributes include `reason`, `enabled`, `configured`, `cooler_entity_id`, and the current armed/active ages. This makes a failed test distinguishable from an idle feature instead of hiding both behind `off`.
+
+**Manually testing it** — the `better_thermostat.test_boost` service arms a boost cycle on demand (pick `heat` or `cool`) so you can confirm the wiring — target device, fan mode, threshold reachability — without needing to actually open and close a window. It does not bypass required configuration: with Boost disabled, without a Secondary device, or when that device does not report the requested HVAC mode, no command is sent and the diagnostic sensor records the reason.
+
+**Safety and ownership** — Boost only takes ownership after a valid window-close decision and only while the BT mode, contact state, and `call_for_heat` gate allow it. It snapshots the Secondary device's HVAC mode, setpoint, and fan mode, then restores them. A maximum runtime and cooldown prevent a stuck sensor or repeated window events from running the device indefinitely. The implementation is capability-based and heat-source-neutral: users may select any compatible `climate.*` entity that supports the requested mode; no specific room, relay, heat pump, or installation entity is assumed.

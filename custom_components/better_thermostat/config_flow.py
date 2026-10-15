@@ -581,6 +581,10 @@ def _normalize_advanced_submission(
 
     if underfloor_enabled:
         normalized.update(normalize_underfloor_advanced_submission(data))
+        if normalized.get(CONF_HEATING_TYPE) != HeatingType.UNDERFLOOR.value:
+            normalized.pop(CONF_WARM_FLOOR_MAX_BACKOFF, None)
+            normalized.pop(CONF_WARM_FLOOR_SUSTAIN_PUSH, None)
+            normalized.pop(CONF_WARM_FLOOR_LEVEL, None)
     else:
         # A stale heating_type/backoff from a submission made while the
         # instance-level toggle was on must not silently persist once it's

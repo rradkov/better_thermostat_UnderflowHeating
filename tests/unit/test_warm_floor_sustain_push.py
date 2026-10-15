@@ -573,6 +573,23 @@ def test_duty_profile_reduces_intensity_above_target_but_keeps_minimum_floor():
     assert far_profile[0] > near_profile[0]
 
 
+def test_far_above_target_uses_minimum_on_and_longer_pause():
+    bt = _make_bt(cur_temp=24.9, target_temp=23.0)
+    bt.temp_slope = 0.0
+    bt.cur_temp_filtered = bt.external_temp_ema = 24.9
+    bt.external_temp_ema_1h = 24.9
+
+    period_s, on_s, intensity = underfloor._effective_duty_profile(
+        bt,
+        bt.real_trvs["climate.trv"],
+        demand_factor=0.0,
+    )
+
+    assert on_s == underfloor.WARM_FLOOR_ACTUATOR_TRAVEL_S
+    assert period_s - on_s > underfloor.WARM_FLOOR_DUTY_MIN_PAUSE_S
+    assert intensity == pytest.approx(underfloor.WARM_FLOOR_DUTY_MIN_INTENSITY)
+
+
 def test_duty_profile_restores_maintenance_when_far_above_target_but_cooling():
     stable = _make_bt(cur_temp=24.0, target_temp=22.0)
     cooling = _make_bt(cur_temp=24.0, target_temp=22.0)

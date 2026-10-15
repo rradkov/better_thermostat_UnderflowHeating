@@ -116,6 +116,21 @@ def test_advanced_fields_shown_when_underfloor_enabled():
     assert CONF_WARM_FLOOR_LEVEL in keys
 
 
+def test_advanced_fields_hide_warm_floor_for_non_underfloor_heater():
+    fields = config_flow_module._build_advanced_fields(
+        sources=({CONF_HEATING_TYPE: HeatingType.CONVECTOR.value}, None),
+        default_calibration="target_temp_based",
+        homematic=False,
+        has_auto=False,
+        underfloor_enabled=True,
+    )
+    keys = _field_keys(fields)
+    assert CONF_HEATING_TYPE in keys
+    assert CONF_WARM_FLOOR_LEVEL not in keys
+    assert CONF_WARM_FLOOR_MAX_BACKOFF not in keys
+    assert CONF_WARM_FLOOR_SUSTAIN_PUSH not in keys
+
+
 def test_advanced_fields_heating_type_offers_all_four_device_types():
     fields = config_flow_module._build_advanced_fields(
         sources=({}, None),
@@ -184,6 +199,25 @@ def test_normalize_advanced_submission_applies_heating_type_when_enabled():
         underfloor_enabled=True,
     )
     assert normalized[CONF_HEATING_TYPE] == HeatingType.RADIATOR.value
+
+
+def test_normalize_advanced_submission_removes_warm_floor_for_non_underfloor():
+    normalized = config_flow_module._normalize_advanced_submission(
+        {
+            CONF_HEATING_TYPE: HeatingType.CONVECTOR.value,
+            CONF_WARM_FLOOR_LEVEL: "level_3",
+            CONF_WARM_FLOOR_MAX_BACKOFF: 2.0,
+            CONF_WARM_FLOOR_SUSTAIN_PUSH: 0.5,
+        },
+        default_calibration="target_temp_based",
+        homematic=False,
+        has_auto=False,
+        underfloor_enabled=True,
+    )
+    assert normalized[CONF_HEATING_TYPE] == HeatingType.CONVECTOR.value
+    assert CONF_WARM_FLOOR_LEVEL not in normalized
+    assert CONF_WARM_FLOOR_MAX_BACKOFF not in normalized
+    assert CONF_WARM_FLOOR_SUSTAIN_PUSH not in normalized
 
 
 def test_normalize_advanced_submission_defaults_to_underfloor():

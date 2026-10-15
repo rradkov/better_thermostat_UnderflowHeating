@@ -213,18 +213,41 @@ def test_blocked_heater_refreshes_warm_floor_status():
 # ---------------------------------------------------------------------------
 
 
-def test_no_status_published_reads_off():
+def test_no_status_published_reads_disabled():
     bt = _make_bt_climate()
     del bt._boost_status
     sensor = BetterThermostatBoostStatusSensor(bt)
     sensor._update_state()
-    assert sensor._attr_native_value == "off"
+    assert sensor._attr_native_value == "disabled"
+    assert sensor._attr_extra_state_attributes["reason"] == "not_initialized"
+
+
+def test_disabled_status_is_distinct_from_enabled_idle():
+    bt = _make_bt_climate(
+        _boost_status={
+            "active": False,
+            "state": "disabled",
+            "reason": "no_cooler_configured",
+            "enabled": False,
+            "configured": False,
+            "direction": None,
+            "cooler_entity_id": None,
+        }
+    )
+    sensor = BetterThermostatBoostStatusSensor(bt)
+    sensor._update_state()
+    assert sensor._attr_native_value == "disabled"
+    assert sensor._attr_extra_state_attributes["reason"] == "no_cooler_configured"
 
 
 def test_inactive_status_reads_off():
     bt = _make_bt_climate(
         _boost_status={
             "active": False,
+            "state": "off",
+            "reason": "off",
+            "enabled": True,
+            "configured": True,
             "direction": None,
             "elapsed_s": None,
             "cooler_entity_id": "climate.fancoil",

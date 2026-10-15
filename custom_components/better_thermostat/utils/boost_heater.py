@@ -142,6 +142,7 @@ class BoostHeaterTracker:
         open_temp = self.open_temp
         self.open_temp = None
         if open_temp is None or cur_temp is None:
+            self.last_reason = "missing_window_temperature"
             return None
 
         if (
@@ -150,6 +151,7 @@ class BoostHeaterTracker:
             and self.last_boost_end_ts is not None
             and (now_ts - self.last_boost_end_ts) < cooldown_s
         ):
+            self.last_reason = "cooldown"
             return None
 
         if open_temp - cur_temp > threshold_heat and supports_heat:
@@ -162,6 +164,13 @@ class BoostHeaterTracker:
             self.boost_armed_ts = now_ts if now_ts is not None else monotonic()
             self.last_reason = "armed"
             return HVACMode.COOL
+        if (
+            open_temp - cur_temp > threshold_heat
+            or cur_temp - open_temp > threshold_cool
+        ):
+            self.last_reason = "unsupported_direction"
+        else:
+            self.last_reason = "below_threshold"
         return None
 
     def update_slow_ema(self, value: float | None, now_ts: float) -> None:
@@ -649,13 +658,22 @@ def _boost_should_stop(
 
 def _record_boost_status(bt, tracker: BoostHeaterTracker, now_ts: float) -> None:
     """Publish the current boost state onto ``bt`` for the diagnostic sensor."""
+    boost_enabled = bool(getattr(bt, "boost_enabled", False))
+    cooler_entity_id = getattr(bt, "cooler_entity_id", None)
+    configured = bool(cooler_entity_id)
     elapsed_s = None
     if isinstance(tracker.boost_started_ts, (int, float)):
         elapsed_s = round(now_ts - tracker.boost_started_ts, 1)
     armed_age_s = None
     if isinstance(tracker.boost_armed_ts, (int, float)):
         armed_age_s = round(max(0.0, now_ts - tracker.boost_armed_ts), 1)
-    if tracker.boost_started_ts is not None:
+    if not boost_enabled:
+        state = "disabled"
+        reason = "boost_disabled"
+    elif not configured:
+        state = "disabled"
+        reason = "no_cooler_configured"
+    elif tracker.boost_started_ts is not None:
         state = "active"
         reason = "active"
     elif tracker.boost_direction is not None:
@@ -665,14 +683,16 @@ def _record_boost_status(bt, tracker: BoostHeaterTracker, now_ts: float) -> None
         state = "off"
         reason = tracker.last_reason
     bt._boost_status = {
-        "active": tracker.boost_active,
+        "active": bool(boost_enabled and configured and tracker.boost_active),
         "state": state,
         "reason": reason,
+        "enabled": boost_enabled,
+        "configured": configured,
         "direction": tracker.boost_direction,
         "elapsed_s": elapsed_s,
         "armed_age_s": armed_age_s,
         "pending_timeout_s": DEFAULT_BOOST_PENDING_TIMEOUT_MINUTES * 60.0,
-        "cooler_entity_id": getattr(bt, "cooler_entity_id", None),
+        "cooler_entity_id": cooler_entity_id,
     }
 
 
@@ -686,16 +706,16 @@ def update_boost_trend(bt) -> None:
     it little more than a lagged copy of the fast reading). Also publishes
     the diagnostic status snapshot every cycle - this runs whether or not a
     boost is active this cycle, unlike control_boost(), so it is the one
-    place that reliably reflects an idle instance too. A no-op whenever
-    boost isn't enabled.
+    place that reliably reflects an idle instance too. The status is also
+    published when Boost is disabled, so diagnostics distinguish a disabled
+    feature from an enabled but idle Boost.
     """
-    if not getattr(bt, "boost_enabled", False):
-        return
     tracker: BoostHeaterTracker | None = getattr(bt, "_boost_heater_tracker", None)
     if tracker is None:
         return
     now_ts = monotonic()
-    tracker.update_slow_ema(_trend_temperature(bt), now_ts)
+    if getattr(bt, "boost_enabled", False):
+        tracker.update_slow_ema(_trend_temperature(bt), now_ts)
     _record_boost_status(bt, tracker, now_ts)
 
 
@@ -825,6 +845,9 @@ async def trigger_test_boost(bt, direction: HVACMode) -> None:
     same cooldown bookkeeping, same cancellation on an open contact.
     """
     if not getattr(bt, "boost_enabled", False):
+        tracker = getattr(bt, "_boost_heater_tracker", None)
+        if tracker is not None:
+            _record_boost_status(bt, tracker, monotonic())
         _LOGGER.warning(
             "better_thermostat %s: test_boost requested but boost is not enabled",
             getattr(bt, "device_name", None),
@@ -832,6 +855,10 @@ async def trigger_test_boost(bt, direction: HVACMode) -> None:
         return
     cooler_entity_id = getattr(bt, "cooler_entity_id", None)
     if cooler_entity_id is None:
+        tracker = getattr(bt, "_boost_heater_tracker", None)
+        if tracker is not None:
+            tracker.last_reason = "no_cooler_configured"
+            _record_boost_status(bt, tracker, monotonic())
         _LOGGER.warning(
             "better_thermostat %s: test_boost requested but no Cooler entity is configured",
             getattr(bt, "device_name", None),
@@ -846,6 +873,10 @@ async def trigger_test_boost(bt, direction: HVACMode) -> None:
         state.attributes.get("hvac_modes") if state is not None else None
     ) or []
     if direction not in hvac_modes:
+        tracker = getattr(bt, "_boost_heater_tracker", None)
+        if tracker is not None:
+            tracker.last_reason = "unsupported_direction"
+            _record_boost_status(bt, tracker, monotonic())
         _LOGGER.warning(
             "better_thermostat %s: test_boost requested %s but %s does not support it "
             "(supports: %s)",

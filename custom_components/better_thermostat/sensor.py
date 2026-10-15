@@ -1166,14 +1166,15 @@ class BetterThermostatBoostStatusSensor(_BtSensorBase):
     """Representation of a Better Thermostat Boost status sensor.
 
     Reflects ``update_boost_trend()``'s last snapshot, published onto the
-    climate entity as ``_boost_status``. ``"off"`` covers both a disabled
-    instance and an enabled one with no boost currently armed.
+    climate entity as ``_boost_status``. ``"disabled"`` means the optional
+    feature is off or has no secondary climate device; ``"off"`` means Boost
+    is configured and currently idle.
     """
 
     _attr_translation_key = "boost_status"
     _attr_device_class = SensorDeviceClass.ENUM
     _attr_state_class = None
-    _attr_options = ["off", "pending", "heating", "cooling"]
+    _attr_options = ["disabled", "off", "pending", "heating", "cooling"]
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_icon = "mdi:fan-plus"
     _unique_id_suffix = "boost_status"
@@ -1182,11 +1183,18 @@ class BetterThermostatBoostStatusSensor(_BtSensorBase):
         """Update state from the last Boost decision."""
         status = getattr(self._bt_climate, "_boost_status", None)
         if not isinstance(status, dict):
-            self._attr_native_value = "off"
-            self._attr_extra_state_attributes = {}
+            self._attr_native_value = "disabled"
+            self._attr_extra_state_attributes = {
+                "state": "disabled",
+                "reason": "not_initialized",
+                "enabled": False,
+                "configured": False,
+            }
             return
         state = status.get("state")
-        if state == "pending":
+        if state == "disabled":
+            self._attr_native_value = "disabled"
+        elif state == "pending":
             self._attr_native_value = "pending"
         elif status.get("active"):
             direction = status.get("direction")
@@ -1200,6 +1208,8 @@ class BetterThermostatBoostStatusSensor(_BtSensorBase):
             "cooler_entity_id": status.get("cooler_entity_id"),
             "state": status.get("state"),
             "reason": status.get("reason"),
+            "enabled": status.get("enabled"),
+            "configured": status.get("configured"),
             "armed_age_s": status.get("armed_age_s"),
             "pending_timeout_s": status.get("pending_timeout_s"),
             "elapsed_s": status.get("elapsed_s"),

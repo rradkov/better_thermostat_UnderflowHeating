@@ -261,18 +261,39 @@ def build_underfloor_advanced_fields(
             CONF_HEATING_TYPE,
             default=get_value(CONF_HEATING_TYPE, DEFAULT_HEATING_TYPE_WHEN_SHOWN.value),
         ): heating_type_selector,
-        vol.Optional(
-            CONF_WARM_FLOOR_LEVEL,
-            default=get_value(CONF_WARM_FLOOR_LEVEL, DEFAULT_WARM_FLOOR_LEVEL),
-        ): warm_floor_level_selector,
     }
+
+    # Warm Floor is a capability of an underfloor heater, not a general
+    # heating-type setting.  Config flows cannot reactively hide a sibling
+    # field after the user changes a selector in the same submitted form, so
+    # use the stored/current heating type here and also strip stale Warm Floor
+    # data during normalization below.  This ensures that reopening an
+    # existing Radiator/Convector/AC-HVAC heater never shows Warm Floor.
+    current_heating_type = get_value(
+        CONF_HEATING_TYPE, DEFAULT_HEATING_TYPE_WHEN_SHOWN.value
+    )
+    try:
+        current_heating_type = HeatingType(current_heating_type)
+    except ValueError:
+        current_heating_type = DEFAULT_HEATING_TYPE_WHEN_SHOWN
+
+    if current_heating_type == HeatingType.UNDERFLOOR:
+        fields[
+            vol.Optional(
+                CONF_WARM_FLOOR_LEVEL,
+                default=get_value(CONF_WARM_FLOOR_LEVEL, DEFAULT_WARM_FLOOR_LEVEL),
+            )
+        ] = warm_floor_level_selector
 
     # The raw °C fields stay available side-by-side with the Level dial
     # (not replaced by it) but only need to be shown once "Custom" is
     # selected - otherwise the Level preset drives both, resolved at
     # normalize time (see normalize_underfloor_advanced_submission()).
     warm_floor_level = get_value(CONF_WARM_FLOOR_LEVEL, DEFAULT_WARM_FLOOR_LEVEL)
-    if warm_floor_level == WARM_FLOOR_LEVEL_CUSTOM:
+    if (
+        current_heating_type == HeatingType.UNDERFLOOR
+        and warm_floor_level == WARM_FLOOR_LEVEL_CUSTOM
+    ):
         fields[
             vol.Optional(
                 CONF_WARM_FLOOR_MAX_BACKOFF,
@@ -307,6 +328,13 @@ def normalize_underfloor_advanced_submission(data: dict[str, Any]) -> dict[str, 
         out[CONF_HEATING_TYPE] = HeatingType(raw_type).value
     except ValueError:
         out[CONF_HEATING_TYPE] = DEFAULT_HEATING_TYPE_WHEN_SHOWN.value
+
+    if out[CONF_HEATING_TYPE] != HeatingType.UNDERFLOOR.value:
+        # Do not retain a stale level/backoff/push when a heater is changed to
+        # Radiator, Fan-coil/Convector, or AC-HVAC.  Runtime already ignores
+        # these fields for non-UFH heaters; removing them keeps the form and
+        # stored configuration truthful as well.
+        return out
 
     raw_level = data.get(CONF_WARM_FLOOR_LEVEL, DEFAULT_WARM_FLOOR_LEVEL)
     level = (
@@ -1316,27 +1344,42 @@ def _warm_floor_target_balance_factor(bt, demand_factor: float) -> float:
         return 1.0
 
     margin = float(current) - float(target)
-    excess = max(0.0, margin - WARM_FLOOR_TARGET_EQUILIBRIUM_BAND_C)
-    if excess <= 0.0:
+    if margin <= WARM_FLOOR_TARGET_EQUILIBRIUM_BAND_C:
         bt._warm_floor_target_balance_factor = 1.0
         return 1.0
 
-    # Scale the margin relative to the configured target so this remains
-    # usable across rooms and climates instead of introducing a second fixed
-    # temperature ceiling.
-    margin_scale = max(
-        WARM_FLOOR_TARGET_EQUILIBRIUM_BAND_C,
-        abs(float(target)) * 0.05,
-    )
-    margin_penalty = excess / (excess + margin_scale)
+    # A room that is materially above target must be allowed to cool back
+    # toward target.  Do not let feed-forward demand (outdoor/flow/load) turn
+    # that into another heating request: the room's measured trajectory is the
+    # authoritative signal for how much maintenance can be retained.
+    slope = getattr(bt, "temp_slope", None)
+    short_ema = getattr(bt, "cur_temp_filtered", None)
+    if not isinstance(short_ema, (int, float)):
+        short_ema = getattr(bt, "external_temp_ema", None)
+    long_ema = getattr(bt, "external_temp_ema_1h", None)
+    trajectory_need = 0.0
+    if isinstance(slope, (int, float)) and slope < 0.0:
+        trajectory_need = max(
+            trajectory_need, _clamp(abs(float(slope)) / UNDERSHOOT_SLOPE_GUARD, 0.0, 1.0)
+        )
+    if isinstance(short_ema, (int, float)) and isinstance(long_ema, (int, float)):
+        ema_delta = float(short_ema) - float(long_ema)
+        if ema_delta < 0.0:
+            trajectory_need = max(trajectory_need, _clamp(abs(ema_delta) / 0.5, 0.0, 1.0))
 
-    # Demand already combines slope, EMA separation, heat loss/heating power,
-    # outdoor/flow inputs and applicable MPC data.  A higher value means that
-    # reducing maintenance would risk crossing target soon, so it offsets the
-    # above-target penalty without allowing an excessive room temperature to
-    # request more than the selected baseline.
-    cooling_need = _clamp(float(demand_factor), 0.0, 1.0)
-    factor = 1.0 - margin_penalty * (1.0 - cooling_need)
+    # The target band is a dynamic proportion, not a second fixed ceiling:
+    # farther above target means less heating, while verified cooling can
+    # restore maintenance gradually so the slab is not abandoned.
+    target_ratio = _clamp(
+        WARM_FLOOR_TARGET_EQUILIBRIUM_BAND_C
+        / max(margin, WARM_FLOOR_TARGET_EQUILIBRIUM_BAND_C),
+        0.0,
+        1.0,
+    )
+    factor = target_ratio + (1.0 - target_ratio) * trajectory_need
+    # Plant/load diagnostics still participate, but only as a bounded hint;
+    # they cannot defeat the above-target room correction.
+    factor += _clamp(float(demand_factor), 0.0, 1.0) * 0.10 * target_ratio
     factor = _clamp(factor, WARM_FLOOR_DUTY_MIN_INTENSITY, 1.0)
     bt._warm_floor_target_balance_factor = factor
     return factor
@@ -1360,11 +1403,19 @@ def _effective_duty_profile(
     # lower bound on dynamic intensity, not a fixed level schedule.
     intensity = _clamp(intensity, WARM_FLOOR_DUTY_MIN_INTENSITY, 1.0)
 
+    # Map the public minimum intensity to the physical minimum ON time. This
+    # lets an overheated room use the required four-minute actuator travel,
+    # instead of silently turning the minimum intensity into a 5.2-minute ON
+    # pulse.
+    intensity_span = max(1.0 - WARM_FLOOR_DUTY_MIN_INTENSITY, 0.001)
+    normalized_intensity = _clamp(
+        (intensity - WARM_FLOOR_DUTY_MIN_INTENSITY) / intensity_span, 0.0, 1.0
+    )
     on_s = int(
         round(
             WARM_FLOOR_DUTY_MIN_ON_S
             + (WARM_FLOOR_DUTY_MAX_ON_S - WARM_FLOOR_DUTY_MIN_ON_S)
-            * intensity
+            * normalized_intensity
         )
     )
     # There is deliberately no configured maximum pause. The pause follows

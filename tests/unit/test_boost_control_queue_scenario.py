@@ -238,10 +238,12 @@ class TestBoostTrendHasStandingMemoryBeforeBoostStarts:
         assert bt._boost_heater_tracker.boost_active is False
 
     @pytest.mark.asyncio
-    async def test_update_boost_trend_is_a_no_op_when_boost_disabled(self):
+    async def test_update_boost_trend_publishes_disabled_status_without_learning(self):
         bt = _make_self(boost_enabled=False, cur_temp=19.0, cur_temp_filtered=19.0)
         update_boost_trend(bt)
         assert bt._boost_heater_tracker.slow_ema is None
+        assert bt._boost_status["state"] == "disabled"
+        assert bt._boost_status["reason"] == "boost_disabled"
 
     @pytest.mark.asyncio
     async def test_unavailable_cooler_state_is_a_no_op_through_control_queue(self):

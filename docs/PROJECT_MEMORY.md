@@ -1,5 +1,42 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-15 — Target-centred Warm Floor duty correction
+
+- **Requirement:** Warm Floor should keep the room near `target` / `target + 0.1°C`, not hold an unnecessarily high room temperature. When the room is above target, the floor remains warm with economical maintenance; live slope and EMA diagnostics should prevent the room from drifting farther away.
+- **Change:** The target-balance factor now uses the measured target margin as its primary signal. Outdoor/flow/load demand remains a bounded hint, while a negative slope or short EMA below the one-hour EMA can restore maintenance as the room cools toward target.
+- **Actuator timing:** Dynamic intensity maps its minimum value to exactly the configured four-minute ON travel time. The pause remains dynamically calculated without a fixed maximum, so a materially overheated room gets the shortest safe pulse and a longer pause.
+- **Auto interaction:** Auto remains a diagnostic policy selector (Eco/Balanced/Keep it Hot); the target-balance correction is applied after that policy so a Keep-it-Hot baseline cannot force additional heat into a room that is already materially above target.
+- **Boundary:** Warm Floor is eligible for `current_temperature >= target_temperature`; below target normal BT heating owns the zone. It never changes the user's target or preset and never uses `climate.tatas`.
+- **Verification:** Added a regression test for the four-minute minimum ON pulse and extended the target-centred documentation. Focused synchronous Warm Floor, Boost, config-flow and status-sensor tests pass after the config-flow assertion was corrected to preserve normal defaults while removing stale Warm Floor fields.
+
+### 2026-10-15 — Boost capability state and configuration audit
+
+- **Problem found:** The Boost test on Tino was accepted by Home Assistant but
+  did not run because Boost was disabled and no valid secondary climate device
+  was configured. The diagnostic sensor reported only `off`, which made
+  disabled, unconfigured, and configured-idle states look identical.
+- **Decision:** Boost remains a separate, optional recovery feature. It may
+  command only the configured Secondary `climate.*` entity; it must never drive
+  Warm Floor relays, switches, the normal BT heater, or an installation-specific
+  entity. The project remains generic and heat-source-neutral.
+- **Change:** Boost status now reports `disabled`, `off`, `pending`,
+  `heating`, or `cooling`, with `enabled`, `configured`, and reason
+  attributes. `disabled` explicitly covers the feature toggle being off or a
+  missing Secondary entity; `off` now means a usable Boost is configured and
+  idle. The manual test service records why it refused a request instead of
+  silently leaving an apparently idle sensor.
+- **Change:** Window-close decisions now retain reason codes for missing
+  temperatures, cooldown, unsupported direction, and below-threshold drift.
+  Disabled Boost still publishes its diagnostic state but does not learn trend
+  data or issue any climate command.
+- **Documentation:** Expanded the configuration guide and deep explanation
+  with the lifecycle, ownership boundaries, safety gates, manual-test rules,
+  and capability-based configuration. No `climate.tatas` assumption was added
+  or used.
+- **Verification:** Focused synchronous tests and the sensor/status tests must
+  cover the new `disabled` versus enabled-idle distinction. HA deployment is
+  intentionally pending until this change is reviewed; no release is created.
+
 ### 2026-10-15 — Boost diagnostics and Warm Floor control cleanup
 
 - **Boost:** Added explicit lifecycle diagnostics (`off`, `pending`, and
