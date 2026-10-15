@@ -63,6 +63,7 @@ DEFAULT_BOOST_FAN_MODE: Final = None  # unset = don't touch fan_mode; opt-in onl
 DEFAULT_BOOST_LAG_MINUTES: Final = 5.0
 DEFAULT_BOOST_MAX_RUNTIME: Final = 60.0
 DEFAULT_BOOST_COOLDOWN_MINUTES: Final = 15.0
+DEFAULT_BOOST_PENDING_TIMEOUT_MINUTES: Final = 10.0
 
 # Sentinel meaning "leave fan_mode alone" in the config-flow selector, since
 # voluptuous/HA selectors need a real string option, not a bare None.
@@ -103,6 +104,8 @@ class BoostHeaterTracker:
     slow_ema: float | None = None
     _slow_ema_ts: float | None = None
     last_boost_end_ts: float | None = None
+    boost_armed_ts: float | None = None
+    last_reason: str = "off"
 
     @property
     def boost_active(self) -> bool:
@@ -151,9 +154,13 @@ class BoostHeaterTracker:
 
         if open_temp - cur_temp > threshold_heat and supports_heat:
             self.boost_direction = HVACMode.HEAT
+            self.boost_armed_ts = now_ts if now_ts is not None else monotonic()
+            self.last_reason = "armed"
             return HVACMode.HEAT
         if cur_temp - open_temp > threshold_cool and supports_cool:
             self.boost_direction = HVACMode.COOL
+            self.boost_armed_ts = now_ts if now_ts is not None else monotonic()
+            self.last_reason = "armed"
             return HVACMode.COOL
         return None
 
@@ -169,7 +176,9 @@ class BoostHeaterTracker:
             self.slow_ema = self.slow_ema + alpha * (value - self.slow_ema)
         self._slow_ema_ts = now_ts
 
-    def clear(self, *, now_ts: float | None = None) -> None:
+    def clear(
+        self, *, now_ts: float | None = None, reason: str = "cleared"
+    ) -> None:
         """Reset all boost-cycle state - called on cancellation or completion.
 
         Records ``last_boost_end_ts`` only when the boost had actually begun
@@ -180,11 +189,13 @@ class BoostHeaterTracker:
         if now_ts is not None and self.boost_started_ts is not None:
             self.last_boost_end_ts = now_ts
         self.boost_direction = None
+        self.boost_armed_ts = None
         self.previous_fan_mode = None
         self.previous_hvac_mode = None
         self.previous_temperature = None
         self.boost_started_ts = None
         self.last_action = HVACAction.IDLE
+        self.last_reason = reason
         # open_temp/slow_ema deliberately survive: a fresh window-open still
         # needs the temp captured, and the slow EMA is a standing trend
         # signal, not boost-cycle-scoped state.
@@ -641,10 +652,26 @@ def _record_boost_status(bt, tracker: BoostHeaterTracker, now_ts: float) -> None
     elapsed_s = None
     if isinstance(tracker.boost_started_ts, (int, float)):
         elapsed_s = round(now_ts - tracker.boost_started_ts, 1)
+    armed_age_s = None
+    if isinstance(tracker.boost_armed_ts, (int, float)):
+        armed_age_s = round(max(0.0, now_ts - tracker.boost_armed_ts), 1)
+    if tracker.boost_started_ts is not None:
+        state = "active"
+        reason = "active"
+    elif tracker.boost_direction is not None:
+        state = "pending"
+        reason = "pending_unavailable"
+    else:
+        state = "off"
+        reason = tracker.last_reason
     bt._boost_status = {
         "active": tracker.boost_active,
+        "state": state,
+        "reason": reason,
         "direction": tracker.boost_direction,
         "elapsed_s": elapsed_s,
+        "armed_age_s": armed_age_s,
+        "pending_timeout_s": DEFAULT_BOOST_PENDING_TIMEOUT_MINUTES * 60.0,
         "cooler_entity_id": getattr(bt, "cooler_entity_id", None),
     }
 
@@ -690,6 +717,14 @@ async def control_boost(self) -> None:
 
     state = self.hass.states.get(self.cooler_entity_id)
     if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+        pending_timeout_s = DEFAULT_BOOST_PENDING_TIMEOUT_MINUTES * 60.0
+        if (
+            tracker.boost_started_ts is None
+            and tracker.boost_armed_ts is not None
+            and now_ts - tracker.boost_armed_ts >= pending_timeout_s
+        ):
+            tracker.clear(reason="pending_unavailable_timeout")
+        _record_boost_status(self, tracker, now_ts)
         return
     # Our own up-to-date belief of the device's mode - updated below whenever
     # this cycle issues its own set_hvac_mode command, since `state` itself
@@ -704,7 +739,7 @@ async def control_boost(self) -> None:
         await _restore_previous_state(
             self, self.cooler_entity_id, tracker, current_mode
         )
-        tracker.clear(now_ts=now_ts)
+        tracker.clear(now_ts=now_ts, reason="cancelled_by_guard")
         self.last_cooler_mode_decided = HVACMode.OFF
         _record_boost_status(self, tracker, now_ts)
         return
@@ -771,7 +806,7 @@ async def control_boost(self) -> None:
         await _restore_previous_state(
             self, self.cooler_entity_id, tracker, current_mode
         )
-        tracker.clear(now_ts=now_ts)
+        tracker.clear(now_ts=now_ts, reason="completed")
         _record_boost_status(self, tracker, now_ts)
 
 
@@ -822,5 +857,7 @@ async def trigger_test_boost(bt, direction: HVACMode) -> None:
         return
 
     tracker.boost_direction = direction
+    tracker.boost_armed_ts = monotonic()
+    tracker.last_reason = "armed_manual_test"
     tracker.boost_started_ts = None  # control_boost() stamps it fresh below
     await control_boost(bt)

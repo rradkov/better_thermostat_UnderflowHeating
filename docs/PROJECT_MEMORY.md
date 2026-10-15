@@ -1,5 +1,22 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-15 — Boost diagnostics and Warm Floor control cleanup
+
+- **Boost:** Added explicit lifecycle diagnostics (`off`, `pending`, and
+  `active`) with a reason, armed age, and pending timeout. An armed Boost is
+  cleared after 10 minutes when its configured Cooler remains unavailable, so
+  stale pending state cannot survive indefinitely. Normal target, cooldown,
+  restore, and maximum-runtime behavior remains unchanged.
+- **Warm Floor:** Added effective dynamic intensity and fixed actuator travel
+  times to the diagnostic snapshot. The actuator travel remains deliberately
+  fixed at four minutes for both opening and closing; no user-configurable
+  timing was introduced.
+- **Verification:** The synchronous focused tests pass. Async Boost tests
+  remain host-limited because this Windows environment cannot load the Home
+  Assistant pytest plugin (`fcntl`/async plugin limitation).
+- **Deployment:** Pending commit and DEV Home Assistant installation; no
+  release and no `climate.tatas` access.
+
 ### 2026-10-15 — Boost and Warm Floor leftover cleanup audit
 
 - **Audit:** Reviewed the Boost tracker, window-transition path, control

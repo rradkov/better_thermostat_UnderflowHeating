@@ -16,7 +16,6 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory, Platform, UnitOfTemperature
 from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
-from homeassistant.util import dt as dt_util
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity_registry import (
@@ -25,6 +24,7 @@ from homeassistant.helpers.entity_registry import (
     async_get as async_get_entity_registry,
 )
 from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.util import dt as dt_util
 
 from .calibration import _get_current_solar_intensity
 from .utils.const import CONF_CALIBRATION_MODE, DOMAIN, CalibrationMode
@@ -1155,6 +1155,9 @@ class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
             "hvac_action": status.get("hvac_action"),
             "valve_min_pct": status.get("valve_min_pct"),
             "demand_factor": status.get("demand_factor"),
+            "effective_intensity": status.get("effective_intensity"),
+            "actuator_open_minutes": status.get("actuator_open_minutes"),
+            "actuator_close_minutes": status.get("actuator_close_minutes"),
             "preheat_risk": status.get("preheat_risk"),
         }
 
@@ -1170,7 +1173,7 @@ class BetterThermostatBoostStatusSensor(_BtSensorBase):
     _attr_translation_key = "boost_status"
     _attr_device_class = SensorDeviceClass.ENUM
     _attr_state_class = None
-    _attr_options = ["off", "heating", "cooling"]
+    _attr_options = ["off", "pending", "heating", "cooling"]
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_icon = "mdi:fan-plus"
     _unique_id_suffix = "boost_status"
@@ -1178,13 +1181,26 @@ class BetterThermostatBoostStatusSensor(_BtSensorBase):
     def _update_state(self) -> None:
         """Update state from the last Boost decision."""
         status = getattr(self._bt_climate, "_boost_status", None)
-        if not isinstance(status, dict) or not status.get("active"):
+        if not isinstance(status, dict):
             self._attr_native_value = "off"
             self._attr_extra_state_attributes = {}
             return
+        state = status.get("state")
+        if state == "pending":
+            self._attr_native_value = "pending"
+        elif status.get("active"):
+            direction = status.get("direction")
+            self._attr_native_value = (
+                "heating" if direction == HVACMode.HEAT else "cooling"
+            )
+        else:
+            self._attr_native_value = "off"
         direction = status.get("direction")
-        self._attr_native_value = "heating" if direction == HVACMode.HEAT else "cooling"
         self._attr_extra_state_attributes = {
             "cooler_entity_id": status.get("cooler_entity_id"),
+            "state": status.get("state"),
+            "reason": status.get("reason"),
+            "armed_age_s": status.get("armed_age_s"),
+            "pending_timeout_s": status.get("pending_timeout_s"),
             "elapsed_s": status.get("elapsed_s"),
         }

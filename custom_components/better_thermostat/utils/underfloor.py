@@ -107,6 +107,7 @@ WARM_FLOOR_SENSOR_STALE_AFTER_S: Final = 1200.0
 # in either direction.  A shorter ON/OFF window is not merely inefficient:
 # the actuator may not move far enough to produce any useful heat.
 WARM_FLOOR_ACTUATOR_TRAVEL_S: Final = 4 * 60
+WARM_FLOOR_ACTUATOR_TRAVEL_MINUTES: Final = 4.0
 # These are physical bounds for the dynamic controller, not level schedules.
 # The selected level supplies only a baseline intensity. The actual ON and
 # pause durations are recalculated from live telemetry on every control tick.
@@ -635,6 +636,9 @@ def _record_status(
         "hvac_action": hvac_action,
         "valve_min_pct": valve_min_pct,
         "demand_factor": demand_factor,
+        "effective_intensity": getattr(bt, "_warm_floor_effective_intensity", None),
+        "actuator_open_minutes": WARM_FLOOR_ACTUATOR_TRAVEL_MINUTES,
+        "actuator_close_minutes": WARM_FLOOR_ACTUATOR_TRAVEL_MINUTES,
         "raw_demand_factor": getattr(bt, "_warm_floor_raw_demand_factor", None),
         "target_alignment_factor": getattr(
             bt, "_warm_floor_target_alignment_factor", None
@@ -1373,7 +1377,13 @@ def _effective_duty_profile(
         )
     )
     period_s = on_s + pause_s
+    bt._warm_floor_effective_intensity = round(intensity, 4)
     return period_s, on_s, intensity
+
+
+def _actuator_travel_s(trv_state, phase: str) -> float:
+    """Return the configured travel time for an actuator phase."""
+    return WARM_FLOOR_ACTUATOR_TRAVEL_S
 
 
 def _latch_generic_actuator_phase(trv_state, requested_on: bool) -> tuple[bool, str | None]:
@@ -1408,8 +1418,8 @@ def _latch_generic_actuator_phase(trv_state, requested_on: bool) -> tuple[bool, 
             current_phase = requested_phase
             trv_state.warm_floor_actuator_phase = current_phase
             trv_state.warm_floor_phase_started_at = now
-            trv_state.warm_floor_phase_minimum_until = (
-                now + WARM_FLOOR_ACTUATOR_TRAVEL_S if requested_on else now
+            trv_state.warm_floor_phase_minimum_until = now + _actuator_travel_s(
+                trv_state, current_phase
             )
             trv_state.warm_floor_phase_recovered = False
             trv_state.warm_floor_actuator_guard = None
@@ -1417,8 +1427,8 @@ def _latch_generic_actuator_phase(trv_state, requested_on: bool) -> tuple[bool, 
         current_phase = "on" if reported_action == HVACAction.HEATING.value else "off"
         trv_state.warm_floor_actuator_phase = current_phase
         trv_state.warm_floor_phase_started_at = now
-        trv_state.warm_floor_phase_minimum_until = (
-            now + WARM_FLOOR_ACTUATOR_TRAVEL_S
+        trv_state.warm_floor_phase_minimum_until = now + _actuator_travel_s(
+            trv_state, current_phase
         )
         trv_state.warm_floor_phase_recovered = True
         minimum_until = trv_state.warm_floor_phase_minimum_until
@@ -1446,7 +1456,7 @@ def _latch_generic_actuator_phase(trv_state, requested_on: bool) -> tuple[bool, 
         trv_state.warm_floor_actuator_phase = requested_phase
         trv_state.warm_floor_phase_started_at = now
         trv_state.warm_floor_phase_minimum_until = (
-            now + WARM_FLOOR_ACTUATOR_TRAVEL_S
+            now + _actuator_travel_s(trv_state, requested_phase)
         )
         trv_state.warm_floor_force_setpoint_write = True
     return requested_on, None
@@ -1469,7 +1479,9 @@ def _interrupt_generic_actuator_phase(trv_state, reason: str) -> None:
         return
     trv_state.warm_floor_actuator_phase = "off"
     trv_state.warm_floor_phase_started_at = now
-    trv_state.warm_floor_phase_minimum_until = now + WARM_FLOOR_ACTUATOR_TRAVEL_S
+    trv_state.warm_floor_phase_minimum_until = now + _actuator_travel_s(
+        trv_state, "off"
+    )
     trv_state.warm_floor_actuator_guard = reason
     trv_state.warm_floor_force_setpoint_write = True
 
