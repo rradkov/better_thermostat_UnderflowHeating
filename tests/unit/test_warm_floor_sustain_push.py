@@ -515,6 +515,38 @@ def test_auto_returns_to_keep_hot_after_confirmed_cooling(monkeypatch):
     assert bt._warm_floor_auto_policy == underfloor.WARM_FLOOR_LEVEL_KEEP_HOT
 
 
+def test_auto_downgrades_materially_above_target_even_with_mild_cooling():
+    bt = _make_bt(
+        warm_floor_level=underfloor.WARM_FLOOR_LEVEL_AUTO,
+        cur_temp=25.1,
+        target_temp=23.0,
+    )
+    bt.cur_temp_filtered = 25.11
+    bt.external_temp_ema = 25.11
+    bt.external_temp_ema_1h = 25.26
+    bt.temp_slope = -0.0029
+
+    candidate = underfloor._warm_floor_auto_candidate(bt, demand_factor=0.39)
+
+    assert candidate == underfloor.WARM_FLOOR_LEVEL_ECO
+
+
+def test_auto_keeps_balanced_for_material_excess_with_strong_cooling():
+    bt = _make_bt(
+        warm_floor_level=underfloor.WARM_FLOOR_LEVEL_AUTO,
+        cur_temp=24.2,
+        target_temp=23.0,
+    )
+    bt.cur_temp_filtered = 24.0
+    bt.external_temp_ema = 24.0
+    bt.external_temp_ema_1h = 24.3
+    bt.temp_slope = -0.012
+
+    candidate = underfloor._warm_floor_auto_candidate(bt, demand_factor=0.4)
+
+    assert candidate == underfloor.WARM_FLOOR_LEVEL_BALANCED
+
+
 def test_warm_floor_level_increases_direct_valve_floor_when_raised():
     def valve_floor(level: str) -> int:
         bt = _make_bt(warm_floor_level=level)

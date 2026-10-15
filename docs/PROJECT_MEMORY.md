@@ -1,5 +1,27 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-15 — Auto prioritizes a large above-target margin
+
+- **Observed:** Kitchen was materially above target (`25.1°C` vs `23.0°C`),
+  but Auto remained `Keep it Hot` because a mild negative EMA separation was
+  treated as sufficient cooling evidence.
+- **Problem:** A short-term cooling hint could select the strongest maintenance
+  baseline even while the room still needed to drift back toward target.
+- **Change:** When the measured margin is materially above the near-target
+  band, Auto now selects `Eco` while the room returns toward target. Only a
+  clearly strong cooling/load condition selects `Balanced` in that band.
+- **Safety:** Eco still keeps the minimum valid Warm Floor maintenance pulse;
+  this changes the maintenance baseline, not the `current >= target` guard,
+  normal heating ownership below target, or the four-minute actuator minimum.
+  Near the target, the existing EMA/slope recovery logic can return the policy
+  to `Balanced` or `Keep it Hot` as the diagnostics justify it.
+- **Verification:** Added regression coverage for mild cooling while materially
+  above target and for strong cooling in the same band. The focused Warm Floor
+  suite passed 56 tests; compilation and `git diff --check` passed. The broader
+  legacy maintenance test file still contains eight pre-existing references to
+  removed APIs and is not part of this change.
+
+
 ### 2026-10-15 — Separate plant load from target-aligned Warm Floor demand
 
 - **Observed:** Kitchen had a `demand_factor` near `0.9` because

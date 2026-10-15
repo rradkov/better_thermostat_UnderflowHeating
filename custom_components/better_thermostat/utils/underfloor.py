@@ -161,6 +161,12 @@ WARM_FLOOR_LEVEL_INTENSITY: Final[dict[str, float]] = {
 # room target.  A slow slab is cheaper to keep warm than to recover from cold,
 # but the policy must step down only after the room proves that it is warming.
 WARM_FLOOR_AUTO_NEAR_TARGET_MARGIN_C: Final = 0.25
+# A room that is several near-target bands above the target must be allowed to
+# drift back toward target even when a short-term EMA shows cooling.  The floor
+# still receives the valid minimum maintenance pulse; this only selects the
+# Auto baseline and prevents a cooling hint from keeping an already-warm room
+# on the strongest maintenance profile.
+WARM_FLOOR_AUTO_EXCESS_MARGIN_MULTIPLIER: Final = 4.0
 WARM_FLOOR_AUTO_EMA_WARMING_DELTA_C: Final = 0.10
 WARM_FLOOR_AUTO_EMA_STRONG_WARMING_DELTA_C: Final = 0.25
 WARM_FLOOR_AUTO_EMA_COOLING_DELTA_C: Final = -0.10
@@ -840,6 +846,37 @@ def _warm_floor_auto_candidate(bt, demand_factor: float) -> str:
         and isinstance(slope, (int, float))
         and slope >= 0.01
     )
+
+    materially_above_target = (
+        isinstance(margin, (int, float))
+        and margin
+        >= WARM_FLOOR_AUTO_NEAR_TARGET_MARGIN_C
+        * WARM_FLOOR_AUTO_EXCESS_MARGIN_MULTIPLIER
+    )
+
+    # Cooling evidence is important near the target, but it must not make an
+    # already materially overheated room use Keep it Hot.  Eco continues to
+    # provide the minimum valid floor-maintenance pulse while the room returns
+    # toward target.  Only a clearly strong cooling/load condition justifies
+    # Balanced in this band; Keep it Hot is reserved for the near-target
+    # recovery region below.
+    if materially_above_target:
+        strong_cooling = (
+            (
+                isinstance(ema_delta, (int, float))
+                and ema_delta <= 2 * WARM_FLOOR_AUTO_EMA_COOLING_DELTA_C
+            )
+            or (
+                isinstance(slope, (int, float))
+                and slope <= 2 * WARM_FLOOR_AUTO_COOLING_SLOPE_K_MIN
+            )
+            or demand_factor >= 0.85
+        )
+        return (
+            WARM_FLOOR_LEVEL_BALANCED
+            if strong_cooling
+            else WARM_FLOOR_LEVEL_ECO
+        )
 
     if cooling:
         return WARM_FLOOR_LEVEL_KEEP_HOT
