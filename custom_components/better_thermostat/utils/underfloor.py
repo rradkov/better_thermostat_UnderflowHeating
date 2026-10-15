@@ -625,6 +625,10 @@ def _record_status(
         "hvac_action": hvac_action,
         "valve_min_pct": valve_min_pct,
         "demand_factor": demand_factor,
+        "raw_demand_factor": getattr(bt, "_warm_floor_raw_demand_factor", None),
+        "target_alignment_factor": getattr(
+            bt, "_warm_floor_target_alignment_factor", None
+        ),
         "preheat_risk": getattr(bt, "_warm_floor_preheat_risk", None),
         "outdoor_temp_c": getattr(bt, "_warm_floor_outdoor_temp_c", None),
         "outdoor_temp_source": getattr(bt, "_warm_floor_outdoor_source", None),
@@ -976,6 +980,8 @@ def _warm_floor_demand_factor(
     belongs to the normal Better Thermostat controller.
     """
     demand = 0.0
+    non_plant_demand = 0.0
+    plant_load_demand = 0.0
 
     outdoor_temp, outdoor_source = _warm_floor_outdoor_temperature(bt)
     flow_temp, flow_source = _warm_floor_flow_temperature(bt)
@@ -995,7 +1001,9 @@ def _warm_floor_demand_factor(
             0.0,
             1.0,
         )
-        demand = max(demand, WARM_FLOOR_OUTDOOR_WEIGHT * outdoor_coldness)
+        outdoor_demand = WARM_FLOOR_OUTDOOR_WEIGHT * outdoor_coldness
+        demand = max(demand, outdoor_demand)
+        non_plant_demand = max(non_plant_demand, outdoor_demand)
 
     if isinstance(flow_temp, (int, float)):
         water_capacity = _clamp(
@@ -1004,14 +1012,18 @@ def _warm_floor_demand_factor(
             0.0,
             1.0,
         )
-        demand = max(demand, WARM_FLOOR_WATER_WEIGHT * (1.0 - water_capacity))
+        water_demand = WARM_FLOOR_WATER_WEIGHT * (1.0 - water_capacity)
+        demand = max(demand, water_demand)
+        non_plant_demand = max(non_plant_demand, water_demand)
 
     slope = getattr(bt, "temp_slope", None)
     if isinstance(slope, (int, float)) and slope < 0.0:
+        slope_demand = _clamp(abs(float(slope)) / UNDERSHOOT_SLOPE_GUARD, 0.0, 1.0)
         demand = max(
             demand,
-            _clamp(abs(float(slope)) / UNDERSHOOT_SLOPE_GUARD, 0.0, 1.0),
+            slope_demand,
         )
+        non_plant_demand = max(non_plant_demand, slope_demand)
 
     # The short EMA reacts to the current room movement; the one-hour EMA
     # provides the slower baseline. Their separation catches sustained
@@ -1023,7 +1035,9 @@ def _warm_floor_demand_factor(
     if isinstance(short_ema, (int, float)) and isinstance(long_ema, (int, float)):
         ema_delta = float(short_ema) - float(long_ema)
         if ema_delta < 0.0:
-            demand = max(demand, _clamp(abs(ema_delta) / 0.5, 0.0, 1.0))
+            ema_demand = _clamp(abs(ema_delta) / 0.5, 0.0, 1.0)
+            demand = max(demand, ema_demand)
+            non_plant_demand = max(non_plant_demand, ema_demand)
         elif ema_delta > 0.0:
             # A warmer short EMA indicates solar/residual warming. Reduce an
             # already-demanding maintenance cycle, but keep the baseline
@@ -1035,7 +1049,9 @@ def _warm_floor_demand_factor(
     if isinstance(heat_loss, (int, float)) and isinstance(heating_power, (int, float)):
         if float(heat_loss) > 0.0 and float(heating_power) > 0.0:
             load_ratio = float(heat_loss) / float(heating_power)
-            demand = max(demand, _clamp((load_ratio - 0.5) / 0.5, 0.0, 1.0))
+            load_demand = _clamp((load_ratio - 0.5) / 0.5, 0.0, 1.0)
+            demand = max(demand, load_demand)
+            plant_load_demand = max(plant_load_demand, load_demand)
 
     # MPC keeps a per-heater estimate that is more specific than the
     # instance-level fallback above. Use it for the Generic Thermostat pulse
@@ -1057,17 +1073,69 @@ def _warm_floor_demand_factor(
             and float(mpc_power) > 0.0
         ):
             mpc_load_ratio = float(mpc_loss) / float(mpc_power)
-            demand = max(
-                demand, _clamp((mpc_load_ratio - 0.5) / 0.5, 0.0, 1.0)
-            )
+            mpc_demand = _clamp((mpc_load_ratio - 0.5) / 0.5, 0.0, 1.0)
+            demand = max(demand, mpc_demand)
+            plant_load_demand = max(plant_load_demand, mpc_demand)
     # A predictive maintenance signal lets Warm Floor act before normal
     # heating has to start, but only while the room is still above target.
     # It is deliberately derived from relative trend/thermal evidence rather
     # than a fixed temperature threshold.  The caller still enforces the hard
     # below-target boundary.
+    raw_demand = _clamp(demand, 0.0, 1.0)
+    bt._warm_floor_raw_demand_factor = raw_demand
+
     preheat_risk = _warm_floor_preheat_risk(bt)
     bt._warm_floor_preheat_risk = preheat_risk
-    return _clamp(max(demand, preheat_risk), 0.0, 1.0)
+    demand = _clamp(max(raw_demand, preheat_risk), 0.0, 1.0)
+
+    # Heat-loss/MPC demand describes the plant's thermal load, not a request
+    # to keep adding heat while the room is already above target.  Once the
+    # room is above target, use only directional cooling evidence and the
+    # relative preheat risk to decide how much of that load should affect the
+    # maintenance pulse.  This keeps the decision dynamic: the remaining
+    # margin and measured trend determine the result, not a fixed temperature
+    # ceiling.
+    current = getattr(bt, "cur_temp", None)
+    target = getattr(bt, "bt_target_temp", None)
+    alignment = demand
+    if (
+        isinstance(current, (int, float))
+        and isinstance(target, (int, float))
+        and float(current) > float(target)
+    ):
+        margin = float(current) - float(target)
+        cooling_rates: list[float] = []
+        slope = getattr(bt, "temp_slope", None)
+        if isinstance(slope, (int, float)) and float(slope) < 0.0:
+            cooling_rates.append(abs(float(slope)))
+        short_ema = getattr(bt, "cur_temp_filtered", None)
+        if not isinstance(short_ema, (int, float)):
+            short_ema = getattr(bt, "external_temp_ema", None)
+        long_ema = getattr(bt, "external_temp_ema_1h", None)
+        if (
+            isinstance(short_ema, (int, float))
+            and isinstance(long_ema, (int, float))
+            and float(short_ema) < float(long_ema)
+        ):
+            cooling_rates.append((float(long_ema) - float(short_ema)) / 60.0)
+
+        if cooling_rates:
+            cooling_rate = max(cooling_rates)
+            trend_margin = cooling_rate * 60.0
+            proximity = trend_margin / (trend_margin + margin)
+            cooling_alignment = max(preheat_risk, _clamp(proximity, 0.0, 1.0))
+            alignment = max(
+                non_plant_demand,
+                min(plant_load_demand, cooling_alignment),
+                preheat_risk,
+            )
+        else:
+            # Above target without evidence of cooling needs only the selected
+            # level's baseline cadence; plant-load demand must not lengthen it.
+            alignment = non_plant_demand
+
+    bt._warm_floor_target_alignment_factor = _clamp(alignment, 0.0, 1.0)
+    return bt._warm_floor_target_alignment_factor
 
 
 def _warm_floor_preheat_risk(bt) -> float:

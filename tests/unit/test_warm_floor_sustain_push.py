@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import timedelta
 from unittest.mock import MagicMock
 
+import pytest
 from homeassistant.components.climate.const import HVACAction, HVACMode
 from homeassistant.util import dt as dt_util
 
@@ -439,9 +440,8 @@ def test_stronger_rising_slope_reduces_duty_demand_without_blanket_off(monkeypat
 
     assert gentle_result > gentle.bt_target_temp
     assert strong_result > strong.bt_target_temp
-    assert strong._warm_floor_status["demand_factor"] < gentle._warm_floor_status[
-        "demand_factor"
-    ]
+    assert strong._warm_floor_status["demand_factor"] == 0.0
+    assert gentle._warm_floor_status["demand_factor"] == 0.0
 
 
 def test_warm_floor_level_changes_generic_duty_intensity():
@@ -582,6 +582,45 @@ def test_warm_floor_demand_uses_short_and_one_hour_ema_separation():
     assert warming_demand == 0.0
 
 
+def test_warm_floor_caps_plant_load_demand_when_above_target_and_cooling():
+    """Plant load must not force a near-max pulse above target."""
+    bt = _make_bt(cur_temp=24.3, target_temp=23.0)
+    bt.heat_loss_rate = 0.00665
+    bt.heating_power = 0.007
+    bt.temp_slope = -0.0056
+    bt.mpc_v2_D_hat_K_per_min = 0.0051
+
+    demand = underfloor._warm_floor_demand_factor(bt)
+
+    assert bt._warm_floor_raw_demand_factor == pytest.approx(0.9)
+    assert demand < bt._warm_floor_raw_demand_factor
+    assert demand < 0.3
+
+
+def test_warm_floor_drops_load_demand_when_above_target_and_warming():
+    """A rising room above target must not inherit heat-loss demand."""
+    bt = _make_bt(cur_temp=24.3, target_temp=23.0)
+    bt.heat_loss_rate = 0.00665
+    bt.heating_power = 0.007
+    bt.temp_slope = 0.02
+
+    demand = underfloor._warm_floor_demand_factor(bt)
+
+    assert bt._warm_floor_raw_demand_factor == pytest.approx(0.9)
+    assert demand == 0.0
+
+
+def test_warm_floor_keeps_load_demand_at_exact_target():
+    """At target, plant load may still support the zero-slope pulse."""
+    bt = _make_bt(cur_temp=23.0, target_temp=23.0)
+    bt.heat_loss_rate = 0.00665
+    bt.heating_power = 0.007
+
+    demand = underfloor._warm_floor_demand_factor(bt)
+
+    assert demand == pytest.approx(0.9)
+
+
 def test_warm_floor_predicts_preheat_before_target_crossing():
     approaching = _make_bt(cur_temp=22.1, target_temp=22.0)
     approaching.temp_slope = -0.02
@@ -629,7 +668,8 @@ def test_generic_duty_demand_uses_per_heater_mpc_feedback(monkeypatch):
         CalibrationMode.MPC_V2_CALIBRATION,
     )
 
-    assert demand == 0.5
+    assert bt._warm_floor_raw_demand_factor == pytest.approx(0.5)
+    assert demand == 0.0
 
 
 def test_generic_duty_profile_respects_slow_actuator_travel_time():

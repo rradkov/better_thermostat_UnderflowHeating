@@ -1,5 +1,23 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-15 — Separate plant load from target-aligned Warm Floor demand
+
+- **Observed:** Kitchen had a `demand_factor` near `0.9` because
+  `heat_loss / heating_power` was approximately `0.00665 / 0.007`, even while
+  the room stayed around `24.3°C` against a `23°C` target.
+- **Problem:** Plant-load demand was allowed to lengthen maintenance pulses
+  above target. That signal describes heat loss/capacity, not a request to add
+  heat while the room is already moving toward target.
+- **Change:** Preserve the raw plant-load demand as a diagnostic, then cap the
+  effective demand above target using only measured cooling direction (slope or
+  EMA separation) and relative preheat risk. If the room is rising or has no
+  cooling evidence, plant-load demand no longer increases the Warm Floor
+  pulse. At exact target, the raw load signal remains available so the
+  controller can maintain `temp_slope ≈ 0`.
+- **Goal:** Keep the floor warm while allowing an above-target room to return
+  toward its target, without introducing a fixed Celsius ceiling or changing
+  the below-target ownership of normal Better Thermostat heating.
+
 ### 2026-10-15 — Release stale Generic Thermostat command at exact target
 
 - **Observed:** After Warm Floor became eligible at the exact target, Tino could
