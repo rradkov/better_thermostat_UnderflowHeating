@@ -14,8 +14,11 @@
 - **Verification:** The synchronous focused tests pass. Async Boost tests
   remain host-limited because this Windows environment cannot load the Home
   Assistant pytest plugin (`fcntl`/async plugin limitation).
-- **Deployment:** Pending commit and DEV Home Assistant installation; no
-  release and no `climate.tatas` access.
+- **Deployment:** DEV commit `82deb1d` was installed through HACS and Home
+  Assistant was restarted. HACS reports the same installed and available
+  version, all seven Better Thermostat entries are `loaded`, all seven Boost
+  sensors are `off`, and Warm Floor diagnostics are refreshing with current
+  `status_age_s` values. `climate.tatas` was not accessed.
 
 ### 2026-10-15 — Boost and Warm Floor leftover cleanup audit
 
