@@ -1,5 +1,29 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-15 — Boost and Warm Floor leftover cleanup audit
+
+- **Audit:** Reviewed the Boost tracker, window-transition path, control
+  routing, restore/cancel behavior, status sensor, Warm Floor control paths,
+  diagnostics, and related tests. `climate.tatas` was not used.
+- **Cleanup:** Removed the obsolete `test_warm_floor_maintenance.py`, which
+  still referenced the deleted fixed-profile Warm Floor API and produced false
+  failures. The current Warm Floor tests cover the live dynamic duty-cycle
+  implementation.
+- **Fix:** Boost now preserves an explicitly configured `0` minute cooldown
+  instead of replacing it with the 15-minute default. Trend temperature
+  selection is shared and no longer relies on truthiness for numeric values.
+- **Verification:** Boost tracker tests passed 19 tests; current Warm Floor
+  tests passed 95 tests; compilation, Ruff, and `git diff --check` passed.
+  Async Boost tests remain dependent on the Windows-compatible async test
+  environment; the Home Assistant pytest plugin currently imports POSIX-only
+  `fcntl` on this host.
+- **Follow-up proposals:** Add persistent, reason-coded Boost diagnostics;
+  expose an explicit pending/unavailable state and timeout for an armed Boost;
+  add configurable actuator travel times for Warm Floor; and add long-window
+  simulation tests that optimize room error, slope, floor-maintenance duty,
+  and energy proxy together instead of validating only individual pulses.
+
+
 ### 2026-10-15 — Continuous target balance with economical floor maintenance
 
 - **Requirement:** Warm Floor must keep the room around the Better Thermostat

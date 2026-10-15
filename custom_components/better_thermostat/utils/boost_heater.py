@@ -75,6 +75,15 @@ _SLOW_EMA_TAU_S: Final = 3600.0
 SETPOINT_KEYS: Final = ("temperature",)
 
 
+def _trend_temperature(bt) -> float | None:
+    """Return the best current filtered temperature without truthiness bugs."""
+    filtered = getattr(bt, "cur_temp_filtered", None)
+    if isinstance(filtered, (int, float)):
+        return float(filtered)
+    current = getattr(bt, "cur_temp", None)
+    return float(current) if isinstance(current, (int, float)) else None
+
+
 # ---------------------------------------------------------------------------
 # Boost state tracker
 # ---------------------------------------------------------------------------
@@ -368,10 +377,23 @@ def record_window_transition(bt, role, is_open: bool) -> None:
         tracker.record_window_open(getattr(bt, "cur_temp", None))
         return
 
-    threshold_heat = getattr(bt, "boost_threshold_k", None) or DEFAULT_BOOST_THRESHOLD
-    threshold_cool = getattr(bt, "boost_threshold_cool_k", None) or threshold_heat
+    configured_heat = getattr(bt, "boost_threshold_k", None)
+    threshold_heat = (
+        float(configured_heat)
+        if isinstance(configured_heat, (int, float))
+        else DEFAULT_BOOST_THRESHOLD
+    )
+    configured_cool = getattr(bt, "boost_threshold_cool_k", None)
+    threshold_cool = (
+        float(configured_cool)
+        if isinstance(configured_cool, (int, float))
+        else threshold_heat
+    )
+    configured_cooldown = getattr(bt, "boost_cooldown_minutes", None)
     cooldown_minutes = (
-        getattr(bt, "boost_cooldown_minutes", None) or DEFAULT_BOOST_COOLDOWN_MINUTES
+        float(configured_cooldown)
+        if isinstance(configured_cooldown, (int, float))
+        else DEFAULT_BOOST_COOLDOWN_MINUTES
     )
     state = bt.hass.states.get(bt.cooler_entity_id)
     hvac_modes = (
@@ -646,9 +668,7 @@ def update_boost_trend(bt) -> None:
     if tracker is None:
         return
     now_ts = monotonic()
-    tracker.update_slow_ema(
-        getattr(bt, "cur_temp_filtered", None) or getattr(bt, "cur_temp", None), now_ts
-    )
+    tracker.update_slow_ema(_trend_temperature(bt), now_ts)
     _record_boost_status(bt, tracker, now_ts)
 
 
@@ -666,10 +686,7 @@ async def control_boost(self) -> None:
     # unconditionally before routing here); this second call is a near
     # no-op (dt_s ~= 0) but keeps control_boost() correct in isolation, e.g.
     # under direct unit test.
-    tracker.update_slow_ema(
-        getattr(self, "cur_temp_filtered", None) or getattr(self, "cur_temp", None),
-        now_ts,
-    )
+    tracker.update_slow_ema(_trend_temperature(self), now_ts)
 
     state = self.hass.states.get(self.cooler_entity_id)
     if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
