@@ -17,6 +17,11 @@
   primary continuous control output.
 - **Verification:** Focused Warm Floor suite passed 58 tests; compilation,
   Ruff, and `git diff --check` passed. No release was created.
+- **Deployment:** The implementation was committed and pushed to the public
+  DEV repository as `6bcedcf`. Home Assistant installation is still pending
+  because no HA tab/connector is available in the current session and the
+  local HA endpoints refused the connection; no HA configuration or runtime
+  state was changed.
 
 
 ### 2026-10-15 — Auto prioritizes a large above-target margin
