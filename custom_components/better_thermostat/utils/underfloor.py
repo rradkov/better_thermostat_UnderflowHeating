@@ -115,6 +115,10 @@ WARM_FLOOR_DUTY_MIN_ON_S: Final = WARM_FLOOR_ACTUATOR_TRAVEL_S
 WARM_FLOOR_DUTY_MAX_ON_S: Final = 12 * 60
 WARM_FLOOR_DUTY_MIN_INTENSITY: Final = 0.15
 WARM_FLOOR_DUTY_PAUSE_RESPONSE_S: Final = 15 * 60
+# The desired room equilibrium is target + this small allowance.  It is a
+# control band, not a fixed ON/OFF schedule: the actual correction remains
+# continuous and is qualified by the live thermal diagnostics.
+WARM_FLOOR_TARGET_EQUILIBRIUM_BAND_C: Final = 0.10
 # Broad, source-neutral normalisation bounds for an optional water/buffer
 # temperature. They are deliberately only a bounded capacity hint; room
 # response remains the authoritative feedback signal.
@@ -1292,6 +1296,48 @@ def _warm_floor_rising_factor(bt) -> float:
     return _clamp(factor, WARM_FLOOR_MIN_RISING_DUTY_RATIO, 1.0)
 
 
+def _warm_floor_target_balance_factor(bt, demand_factor: float) -> float:
+    """Bias maintenance toward target while preserving a warm slab.
+
+    The room margin is the primary economic signal.  Cooling/preheat demand
+    qualifies how much of that margin can be tolerated: a room that is still
+    materially above target but demonstrably cooling must retain more floor
+    maintenance than a room that is above target and stable/warming.  The
+    resulting factor is continuous, while the actuator minimum remains the
+    hard lower bound in ``_effective_duty_profile``.
+    """
+    current = getattr(bt, "cur_temp", None)
+    target = getattr(bt, "bt_target_temp", None)
+    if not isinstance(current, (int, float)) or not isinstance(target, (int, float)):
+        return 1.0
+
+    margin = float(current) - float(target)
+    excess = max(0.0, margin - WARM_FLOOR_TARGET_EQUILIBRIUM_BAND_C)
+    if excess <= 0.0:
+        bt._warm_floor_target_balance_factor = 1.0
+        return 1.0
+
+    # Scale the margin relative to the configured target so this remains
+    # usable across rooms and climates instead of introducing a second fixed
+    # temperature ceiling.
+    margin_scale = max(
+        WARM_FLOOR_TARGET_EQUILIBRIUM_BAND_C,
+        abs(float(target)) * 0.05,
+    )
+    margin_penalty = excess / (excess + margin_scale)
+
+    # Demand already combines slope, EMA separation, heat loss/heating power,
+    # outdoor/flow inputs and applicable MPC data.  A higher value means that
+    # reducing maintenance would risk crossing target soon, so it offsets the
+    # above-target penalty without allowing an excessive room temperature to
+    # request more than the selected baseline.
+    cooling_need = _clamp(float(demand_factor), 0.0, 1.0)
+    factor = 1.0 - margin_penalty * (1.0 - cooling_need)
+    factor = _clamp(factor, WARM_FLOOR_DUTY_MIN_INTENSITY, 1.0)
+    bt._warm_floor_target_balance_factor = factor
+    return factor
+
+
 def _effective_duty_profile(
     bt, trv_state, demand_factor: float
 ) -> tuple[int, int, float]:
@@ -1300,6 +1346,10 @@ def _effective_duty_profile(
     level_intensity = _warm_floor_level_intensity(bt, trv_state, demand_factor)
     # Cooling/load demand raises the selected baseline toward full intensity.
     intensity = level_intensity + (1.0 - level_intensity) * demand_factor
+    # Target balance is applied after the level/demand blend.  This makes the
+    # displayed Eco/Balanced/Keep-it-Hot policy a diagnostic explanation while
+    # the actual duty cycle remains economical and target-centred.
+    intensity *= _warm_floor_target_balance_factor(bt, demand_factor)
     intensity *= _warm_floor_rising_factor(bt)
     # Even under strong solar/residual warming, keep a minimum maintenance
     # cadence so the slab is never abandoned for a long period. This is a

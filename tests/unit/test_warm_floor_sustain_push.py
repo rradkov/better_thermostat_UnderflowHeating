@@ -11,9 +11,9 @@ from __future__ import annotations
 from datetime import timedelta
 from unittest.mock import MagicMock
 
-import pytest
 from homeassistant.components.climate.const import HVACAction, HVACMode
 from homeassistant.util import dt as dt_util
+import pytest
 
 from custom_components.better_thermostat.trv import Trv
 from custom_components.better_thermostat.utils import underfloor
@@ -22,8 +22,8 @@ from custom_components.better_thermostat.utils.underfloor import (
     CONF_HEATING_TYPE,
     CONF_WARM_FLOOR_LEVEL,
     CONF_WARM_FLOOR_SUSTAIN_PUSH,
-    WARM_FLOOR_SENSOR_STALE_AFTER_S,
     WARM_FLOOR_LEVEL_CUSTOM,
+    WARM_FLOOR_SENSOR_STALE_AFTER_S,
     HeatingType,
     apply_warm_floor_floor,
 )
@@ -545,6 +545,57 @@ def test_auto_keeps_balanced_for_material_excess_with_strong_cooling():
     candidate = underfloor._warm_floor_auto_candidate(bt, demand_factor=0.4)
 
     assert candidate == underfloor.WARM_FLOOR_LEVEL_BALANCED
+
+
+def test_duty_profile_reduces_intensity_above_target_but_keeps_minimum_floor():
+    near = _make_bt(cur_temp=22.1, target_temp=22.0)
+    far = _make_bt(cur_temp=24.0, target_temp=22.0)
+    near.temp_slope = 0.0
+    far.temp_slope = 0.0
+    near.cur_temp_filtered = near.external_temp_ema = 22.1
+    far.cur_temp_filtered = far.external_temp_ema = 24.0
+    near.external_temp_ema_1h = 22.1
+    far.external_temp_ema_1h = 24.0
+
+    near_profile = underfloor._effective_duty_profile(
+        near,
+        near.real_trvs["climate.trv"],
+        demand_factor=0.0,
+    )
+    far_profile = underfloor._effective_duty_profile(
+        far,
+        far.real_trvs["climate.trv"],
+        demand_factor=0.0,
+    )
+
+    assert far_profile[2] < near_profile[2]
+    assert far_profile[1] >= underfloor.WARM_FLOOR_DUTY_MIN_ON_S
+    assert far_profile[0] > near_profile[0]
+
+
+def test_duty_profile_restores_maintenance_when_far_above_target_but_cooling():
+    stable = _make_bt(cur_temp=24.0, target_temp=22.0)
+    cooling = _make_bt(cur_temp=24.0, target_temp=22.0)
+    stable.cur_temp_filtered = stable.external_temp_ema = 24.0
+    cooling.cur_temp_filtered = cooling.external_temp_ema = 23.7
+    stable.external_temp_ema_1h = 24.0
+    cooling.external_temp_ema_1h = 24.2
+    stable.temp_slope = 0.0
+    cooling.temp_slope = -0.02
+
+    stable_profile = underfloor._effective_duty_profile(
+        stable,
+        stable.real_trvs["climate.trv"],
+        demand_factor=0.0,
+    )
+    cooling_profile = underfloor._effective_duty_profile(
+        cooling,
+        cooling.real_trvs["climate.trv"],
+        demand_factor=0.8,
+    )
+
+    assert cooling_profile[2] > stable_profile[2]
+    assert cooling_profile[1] > stable_profile[1]
 
 
 def test_warm_floor_level_increases_direct_valve_floor_when_raised():

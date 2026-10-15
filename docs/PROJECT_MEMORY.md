@@ -1,5 +1,24 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-15 — Continuous target balance with economical floor maintenance
+
+- **Requirement:** Warm Floor must keep the room around the Better Thermostat
+  target (preferably target to target + 0.1°C) with `temp_slope` near zero,
+  while still keeping the slab warm at the lowest useful energy cost.
+- **Change:** Added a continuous target-balance factor after the Auto/level
+  baseline and live demand blend. The factor reduces actual ON intensity as
+  the room moves above the target band, while cooling, preheat risk, heat-loss/
+  power, outdoor/flow and applicable MPC diagnostics can restore maintenance
+  intensity when the room is moving back toward target.
+- **Safety:** The factor never removes the minimum valid floor pulse, never
+  changes the user's target or preset, preserves the `current >= target`
+  Warm Floor boundary, and keeps the four-minute actuator travel minimum.
+  Eco/Balanced/Keep it Hot remain diagnostic labels; the duty cycle is now the
+  primary continuous control output.
+- **Verification:** Focused Warm Floor suite passed 58 tests; compilation,
+  Ruff, and `git diff --check` passed. No release was created.
+
+
 ### 2026-10-15 — Auto prioritizes a large above-target margin
 
 - **Observed:** Kitchen was materially above target (`25.1°C` vs `23.0°C`),
