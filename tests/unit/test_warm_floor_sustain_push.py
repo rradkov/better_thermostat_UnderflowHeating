@@ -478,8 +478,8 @@ def test_auto_bootstraps_keep_hot_before_confirming_warming(monkeypatch):
         underfloor.WARM_FLOOR_LEVEL_KEEP_HOT
     ]
 
-    # Strong warming is first confirmed, then the policy moves down only one
-    # level after the minimum dwell and confirmation windows.
+    # Strong warming is first confirmed, then Auto can move directly to Eco
+    # after the minimum dwell and confirmation windows.
     clock[0] = underfloor.WARM_FLOOR_AUTO_MIN_DWELL_S
     underfloor._warm_floor_level_intensity(
         bt, bt.real_trvs["climate.trv"], demand_factor=0.4
@@ -488,10 +488,10 @@ def test_auto_bootstraps_keep_hot_before_confirming_warming(monkeypatch):
     underfloor._warm_floor_level_intensity(
         bt, bt.real_trvs["climate.trv"], demand_factor=0.4
     )
-    assert bt._warm_floor_auto_policy == underfloor.WARM_FLOOR_LEVEL_BALANCED
+    assert bt._warm_floor_auto_policy == underfloor.WARM_FLOOR_LEVEL_ECO
 
 
-def test_auto_returns_to_keep_hot_after_confirmed_cooling(monkeypatch):
+def test_auto_returns_directly_to_keep_hot_after_confirmed_cooling(monkeypatch):
     bt = _make_bt(warm_floor_level=underfloor.WARM_FLOOR_LEVEL_AUTO)
     bt.cur_temp_filtered = 21.7
     bt.external_temp_ema = 21.7
@@ -508,6 +508,30 @@ def test_auto_returns_to_keep_hot_after_confirmed_cooling(monkeypatch):
         bt, bt.real_trvs["climate.trv"], demand_factor=0.4
     )
     clock[0] += underfloor.WARM_FLOOR_AUTO_MIN_DWELL_S + 1
+    underfloor._warm_floor_level_intensity(
+        bt, bt.real_trvs["climate.trv"], demand_factor=0.4
+    )
+
+    assert bt._warm_floor_auto_policy == underfloor.WARM_FLOOR_LEVEL_KEEP_HOT
+
+
+def test_auto_can_jump_directly_from_eco_to_keep_hot(monkeypatch):
+    bt = _make_bt(warm_floor_level=underfloor.WARM_FLOOR_LEVEL_AUTO)
+    bt._warm_floor_auto_policy = underfloor.WARM_FLOOR_LEVEL_ECO
+    bt._warm_floor_auto_policy_since = 0.0
+    bt._warm_floor_auto_candidate = underfloor.WARM_FLOOR_LEVEL_ECO
+    bt._warm_floor_auto_candidate_since = 0.0
+    bt.cur_temp_filtered = 21.7
+    bt.external_temp_ema = 21.7
+    bt.external_temp_ema_1h = 21.9
+    bt.temp_slope = -0.02
+    clock = [underfloor.WARM_FLOOR_AUTO_MIN_DWELL_S]
+    monkeypatch.setattr(underfloor, "monotonic", lambda: clock[0])
+
+    underfloor._warm_floor_level_intensity(
+        bt, bt.real_trvs["climate.trv"], demand_factor=0.4
+    )
+    clock[0] += underfloor.WARM_FLOOR_AUTO_STRONGER_CONFIRM_S + 1
     underfloor._warm_floor_level_intensity(
         bt, bt.real_trvs["climate.trv"], demand_factor=0.4
     )
@@ -950,7 +974,7 @@ def test_auto_warm_floor_bootstraps_and_moves_with_confirmed_trend(monkeypatch):
     underfloor._effective_duty_profile(bt, trv, 0.2)
     clock[0] += underfloor.WARM_FLOOR_AUTO_POLICY_CONFIRM_S
     underfloor._effective_duty_profile(bt, trv, 0.2)
-    assert bt._warm_floor_auto_policy == underfloor.WARM_FLOOR_LEVEL_BALANCED
+    assert bt._warm_floor_auto_policy == underfloor.WARM_FLOOR_LEVEL_ECO
 
     bt.cur_temp_filtered = 21.8
     bt.external_temp_ema = 21.8

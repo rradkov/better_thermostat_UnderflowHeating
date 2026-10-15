@@ -162,10 +162,10 @@ WARM_FLOOR_LEVEL_INTENSITY: Final[dict[str, float]] = {
     WARM_FLOOR_LEVEL_CUSTOM: 0.45,
 }
 
-# Auto is deliberately conservative when it first takes ownership near the
-# room target.  A slow slab is cheaper to keep warm than to recover from cold,
-# but the policy must step down only after the room proves that it is warming.
-WARM_FLOOR_AUTO_NEAR_TARGET_MARGIN_C: Final = 0.25
+# Auto evaluates the target-centred band at the same target + 0.1°C boundary
+# used by the duty controller.  The remaining fixed values below are only
+# confirmation/hysteresis guards; they are not fixed ON/OFF schedules.
+WARM_FLOOR_AUTO_NEAR_TARGET_MARGIN_C: Final = WARM_FLOOR_TARGET_EQUILIBRIUM_BAND_C
 # A room that is several near-target bands above the target must be allowed to
 # drift back toward target even when a short-term EMA shows cooling.  The floor
 # still receives the valid minimum maintenance pulse; this only selects the
@@ -931,25 +931,13 @@ def _warm_floor_auto_candidate(bt, demand_factor: float) -> str:
     return WARM_FLOOR_LEVEL_ECO
 
 
-def _warm_floor_auto_step(current: str, candidate: str) -> str:
-    """Move at most one Auto policy level per confirmed transition."""
-    order = [
-        WARM_FLOOR_LEVEL_ECO,
-        WARM_FLOOR_LEVEL_BALANCED,
-        WARM_FLOOR_LEVEL_KEEP_HOT,
-    ]
-    try:
-        current_index = order.index(current)
-        candidate_index = order.index(candidate)
-    except ValueError:
-        return WARM_FLOOR_LEVEL_KEEP_HOT
-    if candidate_index == current_index:
-        return current
-    return order[current_index + (1 if candidate_index > current_index else -1)]
-
-
 def _warm_floor_auto_policy(bt, demand_factor: float) -> str:
-    """Return a hysteretic, conservative Auto policy."""
+    """Return a hysteretic Auto policy selected from live diagnostics.
+
+    The candidate may be any of Eco, Balanced, or Keep it Hot.  Confirmation
+    and minimum dwell prevent chatter, but a confirmed transition is applied
+    directly instead of walking through an unrelated intermediate level.
+    """
     now = monotonic()
     current = getattr(bt, "_warm_floor_auto_policy", None)
     valid = {
@@ -959,8 +947,8 @@ def _warm_floor_auto_policy(bt, demand_factor: float) -> str:
     }
     if current not in valid:
         # Bootstrap conservatively. The first eligible at/above-target window
-        # gets a strong baseline, then later ticks may step down after proof
-        # of warming. This state is policy-only; the caller still blocks the
+        # gets a strong baseline, then later ticks may choose another policy
+        # after proof of the live trend. This state is policy-only; the caller still blocks the
         # below-target region before sending anything.
         current = WARM_FLOOR_LEVEL_KEEP_HOT
         bt._warm_floor_auto_policy = current
@@ -983,26 +971,16 @@ def _warm_floor_auto_policy(bt, demand_factor: float) -> str:
 
     candidate_since = getattr(bt, "_warm_floor_auto_candidate_since", now)
     policy_since = getattr(bt, "_warm_floor_auto_policy_since", now)
-    current_index = [
-        WARM_FLOOR_LEVEL_ECO,
-        WARM_FLOOR_LEVEL_BALANCED,
-        WARM_FLOOR_LEVEL_KEEP_HOT,
-    ].index(current)
-    candidate_index = [
-        WARM_FLOOR_LEVEL_ECO,
-        WARM_FLOOR_LEVEL_BALANCED,
-        WARM_FLOOR_LEVEL_KEEP_HOT,
-    ].index(candidate)
     confirmation_s = (
         WARM_FLOOR_AUTO_STRONGER_CONFIRM_S
-        if candidate_index > current_index
+        if candidate == WARM_FLOOR_LEVEL_KEEP_HOT
         else WARM_FLOOR_AUTO_POLICY_CONFIRM_S
     )
     if (
         now - candidate_since >= confirmation_s
         and now - policy_since >= WARM_FLOOR_AUTO_MIN_DWELL_S
     ):
-        current = _warm_floor_auto_step(current, candidate)
+        current = candidate
         bt._warm_floor_auto_policy = current
         bt._warm_floor_auto_policy_since = now
         bt._warm_floor_auto_candidate = current

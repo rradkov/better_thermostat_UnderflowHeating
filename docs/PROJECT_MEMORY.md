@@ -1,5 +1,12 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-15 — Auto direct policy selection
+
+- **Requirement:** Auto must reevaluate Eco, Balanced, and Keep it Hot as the room moves from an overheated state toward `target + 0.1°C` and then toward neutral `slope ≈ 0`.
+- **Change:** A confirmed Auto candidate is now applied directly. Auto can move from Eco to Keep it Hot or from Keep it Hot to Eco without passing through Balanced. Minimum dwell and confirmation remain only as anti-chatter protection.
+- **Target relationship:** The target-centred duty controller still calculates the actual ON/OFF duration. Auto selects the diagnostic maintenance baseline; it cannot override the rule that far-above-target rooms receive only minimum maintenance and near-target cooling can restore heat.
+- **Verification:** Added direct-transition coverage and aligned the Auto near-target margin with the target-equilibrium band of `0.1°C`.
+
 ### 2026-10-15 — Correct slope/EMA influence by target proximity
 
 - **Requirement correction:** When a room is above target, cooling evidence must not increase Warm Floor heating simply because the room is cooling. The room must first be allowed to approach the target economically.
@@ -343,6 +350,9 @@
 
 ### 2026-10-14 — Implement conservative, trend-confirmed Auto policy
 
+- **Historical note:** The one-level transition rule described below was the
+  original implementation and is superseded by the direct Auto policy
+  selection recorded on 2026-10-15.
 - **Change:** Auto now bootstraps at `Keep it Hot` when it first becomes active,
   then changes at most one level at a time after minimum dwell and persistence
   windows. Confirmed warming moves `Keep it Hot` → `Balanced` → `Eco`; confirmed
