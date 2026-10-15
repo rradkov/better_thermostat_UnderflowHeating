@@ -1368,15 +1368,17 @@ def _warm_floor_target_balance_factor(bt, demand_factor: float) -> float:
             trajectory_need = max(trajectory_need, _clamp(abs(ema_delta) / 0.5, 0.0, 1.0))
 
     # The target band is a dynamic proportion, not a second fixed ceiling:
-    # farther above target means less heating, while verified cooling can
-    # restore maintenance gradually so the slab is not abandoned.
+    # farther above target means less heating.  Cooling evidence is allowed
+    # to restore maintenance only in proportion to that proximity, so a
+    # negative slope cannot turn a materially overheated room back into a
+    # strong heating request.
     target_ratio = _clamp(
         WARM_FLOOR_TARGET_EQUILIBRIUM_BAND_C
         / max(margin, WARM_FLOOR_TARGET_EQUILIBRIUM_BAND_C),
         0.0,
         1.0,
     )
-    factor = target_ratio + (1.0 - target_ratio) * trajectory_need
+    factor = target_ratio + target_ratio * trajectory_need
     # Plant/load diagnostics still participate, but only as a bounded hint;
     # they cannot defeat the above-target room correction.
     factor += _clamp(float(demand_factor), 0.0, 1.0) * 0.10 * target_ratio

@@ -1,5 +1,12 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-15 — Correct slope/EMA influence by target proximity
+
+- **Requirement correction:** When a room is above target, cooling evidence must not increase Warm Floor heating simply because the room is cooling. The room must first be allowed to approach the target economically.
+- **Control rule:** Target margin controls the base intensity. A negative `temp_slope` or a short EMA below the one-hour EMA can restore maintenance only in proportion to proximity to the target band. Far above target, the room remains on the minimum safe actuator pulse; near target, the same cooling evidence increases the pulse to hold `slope ≈ 0`.
+- **Auto rule:** In `Auto`, the diagnostics select Eco/Balanced/Keep it Hot as the maintenance strategy while the target-proximity controller resolves the actual ON/OFF timing. The policy cannot override the target-centred correction.
+- **Verification:** Added regression coverage proving that cooling does not increase heat while far above target and does increase maintenance near target to avoid crossing below it.
+
 ### 2026-10-15 — Target-centred Warm Floor duty correction
 
 - **Requirement:** Warm Floor should keep the room near `target` / `target + 0.1°C`, not hold an unnecessarily high room temperature. When the room is above target, the floor remains warm with economical maintenance; live slope and EMA diagnostics should prevent the room from drifting farther away.

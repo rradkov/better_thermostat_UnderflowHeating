@@ -590,7 +590,7 @@ def test_far_above_target_uses_minimum_on_and_longer_pause():
     assert intensity == pytest.approx(underfloor.WARM_FLOOR_DUTY_MIN_INTENSITY)
 
 
-def test_duty_profile_restores_maintenance_when_far_above_target_but_cooling():
+def test_far_above_target_does_not_increase_heat_just_because_room_is_cooling():
     stable = _make_bt(cur_temp=24.0, target_temp=22.0)
     cooling = _make_bt(cur_temp=24.0, target_temp=22.0)
     stable.cur_temp_filtered = stable.external_temp_ema = 24.0
@@ -609,6 +609,31 @@ def test_duty_profile_restores_maintenance_when_far_above_target_but_cooling():
         cooling,
         cooling.real_trvs["climate.trv"],
         demand_factor=0.8,
+    )
+
+    assert cooling_profile[2] <= stable_profile[2]
+    assert cooling_profile[1] <= stable_profile[1]
+
+
+def test_near_target_cooling_restores_maintenance_to_hold_zero_slope():
+    stable = _make_bt(cur_temp=22.15, target_temp=22.0)
+    cooling = _make_bt(cur_temp=22.15, target_temp=22.0)
+    stable.cur_temp_filtered = stable.external_temp_ema = 22.15
+    cooling.cur_temp_filtered = cooling.external_temp_ema = 22.05
+    stable.external_temp_ema_1h = 22.15
+    cooling.external_temp_ema_1h = 22.25
+    stable.temp_slope = 0.0
+    cooling.temp_slope = -0.02
+
+    stable_profile = underfloor._effective_duty_profile(
+        stable,
+        stable.real_trvs["climate.trv"],
+        demand_factor=0.0,
+    )
+    cooling_profile = underfloor._effective_duty_profile(
+        cooling,
+        cooling.real_trvs["climate.trv"],
+        demand_factor=0.0,
     )
 
     assert cooling_profile[2] > stable_profile[2]
