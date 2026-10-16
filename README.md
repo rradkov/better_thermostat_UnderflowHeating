@@ -42,17 +42,17 @@ We've created a companion UI element which can display more information than the
 
 This integration brings intelligent control to connected climate systems — including underfloor heating, fan-coils, air conditioners, heat pumps, radiators, and TRVs:
 
-- Uses a temperature sensor away from the heat emitter or HVAC unit to measure the real room temperature
-- Makes your TRVs fully compatible with Google Home
-- Let your windows disable your heating (avoid programming this via an automation)
-- Your weather forecast provider will turn your heat on/off
-- Or an outside air temperature sensor can do this as well
-- Does some valve maintenance automatically, to avoid them getting stuck closed over the summer
-- Group multiple TRVs or climate devices into one room-level control setup
-- Enhance the default TRV Algorithm with some smartness to reduce energy consumption
-- Dynamic preset temperature learning & persistence (baseline/"no preset" remembers the last temperature you set and survives restarts)
-- **Advanced Control Algorithms**: Choose between MPC, PID, TPI, AI Time Based or simple target temperature matching for precise control.
-- **Selectable Presets**: Configure which preset modes are available for your thermostat during setup.
+- Uses a room temperature sensor away from the active heat emitter or HVAC unit for more representative room control
+- Controls compatible Home Assistant climate entities, from floor-heating actuators and fan-coils to air conditioners, heat pumps, radiators, and TRVs
+- Makes connected thermostat and climate entities available for convenient Home Assistant and Google Home control
+- Lets windows and doors pause heating or cooling without requiring a separate automation
+- Uses weather forecasts or an outdoor temperature sensor to adjust heating and cooling behavior
+- Performs valve maintenance automatically where a connected valve supports it, helping prevent valves from sticking closed
+- Supports grouping multiple TRVs for rooms with several radiator valves
+- Improves temperature regulation with adaptive control and energy-aware heating/cooling behavior
+- Learns and persists dynamic preset temperatures, so the baseline/"no preset" target survives restarts
+- **Advanced Control Algorithms**: Choose between MPC, PID, TPI, AI Time Based or simple target temperature matching for precise climate control.
+- **Selectable Presets**: Configure which preset modes are available for each thermostat during setup.
 - **Warm Floor mode** *(fork-only)*: Keeps underfloor heating from fully idling between heat calls, using the same heat-loss/heating-power/solar telemetry BT already tracks — no new thermal model, no fully-cold slab to recover from.
 - **Boost on window reopen** *(fork-only)*: Reuses your configured secondary climate device (a fan-coil, heat pump, air conditioner, or similar) to actively recover the room after a window closes, symmetrically in either direction — a heat boost if the room got too cold, a cool boost if it got too warm.
 
