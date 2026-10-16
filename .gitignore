@@ -90,6 +90,8 @@ node_modules
 .opencode/
 AGENTS.md
 CLAUDE.md
+docs/BOOST_INTERNAL.md
+docs/PROJECT_MEMORY.md
 STACK.md
 opencode.json
 .codebase-memory
