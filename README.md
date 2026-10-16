@@ -5,17 +5,16 @@
 
 # Better Thermostat — UnderflowHeating fork
 
-This repository is a modified fork of [KartoffelToby/better_thermostat](https://github.com/KartoffelToby/better_thermostat), focused on modern heating and cooling systems beyond traditional radiators.
+This repository is a modified fork of [KartoffelToby/better_thermostat](https://github.com/KartoffelToby/better_thermostat), with **underfloor heating as its primary focus**.
 
-UnderflowHeating is designed for Home Assistant installations that combine **hydronic underfloor heating, fan-coils, air conditioners, heat pumps, and mixed HVAC systems**. It keeps the core Better Thermostat features while adding fork-specific control for systems where slow floor heating, fast air heating/cooling, and multiple climate devices need to work together.
+UnderflowHeating is designed primarily for Home Assistant installations where hydronic underfloor heating is combined with **fan-coil convectors** or with **air conditioners and heat pumps**. It adds fork-specific control for systems where slow floor heating and fast air heating/cooling need to work together.
 
 ### What this fork is for
 
-- **Underfloor heating:** Warm Floor control helps prevent the floor from fully cooling between heating calls and improves recovery of slow hydronic systems.
-- **Fan-coils:** Use fan-coil climate devices as part of the room's heating or cooling strategy, including active recovery after a window is closed.
-- **Air conditioners and heat pumps:** Coordinate Home Assistant climate entities for efficient heating and cooling, including heat-pump and air-conditioning use cases.
-- **Mixed HVAC systems:** Combine floor heating with fan-coils, air conditioners, heat pumps, or other climate devices in the same installation.
-- **Radiator and TRV setups:** The original Better Thermostat functionality remains available for traditional thermostatic radiator valves and radiator-based systems.
+- **Underfloor heating first:** Warm Floor control helps prevent the floor from fully cooling between heating calls and improves recovery of slow hydronic systems.
+- **Underfloor heating + fan-coils:** Use fan-coil convectors as the fast room-heating or cooling companion to the underfloor system, including active recovery after a window is closed.
+- **Underfloor heating + air conditioners:** Combine floor heating with an air conditioner or heat pump for fast recovery and efficient heating/cooling.
+- **Radiators and TRVs:** The original Better Thermostat functionality remains available as additional compatibility for traditional radiator-based systems.
 
 The fork modifications are maintained by Rumen Radkov and were introduced from October 2026 onward. The original copyright and license notices are preserved. This project, including the fork modifications, is released under the [GNU Affero General Public License v3.0](LICENSE).
 
@@ -40,15 +39,15 @@ We've created a companion UI element which can display more information than the
 
 ### Features
 
-This integration brings intelligent control to connected climate systems — including underfloor heating, fan-coils, air conditioners, heat pumps, radiators, and TRVs:
+This fork brings intelligent control to **underfloor heating first**, with support for complementary fan-coil, air-conditioner, and heat-pump climate devices:
 
 - Uses a room temperature sensor away from the active heat emitter or HVAC unit for more representative room control
-- Controls compatible Home Assistant climate entities, from floor-heating actuators and fan-coils to air conditioners, heat pumps, radiators, and TRVs
+- Coordinates compatible Home Assistant climate entities around the underfloor-heating system, including fan-coils, air conditioners, heat pumps, radiators, and TRVs
 - Makes connected thermostat and climate entities available for convenient Home Assistant and Google Home control
 - Lets windows and doors pause heating or cooling without requiring a separate automation
 - Uses weather forecasts or an outdoor temperature sensor to adjust heating and cooling behavior
 - Performs valve maintenance automatically where a connected valve supports it, helping prevent valves from sticking closed
-- Supports grouping multiple TRVs for rooms with several radiator valves
+- Supports grouping multiple TRVs where radiator valves are part of the installation
 - Improves temperature regulation with adaptive control and energy-aware heating/cooling behavior
 - Learns and persists dynamic preset temperatures, so the baseline/"no preset" target survives restarts
 - **Advanced Control Algorithms**: Choose between MPC, PID, TPI, AI Time Based or simple target temperature matching for precise climate control.
