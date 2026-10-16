@@ -1059,7 +1059,13 @@ class BetterThermostatBoostStatusSensor(_BtSensorBase):
     _unique_id_suffix = "boost_status"
 
     def _update_state(self) -> None:
-        """Update state from the last Boost decision."""
+        """Update state from the last Boost decision.
+
+        The sensor is intentionally a projection of the climate entity's
+        `_boost_status` snapshot. It does not independently inspect the
+        Cooler, because doing so could show a different answer while HA is
+        still processing a Boost command or its restore command.
+        """
         status = getattr(self._bt_climate, "_boost_status", None)
         if not isinstance(status, dict) or not status.get("active"):
             self._attr_native_value = "off"

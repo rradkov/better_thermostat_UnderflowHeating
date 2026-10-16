@@ -82,7 +82,21 @@ SETPOINT_KEYS: Final = ("temperature",)
 
 @dataclass
 class BoostHeaterTracker:
-    """Per-instance boost lifecycle and the telemetry its termination needs."""
+    """Per-instance Boost state and the telemetry its termination needs.
+
+    The tracker separates three concepts that are easy to conflate:
+
+    * ``open_temp`` is window-cycle input and is consumed at close;
+    * ``boost_direction`` means a Boost is armed and gives the control queue
+      ownership of the shared Cooler;
+    * the ``previous_*`` fields are the one-time snapshot needed to restore
+      the Cooler exactly when the overlay ends.
+
+    ``slow_ema`` is deliberately not cleared with a Boost. It represents
+    standing room history and must already be meaningful when a new Boost
+    starts, otherwise the anti-blip guard would only be a short-lived copy of
+    the current sensor value.
+    """
 
     open_temp: float | None = None
     boost_direction: HVACMode | None = None  # None | HVACMode.HEAT | HVACMode.COOL
@@ -364,6 +378,9 @@ def record_window_transition(bt, role, is_open: bool) -> None:
     if tracker is None:
         return
 
+    # Opening only captures the baseline. No command is sent while the window
+    # is open; the existing contact gate remains responsible for suppressing
+    # normal heating/cooling decisions.
     if is_open:
         tracker.record_window_open(getattr(bt, "cur_temp", None))
         return
@@ -377,6 +394,9 @@ def record_window_transition(bt, role, is_open: bool) -> None:
     hvac_modes = (
         state.attributes.get("hvac_modes") if state is not None else None
     ) or []
+    # Closing consumes the captured baseline exactly once. The tracker checks
+    # both drift direction and the capabilities reported by the actual Cooler
+    # before it grants Boost ownership to the control queue.
     direction = tracker.evaluate_on_close(
         getattr(bt, "cur_temp", None),
         threshold_heat,
@@ -571,6 +591,10 @@ def _boost_should_stop(
     if isinstance(solar_gain_rate, (int, float)) and solar_gain_rate > 0:
         solar_adjustment = float(solar_gain_rate) * float(lag_minutes)
 
+    # The heat and cool branches are mirror images, but the solar term is
+    # intentionally warming in both. Therefore solar helps heat recovery and
+    # fights cool recovery; do not simplify this into a direction-neutral
+    # absolute-error check.
     if direction == HVACMode.HEAT:
         still_needs_heat = should_heat_with_tolerance(
             cur_temp, target, tolerance, tracker.last_action
@@ -660,6 +684,9 @@ async def control_boost(self) -> None:
     same entity in the same cycle. ``control_cooler()`` resumes as soon as
     the boost ends (``tracker.boost_direction`` goes back to ``None``).
     """
+    # This function is called only while the control queue has selected Boost
+    # as the Cooler owner. It must remain safe when called directly by tests
+    # or the manual service, so it repeats the minimum local trend update.
     tracker: BoostHeaterTracker = self._boost_heater_tracker
     now_ts = monotonic()
     # update_boost_trend() already ran this cycle (control_queue() calls it
@@ -679,6 +706,9 @@ async def control_boost(self) -> None:
     # is a snapshot fetched once and never refreshed mid-cycle.
     current_mode = state.state
 
+    # Existing safety gates always win over Boost. A window reopening during
+    # an active cycle cancels recovery immediately and restores the state that
+    # existed before Boost touched the device.
     if (
         self.bt_hvac_mode == HVACMode.OFF
         or self.contact_open
@@ -699,6 +729,9 @@ async def control_boost(self) -> None:
         await _ensure_off(self, self.cooler_entity_id, current_mode)
         return
 
+    # Snapshot only once, immediately before the first real Boost command.
+    # Re-snapshotting on later cycles would capture Boost's own mode and make
+    # exact restoration impossible.
     if tracker.boost_started_ts is None:
         tracker.boost_started_ts = now_ts
         # Snapshot the device's mode/temperature before this cycle changes
@@ -750,6 +783,9 @@ async def control_boost(self) -> None:
     cur_temp = getattr(self, "cur_temp", None)
     if not isinstance(cur_temp, (int, float)):
         return
+    # Restore and clear in the same cycle as the stop decision. This keeps the
+    # diagnostic sensor and the next control-cycle routing consistent: once
+    # Boost is finished, normal control can safely resume.
     if _boost_should_stop(self, tracker, float(cur_temp), now_ts, direction):
         await _restore_previous_state(
             self, self.cooler_entity_id, tracker, current_mode

@@ -617,6 +617,10 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         self.sensor_entity_id = sensor_entity_id
         self.humidity_sensor_entity_id = humidity_sensor_entity_id
         self.cooler_entity_id = cooler_entity_id
+        # Boost is an overlay on the configured Cooler, not a new climate
+        # channel. Keep its settings on the Better Thermostat instance so the
+        # window event path, the control queue and the diagnostic sensor all
+        # observe the same per-instance configuration and tracker state.
         try:
             self.min_cooler_resend_interval_s: float = max(
                 0.0, float(min_cooler_resend_interval or 0)

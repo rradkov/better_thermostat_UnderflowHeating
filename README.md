@@ -1,7 +1,17 @@
 
 
 [![GitHub issues](https://img.shields.io/github/issues/rradkov/better_thermostat_UnderflowHeating?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/issues)
-[![Version](https://img.shields.io/badge/Version-1.9.2.1.1-009688?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/releases)
+[![Version](https://img.shields.io/badge/Version-1.9.2.1.2-009688?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/releases)
+
+# Better Thermostat — UnderflowHeating fork
+
+This repository is a modified fork of [KartoffelToby/better_thermostat](https://github.com/KartoffelToby/better_thermostat), adapted for underfloor heating and fan-coil systems.
+
+The fork modifications are maintained by Rumen Radkov and were introduced from October 2026 onward. The original copyright and license notices are preserved. This project, including the fork modifications, is released under the [GNU Affero General Public License v3.0](LICENSE).
+
+Original project: <https://github.com/KartoffelToby/better_thermostat>
+
+The source code for every published fork release is available in this repository. Fork-specific support and issue tracking are available in the [fork issue tracker](https://github.com/rradkov/better_thermostat_UnderflowHeating/issues).
 
 **For more info visit: <https://better-thermostat.org/>**
 

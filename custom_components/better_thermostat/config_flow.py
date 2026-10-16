@@ -803,7 +803,9 @@ def _build_user_fields(
         )
 
     # Boost reuses the Cooler entity, so it's only offered once one is
-    # configured - there's nothing for it to boost otherwise.
+    # configured - there's nothing for it to boost otherwise. The form does
+    # not ask for a second entity: the same secondary climate device is both
+    # the ordinary cooling target and the temporary recovery actuator.
     if resolve(CONF_COOLER):
         add_field(
             CONF_BOOST_HEATER_ENABLED,
@@ -1024,7 +1026,9 @@ def _normalize_user_submission(
 
     # Boost can only be enabled while a Cooler is configured - it has
     # nothing to boost otherwise, and a submission where the Cooler was
-    # just removed must not leave a stale boost toggle behind.
+    # just removed must not leave a stale boost toggle behind. Normalize all
+    # dependent values below as one unit so a previously enabled Boost cannot
+    # survive a later options-flow submission with the Cooler removed.
     boost_heater_enabled = bool(normalized.get(CONF_COOLER)) and _as_bool(
         user_input.get(CONF_BOOST_HEATER_ENABLED), False
     )

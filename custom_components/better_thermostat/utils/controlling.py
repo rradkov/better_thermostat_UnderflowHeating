@@ -278,6 +278,11 @@ async def control_queue(self):
                     # they must never run in the same cycle: an armed boost
                     # preempts control_cooler() entirely, and control_cooler()
                     # resumes on its own the cycle after the boost ends.
+                    #
+                    # This is the central ownership rule for the shared
+                    # secondary climate device. The tracker is the source of
+                    # truth for "armed"; Boost itself clears that state only
+                    # after it has restored the pre-Boost snapshot.
                     _cooler_pass_completed = False
                     _boost_active_this_cycle = (
                         self.boost_enabled

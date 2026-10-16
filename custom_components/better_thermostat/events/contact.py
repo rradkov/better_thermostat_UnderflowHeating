@@ -225,6 +225,12 @@ async def contact_queue(self, role: ContactRole):
                     # make sure the current state is the suggested change state to prevent a false positive:
                     if current_contact_state == contact_event_to_process:
                         setattr(self, role.open_attr, contact_event_to_process)
+                        # Boost deliberately hooks into the debounced, confirmed
+                        # window transition. It must not react to the raw sensor
+                        # event: a short bounce/open-close sequence would
+                        # otherwise arm a boost from a state that never became
+                        # the user's effective window state. Door transitions
+                        # are intentionally excluded inside contact_queue().
                         if role.kind == "window":
                             record_window_transition(
                                 self, role, contact_event_to_process
