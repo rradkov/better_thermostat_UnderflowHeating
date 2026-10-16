@@ -5,7 +5,17 @@
 
 # Better Thermostat — UnderflowHeating fork
 
-This repository is a modified fork of [KartoffelToby/better_thermostat](https://github.com/KartoffelToby/better_thermostat), adapted for underfloor heating and fan-coil systems.
+This repository is a modified fork of [KartoffelToby/better_thermostat](https://github.com/KartoffelToby/better_thermostat), focused on modern heating and cooling systems beyond traditional radiators.
+
+UnderflowHeating is designed for Home Assistant installations that combine **hydronic underfloor heating, fan-coils, air conditioners, heat pumps, and mixed HVAC systems**. It keeps the core Better Thermostat features while adding fork-specific control for systems where slow floor heating, fast air heating/cooling, and multiple climate devices need to work together.
+
+### What this fork is for
+
+- **Underfloor heating:** Warm Floor control helps prevent the floor from fully cooling between heating calls and improves recovery of slow hydronic systems.
+- **Fan-coils:** Use fan-coil climate devices as part of the room's heating or cooling strategy, including active recovery after a window is closed.
+- **Air conditioners and heat pumps:** Coordinate Home Assistant climate entities for efficient heating and cooling, including heat-pump and air-conditioning use cases.
+- **Mixed HVAC systems:** Combine floor heating with fan-coils, air conditioners, heat pumps, or other climate devices in the same installation.
+- **Radiator and TRV setups:** The original Better Thermostat functionality remains available for traditional thermostatic radiator valves and radiator-based systems.
 
 The fork modifications are maintained by Rumen Radkov and were introduced from October 2026 onward. The original copyright and license notices are preserved. This project, including the fork modifications, is released under the [GNU Affero General Public License v3.0](LICENSE).
 
@@ -30,15 +40,15 @@ We've created a companion UI element which can display more information than the
 
 ### Features
 
-This integration brings some smartness to your connected radiator (and, in this fork, underfloor heating) setup:
+This integration brings intelligent control to connected climate systems — including underfloor heating, fan-coils, air conditioners, heat pumps, radiators, and TRVs:
 
-- Uses a temperature sensor far away from the radiators to measure the real room temperature
+- Uses a temperature sensor away from the heat emitter or HVAC unit to measure the real room temperature
 - Makes your TRVs fully compatible with Google Home
 - Let your windows disable your heating (avoid programming this via an automation)
 - Your weather forecast provider will turn your heat on/off
 - Or an outside air temperature sensor can do this as well
 - Does some valve maintenance automatically, to avoid them getting stuck closed over the summer
-- Group multiple TRVs to one (e.g. for a room with multiple radiators)
+- Group multiple TRVs or climate devices into one room-level control setup
 - Enhance the default TRV Algorithm with some smartness to reduce energy consumption
 - Dynamic preset temperature learning & persistence (baseline/"no preset" remembers the last temperature you set and survives restarts)
 - **Advanced Control Algorithms**: Choose between MPC, PID, TPI, AI Time Based or simple target temperature matching for precise control.
