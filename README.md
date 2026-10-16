@@ -7,13 +7,13 @@
 
 This repository is a modified fork of [KartoffelToby/better_thermostat](https://github.com/KartoffelToby/better_thermostat), with **underfloor heating as its primary focus**.
 
-UnderflowHeating is designed primarily for Home Assistant installations where hydronic underfloor heating is supplied by a **heat pump** and/or combined with **fan-coil convectors** or **air conditioners**. It adds fork-specific control for systems where slow floor heating and fast air heating/cooling need to work together.
+UnderflowHeating is designed primarily for Home Assistant installations where a **heat pump supplies both the hydronic underfloor heating and the fan-coil convectors**, optionally alongside air conditioners. It adds fork-specific control for systems where slow floor heating and fast air heating/cooling need to work together.
 
 ### What this fork is for
 
 - **Underfloor heating first:** Warm Floor control helps prevent the floor from fully cooling between heating calls and improves recovery of slow hydronic systems.
-- **Underfloor heating + fan-coils:** Use fan-coil convectors as the fast room-heating or cooling companion to the underfloor system, including active recovery after a window is closed.
-- **Underfloor heating + heat pumps:** Use the heat pump as the heat source for the underfloor circuit.
+- **Underfloor heating + fan-coils:** Use fan-coil convectors as the fast room-heating or cooling companion to the underfloor system, with both supplied by the same heat pump where applicable.
+- **Heat-pump system:** Use the heat pump as the common heat source for the underfloor circuit and the fan-coil convectors.
 - **Underfloor heating + air conditioners:** Combine floor heating with an air conditioner for fast recovery and efficient heating/cooling.
 - **Radiators and TRVs:** The original Better Thermostat functionality remains available as additional compatibility for traditional radiator-based systems.
 
