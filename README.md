@@ -7,13 +7,13 @@
 
 This repository is a modified fork of [KartoffelToby/better_thermostat](https://github.com/KartoffelToby/better_thermostat), with **underfloor heating as its primary focus**.
 
-UnderflowHeating is designed primarily for Home Assistant installations where a **heat pump supplies both the hydronic underfloor heating and the fan-coil convectors**, optionally alongside air conditioners. It adds fork-specific control for systems where slow floor heating and fast air heating/cooling need to work together.
+UnderflowHeating is designed primarily for Home Assistant installations centered on hydronic underfloor heating. The heat source can be a heat pump, electric boiler, gas boiler, pellet or other solid-fuel boiler, or another heating source. The system can also include fan-coil convectors and/or air conditioners for additional heating or cooling.
 
 ### What this fork is for
 
 - **Underfloor heating first:** Warm Floor control helps prevent the floor from fully cooling between heating calls and improves recovery of slow hydronic systems.
-- **Underfloor heating + fan-coils:** Use fan-coil convectors as the fast room-heating or cooling companion to the underfloor system, with both supplied by the same heat pump where applicable.
-- **Heat-pump system:** Use the heat pump as the common heat source for the underfloor circuit and the fan-coil convectors.
+- **Underfloor heating + fan-coils:** Use fan-coil convectors as the fast room-heating or cooling companion to the underfloor system, regardless of whether they share the same heat source.
+- **Source-independent:** The integration focuses on the underfloor system and room climate behavior; the type of boiler, heat pump, or other heat source is not a limitation.
 - **Underfloor heating + air conditioners:** Combine floor heating with an air conditioner for fast recovery and efficient heating/cooling.
 - **Radiators and TRVs:** The original Better Thermostat functionality remains available as additional compatibility for traditional radiator-based systems.
 
@@ -40,7 +40,7 @@ We've created a companion UI element which can display more information than the
 
 ### Features
 
-This fork brings intelligent control to **underfloor heating first**, with support for complementary fan-coil and air-conditioner climate devices, including installations where a heat pump is the heat source:
+This fork brings intelligent control to **underfloor heating first**, with optional fan-coil and air-conditioner climate devices for additional heating or cooling. The heat-source technology remains independent of the integration:
 
 - Uses a room temperature sensor away from the active heat emitter or HVAC unit for more representative room control
 - Coordinates compatible Home Assistant climate entities around the underfloor-heating system, including fan-coils, air conditioners, radiators, and TRVs
