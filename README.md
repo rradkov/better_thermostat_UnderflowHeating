@@ -7,13 +7,14 @@
 
 This repository is a modified fork of [KartoffelToby/better_thermostat](https://github.com/KartoffelToby/better_thermostat), with **underfloor heating as its primary focus**.
 
-UnderflowHeating is designed primarily for Home Assistant installations where hydronic underfloor heating is combined with **fan-coil convectors** or with **air conditioners and heat pumps**. It adds fork-specific control for systems where slow floor heating and fast air heating/cooling need to work together.
+UnderflowHeating is designed primarily for Home Assistant installations where hydronic underfloor heating is supplied by a **heat pump** and/or combined with **fan-coil convectors** or **air conditioners**. It adds fork-specific control for systems where slow floor heating and fast air heating/cooling need to work together.
 
 ### What this fork is for
 
 - **Underfloor heating first:** Warm Floor control helps prevent the floor from fully cooling between heating calls and improves recovery of slow hydronic systems.
 - **Underfloor heating + fan-coils:** Use fan-coil convectors as the fast room-heating or cooling companion to the underfloor system, including active recovery after a window is closed.
-- **Underfloor heating + air conditioners:** Combine floor heating with an air conditioner or heat pump for fast recovery and efficient heating/cooling.
+- **Underfloor heating + heat pumps:** Use the heat pump as the heat source for the underfloor circuit.
+- **Underfloor heating + air conditioners:** Combine floor heating with an air conditioner for fast recovery and efficient heating/cooling.
 - **Radiators and TRVs:** The original Better Thermostat functionality remains available as additional compatibility for traditional radiator-based systems.
 
 The fork modifications are maintained by Rumen Radkov and were introduced from October 2026 onward. The original copyright and license notices are preserved. This project, including the fork modifications, is released under the [GNU Affero General Public License v3.0](LICENSE).
@@ -39,10 +40,10 @@ We've created a companion UI element which can display more information than the
 
 ### Features
 
-This fork brings intelligent control to **underfloor heating first**, with support for complementary fan-coil, air-conditioner, and heat-pump climate devices:
+This fork brings intelligent control to **underfloor heating first**, with support for complementary fan-coil and air-conditioner climate devices, including installations where a heat pump is the heat source:
 
 - Uses a room temperature sensor away from the active heat emitter or HVAC unit for more representative room control
-- Coordinates compatible Home Assistant climate entities around the underfloor-heating system, including fan-coils, air conditioners, heat pumps, radiators, and TRVs
+- Coordinates compatible Home Assistant climate entities around the underfloor-heating system, including fan-coils, air conditioners, radiators, and TRVs
 - Makes connected thermostat and climate entities available for convenient Home Assistant and Google Home control
 - Lets windows and doors pause heating or cooling without requiring a separate automation
 - Uses weather forecasts or an outdoor temperature sensor to adjust heating and cooling behavior
@@ -53,7 +54,7 @@ This fork brings intelligent control to **underfloor heating first**, with suppo
 - **Advanced Control Algorithms**: Choose between MPC, PID, TPI, AI Time Based or simple target temperature matching for precise climate control.
 - **Selectable Presets**: Configure which preset modes are available for each thermostat during setup.
 - **Warm Floor mode** *(fork-only)*: Keeps underfloor heating from fully idling between heat calls, using the same heat-loss/heating-power/solar telemetry BT already tracks — no new thermal model, no fully-cold slab to recover from.
-- **Boost on window reopen** *(fork-only)*: Reuses your configured secondary climate device (a fan-coil, heat pump, air conditioner, or similar) to actively recover the room after a window closes, symmetrically in either direction — a heat boost if the room got too cold, a cool boost if it got too warm.
+- **Boost on window reopen** *(fork-only)*: Reuses your configured secondary climate device (a fan-coil, air conditioner, or similar) to actively recover the room after a window closes, symmetrically in either direction — a heat boost if the room got too cold, a cool boost if it got too warm.
 
 See [Underfloor heating (Warm Floor) & Boost](docs/Configuration/configuration.md#underfloor-heating-warm-floor-mode) in the configuration guide for details.
 
