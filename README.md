@@ -1,7 +1,7 @@
 
 
 [![GitHub issues](https://img.shields.io/github/issues/rradkov/better_thermostat_UnderflowHeating?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/issues)
-[![Version](https://img.shields.io/badge/Version-1.9.3.1.3-009688?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/releases)
+[![Version](https://img.shields.io/badge/Version-1.9.3.1.5-009688?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/releases)
 
 # Better Thermostat — UnderflowHeating fork
 
@@ -23,7 +23,7 @@ Original project: <https://github.com/KartoffelToby/better_thermostat>
 
 The source code for every published fork release is available in this repository. Fork-specific support and issue tracking are available in the [fork issue tracker](https://github.com/rradkov/better_thermostat_UnderflowHeating/issues).
 
-## Latest fork release: 1.9.3.1.3
+## Latest fork release: 1.9.3.1.5
 
 This release improves recovery after a controlled heater, outdoor sensor, or related device becomes unavailable and later returns:
 
