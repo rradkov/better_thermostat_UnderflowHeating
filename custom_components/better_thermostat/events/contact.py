@@ -73,13 +73,6 @@ DOOR = ContactRole(
     learn_more_url="https://better-thermostat.org/faq/door-sensor",
 )
 
-CONTACT_ROLES: Final = (WINDOW, DOOR)
-
-
-def contact_issue_id(role: ContactRole, device_name: str) -> str:
-    """Return the repair issue id of one contact kind of one thermostat."""
-    return f"{role.issue_translation_key}_{device_name}"
-
 
 async def trigger_contact_change(self, role: ContactRole, event) -> None:
     """Handle a contact sensor state event and queue the debounced change.
@@ -141,7 +134,7 @@ async def trigger_contact_change(self, role: ContactRole, event) -> None:
         ir.async_create_issue(
             hass=self.hass,
             domain=DOMAIN,
-            issue_id=contact_issue_id(role, self.device_name),
+            issue_id=f"{role.issue_translation_key}_{self.device_name}",
             is_fixable=False,
             is_persistent=False,
             learn_more_url=role.learn_more_url,
@@ -155,7 +148,9 @@ async def trigger_contact_change(self, role: ContactRole, event) -> None:
         return
 
     # a recognized reading clears any stale invalid-state repair issue
-    ir.async_delete_issue(self.hass, DOMAIN, contact_issue_id(role, self.device_name))
+    ir.async_delete_issue(
+        self.hass, DOMAIN, f"{role.issue_translation_key}_{self.device_name}"
+    )
 
     # make sure to skip events which do not change the saved contact state:
     if new_contact_open == old_contact_open:
@@ -230,6 +225,12 @@ async def contact_queue(self, role: ContactRole):
                     # make sure the current state is the suggested change state to prevent a false positive:
                     if current_contact_state == contact_event_to_process:
                         setattr(self, role.open_attr, contact_event_to_process)
+                        # Boost deliberately hooks into the debounced, confirmed
+                        # window transition. It must not react to the raw sensor
+                        # event: a short bounce/open-close sequence would
+                        # otherwise arm a boost from a state that never became
+                        # the user's effective window state. Door transitions
+                        # are intentionally excluded inside contact_queue().
                         if role.kind == "window":
                             record_window_transition(
                                 self, role, contact_event_to_process

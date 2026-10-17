@@ -17,12 +17,6 @@ from .generic import (
 
 _LOGGER = logging.getLogger(__name__)
 
-# deCONZ expresses a thermostat's ``config/offset`` in hundredths of a degree,
-# the same encoding it uses for ``heatsetpoint`` and the measured temperature:
-# the value 250 is 2.5 K. Every offset crossing this adapter is in Kelvin, so
-# the wire value is scaled on the way out and back on the way in.
-OFFSET_UNITS_PER_KELVIN = 100
-
 
 async def get_info(self, entity_id):
     """Get info from TRV."""
@@ -60,7 +54,7 @@ async def get_current_offset(self, entity_id):
     if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
         return 0.0
     try:
-        return float(str(state.attributes.get("offset", 0))) / OFFSET_UNITS_PER_KELVIN
+        return float(str(state.attributes.get("offset", 0)))
     except ValueError, TypeError:
         _LOGGER.warning(
             "better_thermostat %s: Could not convert calibration offset '%s' to float, using 0",
@@ -88,10 +82,6 @@ async def get_max_offset(self, entity_id):
 async def set_offset(self, entity_id, offset) -> bool:
     """Write a calibration offset through the deCONZ configure service.
 
-    deCONZ counts the offset in hundredths of a Kelvin, so the Kelvin value is
-    scaled by ``OFFSET_UNITS_PER_KELVIN`` here. The ``configure`` service
-    forwards that payload to the REST API unaltered.
-
     Parameters
     ----------
     self : BetterThermostat
@@ -110,11 +100,7 @@ async def set_offset(self, entity_id, offset) -> bool:
     await self.hass.services.async_call(
         "deconz",
         "configure",
-        {
-            "entity": entity_id,
-            "field": "/config",
-            "data": {"offset": round(offset * OFFSET_UNITS_PER_KELVIN)},
-        },
+        {"entity": entity_id, "field": "/config", "data": {"offset": offset}},
         blocking=True,
         context=self.context,
     )

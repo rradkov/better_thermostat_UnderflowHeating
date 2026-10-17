@@ -11,6 +11,7 @@ on every outdoor reading.
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from homeassistant.core import State
 import pytest
 
 from custom_components.better_thermostat.climate import BetterThermostat
@@ -79,19 +80,31 @@ async def test_outdoor_change_no_flip_does_not_enqueue():
 
 
 @pytest.mark.asyncio
-async def test_outdoor_change_is_evaluated_while_a_critical_entity_is_unavailable():
-    """A TRV off the air does not hold back the threshold evaluation.
+async def test_outdoor_recovery_requeues_control_without_heat_decision_flip():
+    """Outdoor sensor recovery must wake Warm Floor even if heat demand is unchanged."""
+    bt = _make_self(call_for_heat_after=True, last_call_for_heat=True)
+    event = MagicMock()
+    event.data = {
+        "old_state": State("sensor.outdoor", "unavailable"),
+        "new_state": State("sensor.outdoor", "5.0"),
+    }
 
-    Summer mode belongs to the room; the reachable TRVs follow the flip, and
-    the control cycle leaves the unreachable one out.
-    """
+    with _patch_checks(bt):
+        await BetterThermostat._trigger_outdoor_change(bt, event=event)
+
+    bt.control_queue_task.put.assert_awaited_once_with(bt)
+
+
+@pytest.mark.asyncio
+async def test_outdoor_change_skips_when_critical_unavailable():
+    """If a critical entity is unavailable, the threshold is not evaluated."""
     bt = _make_self(call_for_heat_after=False, last_call_for_heat=True)
 
     with _patch_checks(bt, critical=False):
         await BetterThermostat._trigger_outdoor_change(bt, event=MagicMock())
 
-    bt._ambient_mock.assert_awaited_once()
-    bt.control_queue_task.put.assert_awaited_once_with(bt)
+    bt._ambient_mock.assert_not_awaited()
+    bt.control_queue_task.put.assert_not_awaited()
 
 
 @pytest.mark.asyncio

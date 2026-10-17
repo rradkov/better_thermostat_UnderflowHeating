@@ -90,11 +90,6 @@ CONF_TARGET_TEMP_STEP: Final = "target_temp_step"
 # actually stored.
 CONF_SHOW_ALL_CALIBRATION_MODES: Final = "show_all_calibration_modes"
 
-# Model string a TRV carries when the device registry has nothing that
-# identifies it. No quirk module answers for it, so a TRV on this model is
-# driven by the default quirks, the same as one whose model is unknown.
-GENERIC_MODEL: Final = "generic"
-
 SUPPORT_FLAGS: Final = (
     ClimateEntityFeature.TARGET_TEMPERATURE
     | ClimateEntityFeature.TURN_OFF
@@ -198,10 +193,6 @@ DEFAULT_CALIBRATION_MODE: Final = CalibrationMode.HEATING_POWER_CALIBRATION
 # is in OFF / ON mode) and rejected at the BT input boundary.
 MIN_REASONABLE_TEMPERATURE = -50.0
 MAX_REASONABLE_TEMPERATURE = 60.0
-
-# How long the room sensor has to stay unavailable or unknown before the
-# TRV-internal temperature stands in for the room temperature (seconds).
-ROOM_SENSOR_FALLBACK_DELAY_S: Final = 120
 
 # Default temperature bounds / setpoint for the BT climate entity (Celsius),
 # used until the underlying TRV reports its own min/max/target.

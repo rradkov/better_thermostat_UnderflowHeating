@@ -59,8 +59,7 @@ ventilation switch and/or send a notification.
 
 Sends a push notification when the minimum battery level of all TRVs associated
 with a Better Thermostat device drops below the configured threshold (default
-**20 %**). The alert is throttled to once every 24 hours per automation to
-avoid spam: a report within 24 hours of the previous notification is ignored.
+**20 %**). The alert is throttled to once every 24 hours to avoid spam.
 
 | Input | Description | Default |
 |---|---|---|
@@ -127,11 +126,8 @@ persons or device trackers are away from home, and restores a configurable
 preset (default: `none`) when someone arrives back.
 
 A configurable departure delay prevents short absences (e.g. walking the dog)
-from unnecessarily switching the heating. If someone returns during the delay,
-the pending switch to Away is cancelled and the home preset is restored. After
-the delay expires, presence is re-checked once more, and the Away preset is
-only applied if still nobody is home. Attribute-only updates of the presence
-entities (e.g. a new GPS position) do not restart the delay.
+from unnecessarily switching the heating. After the delay expires, presence is
+re-checked before applying the Away preset.
 
 | Input | Description | Default |
 |---|---|---|
