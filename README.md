@@ -1,7 +1,7 @@
 
 
 [![GitHub issues](https://img.shields.io/github/issues/rradkov/better_thermostat_UnderflowHeating?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/issues)
-[![Version](https://img.shields.io/badge/Version-1.9.2.1.2-009688?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/releases)
+[![Version](https://img.shields.io/badge/Version-1.9.3.1.3-009688?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/releases)
 
 # Better Thermostat — UnderflowHeating fork
 
@@ -22,6 +22,18 @@ The fork modifications are maintained by Rumen Radkov and were introduced from O
 Original project: <https://github.com/KartoffelToby/better_thermostat>
 
 The source code for every published fork release is available in this repository. Fork-specific support and issue tracking are available in the [fork issue tracker](https://github.com/rradkov/better_thermostat_UnderflowHeating/issues).
+
+## Latest fork release: 1.9.3.1.3
+
+This release improves recovery after a controlled heater, outdoor sensor, or related device becomes unavailable and later returns:
+
+- **Added:** a fresh control pass is queued when a controlled heater recovers, even if the first recovered state does not contain a new temperature or setpoint.
+- **Added:** the same recovery trigger for the optional outdoor sensor.
+- **Changed:** an unavailable optional outdoor input no longer stops Warm Floor or replaces the last valid heating decision with stale data.
+- **Fixed:** recovery paths that could leave Warm Floor or normal heating waiting for a future unrelated state change after a device reconnects.
+- **Verified:** focused recovery, weather, and TRV event tests pass; the implementation remains heat-source and installation neutral.
+
+Upgrade note: after installing this release, restart Home Assistant once so the custom integration is loaded from the new release tree.
 
 **For more info visit: <https://better-thermostat.org/>**
 
