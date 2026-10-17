@@ -67,6 +67,18 @@ async def trigger_trv_change(self, event):
         return
     old_state, new_state, entity_id = resolved_event
 
+    # A recovered device may publish only its current availability/mode first;
+    # it does not necessarily include a new temperature or setpoint.  Remember
+    # the recovery so the caller can force one fresh control pass instead of
+    # leaving a Warm Floor duty cycle parked after an unavailable interval.
+    recovered_from_unavailable = (
+        old_state is not None
+        and old_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+        and new_state is not None
+        and new_state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN, None)
+    )
+    _main_change = recovered_from_unavailable
+
     _org_trv_state = self.hass.states.get(entity_id)
     if _org_trv_state is None:
         _LOGGER.debug(
@@ -196,7 +208,9 @@ async def trigger_trv_change(self, event):
                 self.device_name,
                 entity_id,
             )
-            _main_change = False
+            # Calibration acknowledgement normally suppresses this event's
+            # control queueing, but a recovery must still restart control.
+            _main_change = recovered_from_unavailable
             if trv.calibration == 0:
                 trv.last_calibration = await get_current_offset(self, entity_id)
 

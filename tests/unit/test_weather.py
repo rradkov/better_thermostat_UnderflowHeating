@@ -662,7 +662,7 @@ class TestCheckWeather:
     async def test_outdoor_only_warm_stops_heat(self):
         """A warm cached outdoor temperature stops heating."""
         bt = make_bt(
-            make_hass(),
+            make_hass(states={OUTDOOR_ID: make_state(state="18.0")}),
             outdoor_sensor=OUTDOOR_ID,
             last_avg_outdoor_temp=18.0,
             off_temperature=10.0,
@@ -682,10 +682,23 @@ class TestCheckWeather:
         await check_weather(bt)
         assert bt.call_for_heat is True
 
+    async def test_outdoor_unavailable_with_cache_preserves_last_decision(self):
+        """An offline optional outdoor sensor must not apply stale cutoff data."""
+        states = {OUTDOOR_ID: make_state(state="unavailable")}
+        bt = make_bt(
+            make_hass(states=states),
+            outdoor_sensor=OUTDOOR_ID,
+            last_avg_outdoor_temp=18.0,
+            off_temperature=10.0,
+        )
+        bt.call_for_heat = True
+        await check_weather(bt)
+        assert bt.call_for_heat is True
+
     async def test_outdoor_sensor_overrides_weather_to_heat(self):
         """With both sources, the outdoor sensor's verdict wins outright."""
         bt = make_bt(
-            make_hass(),
+            make_hass(states={OUTDOOR_ID: make_state(state="2.0")}),
             weather_entity=WEATHER_ID,
             outdoor_sensor=OUTDOOR_ID,
             last_avg_outdoor_temp=2.0,  # cold -> heat
@@ -701,7 +714,7 @@ class TestCheckWeather:
     async def test_outdoor_sensor_overrides_weather_to_stop(self):
         """The outdoor sensor can override the weather prediction to stop heat."""
         bt = make_bt(
-            make_hass(),
+            make_hass(states={OUTDOOR_ID: make_state(state="18.0")}),
             weather_entity=WEATHER_ID,
             outdoor_sensor=OUTDOOR_ID,
             last_avg_outdoor_temp=18.0,  # warm -> no heat

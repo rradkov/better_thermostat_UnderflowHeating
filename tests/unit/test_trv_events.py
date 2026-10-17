@@ -172,6 +172,26 @@ class TestUnavailableInvalidation:
 
         assert mock_bt.real_trvs[ENTITY_ID].current_temperature == 18.0
 
+    @pytest.mark.asyncio
+    async def test_recovery_queues_control_when_no_new_measurement_is_reported(
+        self, mock_bt
+    ):
+        """An availability recovery must restart the control cycle."""
+        unavailable = State(ENTITY_ID, "unavailable")
+        recovered = _make_state()
+        mock_bt.hass.states.get.return_value = recovered
+
+        with patch(
+            "custom_components.better_thermostat.events.trv.convert_inbound_states",
+            return_value=HVACMode.HEAT,
+        ):
+            await trigger_trv_change(
+                mock_bt,
+                _make_event(mock_bt, new_state=recovered, old_state=unavailable),
+            )
+
+        mock_bt.control_queue_task.put.assert_awaited_once_with(mock_bt)
+
 
 class TestTriggerTrvChangeGuards:
     """Guard-clause tests for trigger_trv_change()."""

@@ -1123,6 +1123,15 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         # The degraded-mode annunciation updates first: it has to keep
         # reporting a lost room sensor even while an unavailable TRV aborts
         # the rest of the handler.
+        old_state = event.data.get("old_state") if event is not None else None
+        new_state = event.data.get("new_state") if event is not None else None
+        outdoor_recovered = (
+            old_state is not None
+            and old_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+            and new_state is not None
+            and new_state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN, None)
+        )
+
         await check_and_update_degraded_mode(self)
         _check = await check_critical_entities(self)
         if _check is False:
@@ -1152,6 +1161,12 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
             self.async_write_ha_state()
             if event is not None:
                 await self.control_queue_task.put(self)
+        elif outdoor_recovered and event is not None:
+            # Outdoor temperature is optional.  Its outage must not stop
+            # Warm Floor, but its recovery must still trigger an immediate
+            # recalculation instead of waiting for the next periodic tick.
+            self.async_write_ha_state()
+            await self.control_queue_task.put(self)
 
     async def _trigger_temperature_change(self, event):
         # The degraded-mode annunciation updates first: it has to keep

@@ -40,6 +40,9 @@ async def check_weather(self) -> bool:
             true if call_for_heat was changed
     """
     old_call_for_heat = self.call_for_heat
+    previous_valid_call_for_heat = (
+        old_call_for_heat if isinstance(old_call_for_heat, bool) else True
+    )
     _call_for_heat_weather: bool | None = None
     _call_for_heat_outdoor = False
 
@@ -53,32 +56,34 @@ async def check_weather(self) -> bool:
             self.call_for_heat = _call_for_heat_weather
 
     if self.outdoor_sensor is not None:
-        if None in (self.last_avg_outdoor_temp, self.off_temperature):
-            # Check if sensor is currently unavailable (expected during startup)
-            _outdoor_state = self.hass.states.get(self.outdoor_sensor)
-            _sensor_unavailable = _outdoor_state is None or _outdoor_state.state in (
-                "unavailable",
-                "unknown",
-                None,
-            )
+        _outdoor_state = self.hass.states.get(self.outdoor_sensor)
+        _sensor_unavailable = _outdoor_state is None or _outdoor_state.state in (
+            "unavailable",
+            "unknown",
+            None,
+        )
 
-            if _sensor_unavailable:
-                # Sensor not ready yet - expected during startup, just debug
-                _LOGGER.debug(
-                    "better_thermostat %s: outdoor sensor not yet available, fallback to heat",
-                    self.device_name,
-                )
-            else:
-                # Sensor is available but we have no cached data - unexpected, warn
-                _LOGGER.warning(
-                    "better_thermostat %s: outdoor sensor available but no data cached, fallback to heat",
-                    self.device_name,
-                )
+        if _sensor_unavailable:
+            # An optional outdoor sensor cannot revoke an already valid
+            # heating decision while it is offline.  Preserve the weather
+            # result (if one was available) or the safe default True; never
+            # apply a stale outdoor average as a new summer cutoff.
+            _LOGGER.debug(
+                "better_thermostat %s: outdoor sensor unavailable, preserving current heat decision",
+                self.device_name,
+            )
+            if _call_for_heat_weather is None:
+                self.call_for_heat = previous_valid_call_for_heat
+        elif None in (self.last_avg_outdoor_temp, self.off_temperature):
+            _LOGGER.warning(
+                "better_thermostat %s: outdoor sensor available but no usable average, fallback to heat",
+                self.device_name,
+            )
             _call_for_heat_outdoor = True
+            self.call_for_heat = _call_for_heat_outdoor
         else:
             _call_for_heat_outdoor = self.last_avg_outdoor_temp < self.off_temperature
-
-        self.call_for_heat = _call_for_heat_outdoor
+            self.call_for_heat = _call_for_heat_outdoor
 
     if self.weather_entity is None and self.outdoor_sensor is None:
         self.call_for_heat = True
