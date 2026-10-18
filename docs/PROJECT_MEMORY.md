@@ -1914,3 +1914,16 @@ for all supported Home Assistant installations.
   source compilation passed, and `git diff --check` passed. No configurable
   actuator timing fields were added; the default four-minute behavior remains
   internal and generic.
+
+### 2026-10-18 — Preserve exact-target Warm Floor duty eligibility
+
+- Fixed Generic Thermostat Warm Floor handling at exact equality. During an
+  OFF window, `current_temperature == target_temperature` is no longer
+  converted to `idle_release`; the downstream setpoint remains at the target,
+  while the next ON window can still raise it and start a maintenance pulse.
+- Strictly above target, stale downstream heating commands are still released
+  during the OFF window. Below target, normal Better Thermostat heating still
+  owns the decision.
+- Added regression coverage for the exact-target OFF-window case. The change
+  is generic and does not reference any room, relay, integration, or heat
+  source.

@@ -1817,12 +1817,14 @@ def apply_warm_floor_floor(
                 if previous_phase != duty_phase:
                     trv_state.warm_floor_force_setpoint_write = True
         # A Generic Thermostat turns its relay on from the downstream
-        # setpoint alone.  If the Better Thermostat controller is idle and the
-        # room is already strictly above its user target, an old setpoint above the
-        # room temperature is therefore a real heating command, even when
-        # Warm Floor is outside its ON window.  Release that stale command
-        # unless the explicitly configured sustain push is the reason to keep
-        # it above target.  This is deliberately limited to Generic
+        # setpoint alone. If the room is strictly above the user target, an
+        # old setpoint above the room temperature is therefore a real heating
+        # command even when Warm Floor is outside its ON window. Release that
+        # stale command unless the explicitly configured sustain push is the
+        # reason to keep it above target. At exact equality, leave the result
+        # at the target: the OFF window is already unambiguously off, while
+        # the next ON window remains eligible to raise the setpoint and start
+        # a maintenance pulse. This is deliberately limited to Generic
         # Thermostat heaters; valve/setpoint devices have their own idle
         # semantics and must not be clamped here.
         if (
@@ -1834,26 +1836,32 @@ def apply_warm_floor_floor(
             and cur_temp >= target_temp
             and result >= target_temp
         ):
-            # Generic Thermostat keeps its previous heating action when the
-            # target is exactly equal to the measured temperature, especially
-            # with zero hot tolerance.  Release one valid device step below
-            # the room target so the downstream relay has an unambiguous OFF
-            # condition.  This changes only the downstream actuator command;
-            # the Better Thermostat user target and preset remain unchanged.
-            release_step = getattr(trv_state, "target_temp_step", None)
-            if not isinstance(release_step, (int, float)) or release_step <= 0:
-                release_step = getattr(bt, "bt_target_temp_step", None)
-            if not isinstance(release_step, (int, float)) or release_step <= 0:
-                release_step = 0.5
-            min_temp = convert_to_float(
-                trv_state.min_temp,
-                getattr(bt, "device_name", None),
-                "warm_floor release",
-            )
-            result = target_temp - float(release_step)
-            if isinstance(min_temp, (int, float)):
-                result = max(result, float(min_temp))
-            duty_reason = "idle_release"
+            if cur_temp > target_temp:
+                # Release one valid device step below the room target so a
+                # stale downstream heating command has an unambiguous OFF
+                # condition. This changes only the downstream actuator
+                # command; the Better Thermostat user target and preset remain
+                # unchanged.
+                release_step = getattr(trv_state, "target_temp_step", None)
+                if not isinstance(release_step, (int, float)) or release_step <= 0:
+                    release_step = getattr(bt, "bt_target_temp_step", None)
+                if not isinstance(release_step, (int, float)) or release_step <= 0:
+                    release_step = 0.5
+                min_temp = convert_to_float(
+                    trv_state.min_temp,
+                    getattr(bt, "device_name", None),
+                    "warm_floor release",
+                )
+                result = target_temp - float(release_step)
+                if isinstance(min_temp, (int, float)):
+                    result = max(result, float(min_temp))
+                duty_reason = "idle_release"
+            else:
+                # At exact equality, do not release below target and do not
+                # leave a stale ON setpoint above it. The OFF window is already
+                # safe, and the next ON window remains eligible to raise the
+                # setpoint for a maintenance pulse.
+                result = target_temp
         if duty_reason == "duty_cycle_on":
             sustain_push_c = round(result - float(bt.bt_target_temp), 3)
     else:

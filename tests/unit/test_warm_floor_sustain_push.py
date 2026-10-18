@@ -146,7 +146,7 @@ def test_generic_idle_releases_stale_downstream_setpoint(monkeypatch):
 
 
 def test_generic_idle_releases_stale_setpoint_at_exact_target(monkeypatch):
-    """Exact-target Warm Floor must also release a stale heating command."""
+    """Exact-target Warm Floor remains eligible for the next ON window."""
     bt = _make_bt(
         sustain_push=0.0,
         cur_temp=22.0,
@@ -158,8 +158,8 @@ def test_generic_idle_releases_stale_setpoint_at_exact_target(monkeypatch):
 
     result = apply_warm_floor_floor(bt, "climate.trv", 26.0, is_offset=False)
 
-    assert result == 21.5
-    assert bt._warm_floor_status["reason"] == "idle_release"
+    assert result == 22.0
+    assert bt._warm_floor_status["reason"] == "outside_duty_window"
 
 
 def test_does_not_fire_while_still_heating():
