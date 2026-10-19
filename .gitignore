@@ -70,6 +70,7 @@ home-assistant_v2.db
 # Project specific
 x_*
 dashboard/*
+docs/PROJECT_MEMORY.md
 
 # Logs
 *.log

@@ -22,8 +22,9 @@ production repository:
    the DEV repository.
 7. Every production release must document additions, changes, fixes, removals,
    compatibility or migration notes, and verification results.
-8. Before changing project behavior, read and update `docs/PROJECT_MEMORY.md` with
-   the decision, reason, expected behavior, and verification result.
+8. Before changing project behavior, read and update the private maintainer decision
+   log with the decision, reason, expected behavior, and verification result. Keep
+   that log outside the public repository.
 9. `climate.tatas` is an unrelated fan-coil entity in one installation and must not
    be used as a special case or modified as part of Warm Floor work.
 
@@ -43,6 +44,6 @@ feature branch in DEV
 
 Use the DEV repository only for controlled testing. Record the tested commit,
 configuration, relevant entity histories, observed behavior, and any known
-limitations in the project memory or the corresponding PR. Never infer success
+limitations in the private maintainer log or the corresponding PR. Never infer success
 from a calculated controller decision alone: compare the Better Thermostat state,
 downstream Generic Thermostat state, physical relay state, and floor-pump state.
