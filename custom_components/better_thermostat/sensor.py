@@ -1159,6 +1159,11 @@ class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
             "actuator_open_minutes": status.get("actuator_open_minutes"),
             "actuator_close_minutes": status.get("actuator_close_minutes"),
             "preheat_risk": status.get("preheat_risk"),
+            "auto_policy": status.get("auto_policy"),
+            "auto_candidate": status.get("auto_candidate"),
+            "auto_policy_reason": status.get("auto_policy_reason"),
+            "auto_policy_age": status.get("auto_policy_age"),
+            "target_margin": status.get("target_margin"),
         }
 
 

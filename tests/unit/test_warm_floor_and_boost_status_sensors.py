@@ -58,6 +58,11 @@ def test_active_status_reads_active_with_attributes():
             "warm_floor_level": "level_2",
             "valve_min_pct": 12.0,
             "demand_factor": 0.4,
+            "auto_policy": "level_2",
+            "auto_candidate": "level_1",
+            "auto_policy_reason": "above_target_returning_economically",
+            "auto_policy_age": 900.0,
+            "target_margin": 1.2,
         }
     )
     sensor = BetterThermostatWarmFloorStatusSensor(bt)
@@ -70,6 +75,13 @@ def test_active_status_reads_active_with_attributes():
     assert sensor._attr_extra_state_attributes["warm_floor_level"] == "level_2"
     assert sensor._attr_extra_state_attributes["valve_min_pct"] == 12.0
     assert sensor._attr_extra_state_attributes["demand_factor"] == 0.4
+    assert sensor._attr_extra_state_attributes["auto_policy"] == "level_2"
+    assert sensor._attr_extra_state_attributes["auto_candidate"] == "level_1"
+    assert sensor._attr_extra_state_attributes["auto_policy_reason"] == (
+        "above_target_returning_economically"
+    )
+    assert sensor._attr_extra_state_attributes["auto_policy_age"] == 900.0
+    assert sensor._attr_extra_state_attributes["target_margin"] == 1.2
 
 
 def test_status_surfaces_generic_duty_cycle_details():

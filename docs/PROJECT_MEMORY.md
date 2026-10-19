@@ -1,5 +1,28 @@
 # Better Thermostat — Project Memory
 
+### 2026-10-19 — Dynamic Auto policy diagnostics
+
+- **Requirement:** Auto must not use a fixed above-target protection rule such
+  as `target + 0.4°C`. The mode must be selected from the complete live
+  thermal picture and must remain heat-source and installation neutral.
+- **Change:** Replaced the fixed excess-margin multiplier with a dynamic
+  target prediction based on the previous calculated duty period, live slope,
+  EMA separation, target margin, and cooling/warming evidence. The existing
+  target-equilibrium band remains the control objective, not a static
+  overheated-room selector.
+- **Diagnostics:** Warm Floor status now exposes `auto_candidate`,
+  `auto_policy_reason`, `auto_policy_age` (seconds), and `target_margin`
+  alongside the applied `auto_policy`. These fields are available as
+  attributes of the Warm Floor diagnostic sensor in Home Assistant.
+- **Behavior:** A room clearly above target with a flat or warming trend moves
+  toward Eco; a room approaching the target with cooling evidence can select
+  Keep it Hot; a near-target balanced trend selects Balanced. The existing
+  anti-chatter confirmation/dwell behavior remains, so the candidate and the
+  applied policy can temporarily differ and are now visible.
+- **Verification:** Warm Floor and status-sensor focused tests pass (74
+  tests). No `climate.tatas` access or installation-specific hardware rule
+  was added.
+
 ### 2026-10-15 — Auto direct policy selection
 
 - **Requirement:** Auto must reevaluate Eco, Balanced, and Keep it Hot as the room moves from an overheated state toward `target + 0.1°C` and then toward neutral `slope ≈ 0`.

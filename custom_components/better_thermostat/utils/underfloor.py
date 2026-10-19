@@ -166,12 +166,6 @@ WARM_FLOOR_LEVEL_INTENSITY: Final[dict[str, float]] = {
 # used by the duty controller.  The remaining fixed values below are only
 # confirmation/hysteresis guards; they are not fixed ON/OFF schedules.
 WARM_FLOOR_AUTO_NEAR_TARGET_MARGIN_C: Final = WARM_FLOOR_TARGET_EQUILIBRIUM_BAND_C
-# A room that is several near-target bands above the target must be allowed to
-# drift back toward target even when a short-term EMA shows cooling.  The floor
-# still receives the valid minimum maintenance pulse; this only selects the
-# Auto baseline and prevents a cooling hint from keeping an already-warm room
-# on the strongest maintenance profile.
-WARM_FLOOR_AUTO_EXCESS_MARGIN_MULTIPLIER: Final = 4.0
 WARM_FLOOR_AUTO_EMA_WARMING_DELTA_C: Final = 0.10
 WARM_FLOOR_AUTO_EMA_STRONG_WARMING_DELTA_C: Final = 0.25
 WARM_FLOOR_AUTO_EMA_COOLING_DELTA_C: Final = -0.10
@@ -677,6 +671,10 @@ def _record_status(
         "flow_temp_c": getattr(bt, "_warm_floor_flow_temp_c", None),
         "flow_temp_source": getattr(bt, "_warm_floor_flow_source", None),
         "auto_policy": getattr(bt, "_warm_floor_auto_policy", None),
+        "auto_candidate": getattr(bt, "_warm_floor_auto_candidate", None),
+        "auto_policy_reason": getattr(bt, "_warm_floor_auto_policy_reason", None),
+        "auto_policy_age": _warm_floor_auto_policy_age(bt),
+        "target_margin": _warm_floor_target_margin(bt),
         "updated_at": dt_util.utcnow().isoformat(),
     }
     # Keep one status per controlled heater.  A Better Thermostat may control
@@ -835,6 +833,33 @@ def _warm_floor_flow_temperature(bt) -> tuple[float | None, str | None]:
     return None, None
 
 
+def _warm_floor_target_margin(bt) -> float | None:
+    """Return the live room margin above the Better Thermostat target."""
+    current = getattr(bt, "cur_temp", None)
+    target = getattr(bt, "bt_target_temp", None)
+    if not isinstance(current, (int, float)) or not isinstance(target, (int, float)):
+        return None
+    return float(current) - float(target)
+
+
+def _warm_floor_auto_policy_age(bt) -> float | None:
+    """Return the age of the currently applied Auto policy in seconds."""
+    since = getattr(bt, "_warm_floor_auto_policy_since", None)
+    if not isinstance(since, (int, float)):
+        return None
+    return max(0.0, monotonic() - float(since))
+
+
+def _warm_floor_auto_cycle_minutes(bt) -> float:
+    """Resolve the last calculated duty period for short-term prediction."""
+    status = getattr(bt, "_warm_floor_status", None)
+    if isinstance(status, dict):
+        period_s = status.get("duty_period_s")
+        if isinstance(period_s, (int, float)) and period_s > 0:
+            return float(period_s) / 60.0
+    return 0.0
+
+
 def _warm_floor_auto_candidate(bt, demand_factor: float) -> str:
     """Select an Auto policy candidate from room response and demand.
 
@@ -862,73 +887,60 @@ def _warm_floor_auto_candidate(bt, demand_factor: float) -> str:
     )
     slope = getattr(bt, "temp_slope", None)
 
-    cooling = (
-        isinstance(ema_delta, (int, float))
-        and ema_delta <= WARM_FLOOR_AUTO_EMA_COOLING_DELTA_C
-    ) or (
-        isinstance(slope, (int, float))
-        and slope <= WARM_FLOOR_AUTO_COOLING_SLOPE_K_MIN
-    ) or demand_factor >= 0.65
-    warming = (
-        isinstance(ema_delta, (int, float))
-        and ema_delta >= WARM_FLOOR_AUTO_EMA_WARMING_DELTA_C
-        and isinstance(slope, (int, float))
-        and slope >= WARM_FLOOR_AUTO_WARMING_SLOPE_K_MIN
-    )
-    strong_warming = (
-        warming
-        and isinstance(ema_delta, (int, float))
-        and ema_delta >= WARM_FLOOR_AUTO_EMA_STRONG_WARMING_DELTA_C
-        and isinstance(slope, (int, float))
-        and slope >= 0.01
-    )
+    cycle_minutes = _warm_floor_auto_cycle_minutes(bt)
+    projected_margin = margin
+    if isinstance(margin, (int, float)) and isinstance(slope, (int, float)):
+        projected_margin = margin + float(slope) * cycle_minutes
 
-    materially_above_target = (
+    cooling_evidence = 0.0
+    warming_evidence = 0.0
+    if isinstance(ema_delta, (int, float)):
+        cooling_evidence += max(0.0, -float(ema_delta))
+        warming_evidence += max(0.0, float(ema_delta))
+    if isinstance(slope, (int, float)):
+        cooling_evidence += max(0.0, -float(slope) * cycle_minutes)
+        warming_evidence += max(0.0, float(slope) * cycle_minutes)
+
+    # Auto is target-centred without a fixed "materially above target"
+    # threshold.  The previous duty period and live trend predict where the
+    # room will be at the next decision.  The target-equilibrium band remains
+    # the project objective; it is not a protective ceiling or a fixed mode
+    # selector for overheated rooms.
+    dynamic_equilibrium_band = max(
+        WARM_FLOOR_AUTO_NEAR_TARGET_MARGIN_C,
+        cooling_evidence,
+    )
+    near_target = (
         isinstance(margin, (int, float))
-        and margin
-        >= WARM_FLOOR_AUTO_NEAR_TARGET_MARGIN_C
-        * WARM_FLOOR_AUTO_EXCESS_MARGIN_MULTIPLIER
+        and abs(float(margin)) <= dynamic_equilibrium_band
     )
-
-    # Cooling evidence is important near the target, but it must not make an
-    # already materially overheated room use Keep it Hot.  Eco continues to
-    # provide the minimum valid floor-maintenance pulse while the room returns
-    # toward target.  Only a clearly strong cooling/load condition justifies
-    # Balanced in this band; Keep it Hot is reserved for the near-target
-    # recovery region below.
-    if materially_above_target:
-        strong_cooling = (
-            (
-                isinstance(ema_delta, (int, float))
-                and ema_delta <= 2 * WARM_FLOOR_AUTO_EMA_COOLING_DELTA_C
-            )
-            or (
-                isinstance(slope, (int, float))
-                and slope <= 2 * WARM_FLOOR_AUTO_COOLING_SLOPE_K_MIN
-            )
-            or demand_factor >= 0.85
-        )
-        return (
-            WARM_FLOOR_LEVEL_BALANCED
-            if strong_cooling
-            else WARM_FLOOR_LEVEL_ECO
-        )
-
-    if cooling:
-        return WARM_FLOOR_LEVEL_KEEP_HOT
-    if (
-        isinstance(margin, (int, float))
-        and margin <= WARM_FLOOR_AUTO_NEAR_TARGET_MARGIN_C
-        and not warming
+    approaching_target = (
+        isinstance(projected_margin, (int, float))
+        and projected_margin <= WARM_FLOOR_AUTO_NEAR_TARGET_MARGIN_C
+        and cooling_evidence > 0.0
+    )
+    if approaching_target or (
+        near_target and cooling_evidence > warming_evidence
     ):
+        bt._warm_floor_auto_policy_reason = "approaching_target_with_cooling_trend"
         return WARM_FLOOR_LEVEL_KEEP_HOT
-    if strong_warming and demand_factor < 0.65:
+    if near_target and isinstance(margin, (int, float)) and margin <= 0.0:
+        bt._warm_floor_auto_policy_reason = "at_target_floor_recovery"
+        return WARM_FLOOR_LEVEL_KEEP_HOT
+    if near_target:
+        bt._warm_floor_auto_policy_reason = "near_target_thermal_balance"
+        return WARM_FLOOR_LEVEL_BALANCED
+    if isinstance(margin, (int, float)) and margin > 0.0:
+        if warming_evidence > cooling_evidence:
+            bt._warm_floor_auto_policy_reason = "above_target_and_warming"
+        elif cooling_evidence > 0.0:
+            bt._warm_floor_auto_policy_reason = "above_target_returning_economically"
+        else:
+            bt._warm_floor_auto_policy_reason = "above_target_with_flat_trend"
         return WARM_FLOOR_LEVEL_ECO
-    if warming and demand_factor < 0.65:
-        return WARM_FLOOR_LEVEL_BALANCED
-    if demand_factor >= 0.30:
-        return WARM_FLOOR_LEVEL_BALANCED
-    return WARM_FLOOR_LEVEL_ECO
+
+    bt._warm_floor_auto_policy_reason = "insufficient_target_trend_data"
+    return WARM_FLOOR_LEVEL_BALANCED
 
 
 def _warm_floor_auto_policy(bt, demand_factor: float) -> str:
@@ -955,6 +967,7 @@ def _warm_floor_auto_policy(bt, demand_factor: float) -> str:
         bt._warm_floor_auto_policy_since = now
         bt._warm_floor_auto_candidate = current
         bt._warm_floor_auto_candidate_since = now
+        bt._warm_floor_auto_policy_reason = "initial_conservative_policy"
         return current
 
     candidate = _warm_floor_auto_candidate(bt, demand_factor)

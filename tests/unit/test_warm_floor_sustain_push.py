@@ -555,7 +555,7 @@ def test_auto_downgrades_materially_above_target_even_with_mild_cooling():
     assert candidate == underfloor.WARM_FLOOR_LEVEL_ECO
 
 
-def test_auto_keeps_balanced_for_material_excess_with_strong_cooling():
+def test_auto_keeps_economical_mode_for_above_target_cooling():
     bt = _make_bt(
         warm_floor_level=underfloor.WARM_FLOOR_LEVEL_AUTO,
         cur_temp=24.2,
@@ -568,7 +568,8 @@ def test_auto_keeps_balanced_for_material_excess_with_strong_cooling():
 
     candidate = underfloor._warm_floor_auto_candidate(bt, demand_factor=0.4)
 
-    assert candidate == underfloor.WARM_FLOOR_LEVEL_BALANCED
+    assert candidate == underfloor.WARM_FLOOR_LEVEL_ECO
+    assert bt._warm_floor_auto_policy_reason == "above_target_returning_economically"
 
 
 def test_duty_profile_reduces_intensity_above_target_but_keeps_minimum_floor():
