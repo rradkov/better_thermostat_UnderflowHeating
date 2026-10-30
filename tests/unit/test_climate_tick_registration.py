@@ -7,6 +7,7 @@ maintenance enabled). These tests pin down that the maintenance tick is
 registered whenever a TRV enables it, regardless of the calibration mode.
 """
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -33,6 +34,7 @@ def _make_bt(advanced):
     mock.hass = MagicMock()
     mock.device_name = "Test BT"
     mock.is_removed = False
+    mock.control_queue_task = asyncio.Queue()
     mock.real_trvs = {TRV_ID: Trv(entity_id=TRV_ID, advanced=advanced)}
     mock.all_trvs = None
     mock.all_entities = []
