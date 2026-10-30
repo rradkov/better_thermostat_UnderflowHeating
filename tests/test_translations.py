@@ -215,7 +215,14 @@ def test_services_yaml_covered():
     english = _load_json(TRANSLATIONS / "en.json")
     translated_services = english.get("services", {})
 
-    assert set(services) == set(translated_services)
+    from custom_components.better_thermostat.utils import features
+
+    expected = set(services)
+    # Keep the experimental service's labels for development while production
+    # deliberately comments its declaration out of services.yaml.
+    if not features.SECONDARY_BOOST_AVAILABLE:
+        expected.add("test_boost")
+    assert expected == set(translated_services)
     for name, spec in services.items():
         expected_fields = set(spec.get("fields", {}))
         translated_fields = set(translated_services[name].get("fields", {}))

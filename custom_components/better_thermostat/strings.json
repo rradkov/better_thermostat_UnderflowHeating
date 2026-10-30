@@ -69,7 +69,8 @@
           "heating_type": "Heating type",
           "warm_floor_level": "Warm Floor level",
           "warm_floor_max_backoff": "Warm Floor max backoff (°C)",
-          "warm_floor_sustain_push": "Warm Floor sustain push (°C)"
+          "warm_floor_sustain_push": "Warm Floor sustain push (°C)",
+          "mpc_v2_plant_preset": "MPC v2 heating system profile"
         },
         "data_description": {
           "protect_overheating": "Some TRVs don't close the valve completely when the temperature is reached. Or the radiator has a lot of rest heat. This can cause overheating. This option can prevent this.",
@@ -141,7 +142,8 @@
           "boost_max_runtime": "Boost safety timeout (minutes)",
           "boost_asymmetric_threshold": "Use a different threshold for cooling",
           "boost_threshold_cool": "Boost cooling threshold (°C)",
-          "boost_cooldown_minutes": "Boost cooldown (minutes)"
+          "boost_cooldown_minutes": "Boost cooldown (minutes)",
+          "cooler": "Secondary climate device (optional)"
         },
         "data_description": {
           "presets": "Select the presets you want to be available for this thermostat.",
@@ -173,7 +175,8 @@
           "heating_type": "Heating type",
           "warm_floor_level": "Warm Floor level",
           "warm_floor_max_backoff": "Warm Floor max backoff (°C)",
-          "warm_floor_sustain_push": "Warm Floor sustain push (°C)"
+          "warm_floor_sustain_push": "Warm Floor sustain push (°C)",
+          "mpc_v2_plant_preset": "MPC v2 heating system profile"
         },
         "data_description": {
           "protect_overheating": "Some TRVs don't close the valve completely when the temperature is reached. Or the radiator has a lot of rest heat. This can cause overheating. This option can prevent this.",

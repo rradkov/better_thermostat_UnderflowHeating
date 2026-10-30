@@ -69,7 +69,8 @@
           "heating_type": "Tipo di riscaldamento",
           "warm_floor_max_backoff": "Arretramento massimo Pavimento Caldo (°C)",
           "warm_floor_level": "Livello Pavimento Caldo",
-          "warm_floor_sustain_push": "Pavimento Caldo - spinta di mantenimento (°C)"
+          "warm_floor_sustain_push": "Pavimento Caldo - spinta di mantenimento (°C)",
+          "mpc_v2_plant_preset": "MPC v2 heating system profile"
         },
         "data_description": {
           "protect_overheating": "Alcuni TRV non chiudono completamente la valvola quando si raggiunge la temperatura. Oppure il radiatore mantiene molto calore residuo. Questa opzione può evitare il surriscaldamento.",
@@ -141,7 +142,8 @@
           "boost_cooldown_minutes": "Tempo di recupero del boost (minuti)",
           "show_all_calibration_modes": "Mostra tutte le modalità di calibrazione",
           "flow_temp_sensor": "Sensore di temperatura di mandata (opzionale)",
-          "flow_temp_static_c": "Temperatura di mandata, valore statico di riserva (°C)"
+          "flow_temp_static_c": "Temperatura di mandata, valore statico di riserva (°C)",
+          "cooler": "Dispositivo di climatizzazione secondario (opzionale)"
         },
         "data_description": {
           "presets": "Seleziona i preset che vuoi rendere disponibili per questo termostato.",
@@ -173,7 +175,8 @@
           "heating_type": "Tipo di riscaldamento",
           "warm_floor_max_backoff": "Arretramento massimo Pavimento Caldo (°C)",
           "warm_floor_level": "Livello Pavimento Caldo",
-          "warm_floor_sustain_push": "Pavimento Caldo - spinta di mantenimento (°C)"
+          "warm_floor_sustain_push": "Pavimento Caldo - spinta di mantenimento (°C)",
+          "mpc_v2_plant_preset": "MPC v2 heating system profile"
         },
         "data_description": {
           "protect_overheating": "Alcuni TRV non chiudono completamente la valvola quando si raggiunge la temperatura. Oppure il radiatore mantiene molto calore residuo. Questa opzione può evitare il surriscaldamento.",
@@ -425,7 +428,7 @@
     },
     "boost_fan_mode": {
       "options": {
-        "__no_change__": "Non modificare la velocità della ventola"
+        "no_change": "Non modificare la velocità della ventola"
       }
     },
     "warm_floor_level": {
@@ -433,7 +436,8 @@
         "level_1": "1 · Eco",
         "level_2": "2 · Bilanciato",
         "level_3": "3 · Mantieni caldo",
-        "custom": "Personalizzato"
+        "custom": "Personalizzato",
+        "auto": "Auto"
       }
     }
   },

@@ -69,7 +69,8 @@
           "heating_type": "Isıtma türü",
           "warm_floor_max_backoff": "Sıcak Zemin maks. geri çekilme (°C)",
           "warm_floor_level": "Sıcak Zemin seviyesi",
-          "warm_floor_sustain_push": "Sıcak Zemin - sürdürme itmesi (°C)"
+          "warm_floor_sustain_push": "Sıcak Zemin - sürdürme itmesi (°C)",
+          "mpc_v2_plant_preset": "MPC v2 heating system profile"
         },
         "data_description": {
           "protect_overheating": "Bazı TRV'ler sıcaklığa ulaşıldığında vanayı tamamen kapatmaz. Veya radyatör çok fazla artık ısıya sahiptir. Bu aşırı ısınmaya neden olabilir. Bu seçenek bunu önleyebilir.",
@@ -141,7 +142,8 @@
           "boost_cooldown_minutes": "Boost soğuma süresi (dakika)",
           "show_all_calibration_modes": "Tüm kalibrasyon modlarını göster",
           "flow_temp_sensor": "Gidiş suyu sıcaklık sensörü (isteğe bağlı)",
-          "flow_temp_static_c": "Gidiş suyu sıcaklığı, statik yedek değer (°C)"
+          "flow_temp_static_c": "Gidiş suyu sıcaklığı, statik yedek değer (°C)",
+          "cooler": "İkincil iklimlendirme cihazı (isteğe bağlı)"
         },
         "data_description": {
           "presets": "Bu termostat için kullanılabilir olmasını istediğiniz ön ayarları seçin.",
@@ -173,7 +175,8 @@
           "heating_type": "Isıtma türü",
           "warm_floor_max_backoff": "Sıcak Zemin maks. geri çekilme (°C)",
           "warm_floor_level": "Sıcak Zemin seviyesi",
-          "warm_floor_sustain_push": "Sıcak Zemin - sürdürme itmesi (°C)"
+          "warm_floor_sustain_push": "Sıcak Zemin - sürdürme itmesi (°C)",
+          "mpc_v2_plant_preset": "MPC v2 heating system profile"
         },
         "data_description": {
           "protect_overheating": "Bazı TRV'ler sıcaklığa ulaşıldığında vanayı tamamen kapatmaz. Veya radyatör çok fazla artık ısıya sahiptir. Bu aşırı ısınmaya neden olabilir. Bu seçenek bunu önleyebilir.",
@@ -425,7 +428,7 @@
     },
     "boost_fan_mode": {
       "options": {
-        "__no_change__": "Fan modunu değiştirme"
+        "no_change": "Fan modunu değiştirme"
       }
     },
     "warm_floor_level": {
@@ -433,7 +436,8 @@
         "level_1": "1 · Eko",
         "level_2": "2 · Dengeli",
         "level_3": "3 · Sıcak Tut",
-        "custom": "Özel"
+        "custom": "Özel",
+        "auto": "Auto"
       }
     }
   },

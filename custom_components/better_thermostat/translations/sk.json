@@ -69,7 +69,8 @@
           "heating_type": "Typ vykurovania",
           "warm_floor_max_backoff": "Max. ústup Teplej Podlahy (°C)",
           "warm_floor_level": "Úroveň Teplej podlahy",
-          "warm_floor_sustain_push": "Teplá podlaha - udržiavací posun (°C)"
+          "warm_floor_sustain_push": "Teplá podlaha - udržiavací posun (°C)",
+          "mpc_v2_plant_preset": "MPC v2 heating system profile"
         },
         "data_description": {
           "protect_overheating": "Niektoré termostatické ventily úplne neuzatvoria ventil po dosiahnutí požadovanej teploty. Alebo má radiátor veľa zvyškového tepla. To môže spôsobiť prehriatie. Táto možnosť tomu môže zabrániť.",
@@ -141,7 +142,8 @@
           "boost_cooldown_minutes": "Čas obnovy boostu (minúty)",
           "show_all_calibration_modes": "Zobraziť všetky režimy kalibrácie",
           "flow_temp_sensor": "Senzor teploty prívodu (voliteľné)",
-          "flow_temp_static_c": "Teplota prívodu, statická záložná hodnota (°C)"
+          "flow_temp_static_c": "Teplota prívodu, statická záložná hodnota (°C)",
+          "cooler": "Sekundárne klimatizačné zariadenie (voliteľné)"
         },
         "data_description": {
           "presets": "Vyberte predvoľby, ktoré chcete mať k dispozícii pre tento termostat.",
@@ -173,7 +175,8 @@
           "heating_type": "Typ vykurovania",
           "warm_floor_max_backoff": "Max. ústup Teplej Podlahy (°C)",
           "warm_floor_level": "Úroveň Teplej podlahy",
-          "warm_floor_sustain_push": "Teplá podlaha - udržiavací posun (°C)"
+          "warm_floor_sustain_push": "Teplá podlaha - udržiavací posun (°C)",
+          "mpc_v2_plant_preset": "MPC v2 heating system profile"
         },
         "data_description": {
           "protect_overheating": "Niektoré TRV nezatvárajú ventil úplne, keď sa dosiahne požadovaná teplota. Alebo je v radiátore veľa zvyškového tepla. To môže spôsobiť prehriatie. Táto možnosť tomu môže zabrániť.",
@@ -425,7 +428,7 @@
     },
     "boost_fan_mode": {
       "options": {
-        "__no_change__": "Nemeniť rýchlosť ventilátora"
+        "no_change": "Nemeniť rýchlosť ventilátora"
       }
     },
     "warm_floor_level": {
@@ -433,7 +436,8 @@
         "level_1": "1 · Eco",
         "level_2": "2 · Vyvážené",
         "level_3": "3 · Udržať teplo",
-        "custom": "Vlastné"
+        "custom": "Vlastné",
+        "auto": "Auto"
       }
     }
   },

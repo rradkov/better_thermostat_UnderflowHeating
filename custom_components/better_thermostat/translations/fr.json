@@ -69,7 +69,8 @@
           "heating_type": "Type de chauffage",
           "warm_floor_max_backoff": "Recul maximal du Plancher Chaud (°C)",
           "warm_floor_level": "Niveau Plancher Chaud",
-          "warm_floor_sustain_push": "Plancher Chaud - poussée de maintien (°C)"
+          "warm_floor_sustain_push": "Plancher Chaud - poussée de maintien (°C)",
+          "mpc_v2_plant_preset": "MPC v2 heating system profile"
         },
         "data_description": {
           "protect_overheating": "Certains TRVs ne ferment pas complètement la vanne lorsque la température est atteinte. Ou le radiateur a beaucoup de chaleur résiduelle. Cela peut provoquer une surchauffe. Cette option peut prévenir cela.",
@@ -141,7 +142,8 @@
           "boost_cooldown_minutes": "Délai de récupération du boost (minutes)",
           "show_all_calibration_modes": "Afficher tous les modes de calibration",
           "flow_temp_sensor": "Capteur de température de départ (facultatif)",
-          "flow_temp_static_c": "Température de départ, valeur de repli statique (°C)"
+          "flow_temp_static_c": "Température de départ, valeur de repli statique (°C)",
+          "cooler": "Appareil de climatisation secondaire (optionnel)"
         },
         "data_description": {
           "presets": "Sélectionnez les préréglages qui doivent être disponibles pour ce thermostat.",
@@ -173,7 +175,8 @@
           "heating_type": "Type de chauffage",
           "warm_floor_max_backoff": "Recul maximal du Plancher Chaud (°C)",
           "warm_floor_level": "Niveau Plancher Chaud",
-          "warm_floor_sustain_push": "Plancher Chaud - poussée de maintien (°C)"
+          "warm_floor_sustain_push": "Plancher Chaud - poussée de maintien (°C)",
+          "mpc_v2_plant_preset": "MPC v2 heating system profile"
         },
         "data_description": {
           "protect_overheating": "Certains TRVs ne ferment pas complètement la vanne lorsque la température est atteinte. Ou le radiateur a beaucoup de chaleur résiduelle. Cela peut provoquer une surchauffe. Cette option peut prévenir cela.",
@@ -425,7 +428,7 @@
     },
     "boost_fan_mode": {
       "options": {
-        "__no_change__": "Ne pas changer la vitesse du ventilateur"
+        "no_change": "Ne pas changer la vitesse du ventilateur"
       }
     },
     "warm_floor_level": {
@@ -433,7 +436,8 @@
         "level_1": "1 · Éco",
         "level_2": "2 · Équilibré",
         "level_3": "3 · Garder au chaud",
-        "custom": "Personnalisé"
+        "custom": "Personnalisé",
+        "auto": "Auto"
       }
     }
   },

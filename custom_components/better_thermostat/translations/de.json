@@ -69,7 +69,8 @@
           "heating_type": "Heizungstyp",
           "warm_floor_max_backoff": "Warmer Boden max. Rückzug (°C)",
           "warm_floor_level": "Warmer-Boden-Stufe",
-          "warm_floor_sustain_push": "Warmer Boden Halte-Push (°C)"
+          "warm_floor_sustain_push": "Warmer Boden Halte-Push (°C)",
+          "mpc_v2_plant_preset": "MPC v2 heating system profile"
         },
         "data_description": {
           "protect_overheating": "Manche TRVs schließen auch nach Erreichen der Temperatur das Ventil nicht vollständig. Dies kann zu Überhitzungen führen. Ebenso, falls der Radiator viel Restwärme abstrahlt. Diese Option kann dies verhindern.",
@@ -141,7 +142,8 @@
           "boost_cooldown_minutes": "Boost-Abklingzeit (Minuten)",
           "show_all_calibration_modes": "Alle Kalibrierungsmodi anzeigen",
           "flow_temp_sensor": "Vorlauftemperatur-Sensor (optional)",
-          "flow_temp_static_c": "Vorlauftemperatur, statischer Ersatzwert (°C)"
+          "flow_temp_static_c": "Vorlauftemperatur, statischer Ersatzwert (°C)",
+          "cooler": "Sekundäres Klimagerät (optional)"
         },
         "data_description": {
           "presets": "Wähle die Presets aus, die für dieses Thermostat verfügbar sein sollen.",
@@ -173,7 +175,8 @@
           "heating_type": "Heizungstyp",
           "warm_floor_max_backoff": "Warmer Boden max. Rückzug (°C)",
           "warm_floor_level": "Warmer-Boden-Stufe",
-          "warm_floor_sustain_push": "Warmer Boden Halte-Push (°C)"
+          "warm_floor_sustain_push": "Warmer Boden Halte-Push (°C)",
+          "mpc_v2_plant_preset": "MPC v2 heating system profile"
         },
         "data_description": {
           "protect_overheating": "Manche TRVs schließen auch nach Erreichen der Temperatur das Ventil nicht vollständig. Dies kann zu Überhitzungen führen. Ebenso falls der Radiator viel Restwärme abstrahlt. Diese Option kann dies verhindern.",
@@ -425,7 +428,7 @@
     },
     "boost_fan_mode": {
       "options": {
-        "__no_change__": "Lüfterstufe nicht ändern"
+        "no_change": "Lüfterstufe nicht ändern"
       }
     },
     "warm_floor_level": {
@@ -433,7 +436,8 @@
         "level_1": "1 · Öko",
         "level_2": "2 · Ausgewogen",
         "level_3": "3 · Warm halten",
-        "custom": "Benutzerdefiniert"
+        "custom": "Benutzerdefiniert",
+        "auto": "Auto"
       }
     }
   },

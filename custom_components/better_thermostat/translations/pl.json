@@ -69,7 +69,8 @@
           "heating_type": "Typ ogrzewania",
           "warm_floor_max_backoff": "Maksymalne cofnięcie Ciepłej Podłogi (°C)",
           "warm_floor_level": "Poziom Ciepłej Podłogi",
-          "warm_floor_sustain_push": "Ciepła Podłoga - podbicie podtrzymujące (°C)"
+          "warm_floor_sustain_push": "Ciepła Podłoga - podbicie podtrzymujące (°C)",
+          "mpc_v2_plant_preset": "MPC v2 heating system profile"
         },
         "data_description": {
           "protect_overheating": "Niektóre TRV całkowicie zamykają zawór po osiągnięciu temperatury. Lub grzejnik ma dużo ciepła resztkowego. Może to spowodować przegrzanie. Ta opcja może temu zapobiec.",
@@ -141,7 +142,8 @@
           "boost_cooldown_minutes": "Czas odnowienia boostu (minuty)",
           "show_all_calibration_modes": "Pokaż wszystkie tryby kalibracji",
           "flow_temp_sensor": "Czujnik temperatury zasilania (opcjonalnie)",
-          "flow_temp_static_c": "Temperatura zasilania, statyczna wartość zastępcza (°C)"
+          "flow_temp_static_c": "Temperatura zasilania, statyczna wartość zastępcza (°C)",
+          "cooler": "Dodatkowe urządzenie klimatyzacyjne (opcjonalnie)"
         },
         "data_description": {
           "presets": "Wybierz ustawienia predefiniowane, które mają być dostępne dla tego termostatu.",
@@ -173,7 +175,8 @@
           "heating_type": "Typ ogrzewania",
           "warm_floor_max_backoff": "Maksymalne cofnięcie Ciepłej Podłogi (°C)",
           "warm_floor_level": "Poziom Ciepłej Podłogi",
-          "warm_floor_sustain_push": "Ciepła Podłoga - podbicie podtrzymujące (°C)"
+          "warm_floor_sustain_push": "Ciepła Podłoga - podbicie podtrzymujące (°C)",
+          "mpc_v2_plant_preset": "MPC v2 heating system profile"
         },
         "data_description": {
           "protect_overheating": "Niektóre TRV całkowicie zamykają zawór po osiągnięciu temperatury. Lub grzejnik ma dużo ciepła resztkowego. Może to spowodować przegrzanie. Ta opcja może temu zapobiec.",
@@ -425,7 +428,7 @@
     },
     "boost_fan_mode": {
       "options": {
-        "__no_change__": "Nie zmieniaj prędkości wentylatora"
+        "no_change": "Nie zmieniaj prędkości wentylatora"
       }
     },
     "warm_floor_level": {
@@ -433,7 +436,8 @@
         "level_1": "1 · Eco",
         "level_2": "2 · Zbalansowany",
         "level_3": "3 · Utrzymuj ciepło",
-        "custom": "Niestandardowy"
+        "custom": "Niestandardowy",
+        "auto": "Auto"
       }
     }
   },

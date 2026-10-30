@@ -69,7 +69,8 @@
           "heating_type": "Varmetype",
           "warm_floor_max_backoff": "Varm Gulv maks. tilbagetrækning (°C)",
           "warm_floor_level": "Varmt gulv-niveau",
-          "warm_floor_sustain_push": "Varmt gulv fastholdelsespush (°C)"
+          "warm_floor_sustain_push": "Varmt gulv fastholdelsespush (°C)",
+          "mpc_v2_plant_preset": "MPC v2 heating system profile"
         },
         "data_description": {
           "protect_overheating": "Nogle TRV'er lukker ikke ventilen helt, når temperaturen er nået. Eller radiatoren har meget hvilevarme. Dette kan forårsage overophedning. Denne mulighed kan forhindre dette.",
@@ -141,7 +142,8 @@
           "boost_cooldown_minutes": "Boost-nedkølingstid (minutter)",
           "show_all_calibration_modes": "Vis alle kalibreringstilstande",
           "flow_temp_sensor": "Fremløbstemperatur-sensor (valgfri)",
-          "flow_temp_static_c": "Fremløbstemperatur, statisk reserveværdi (°C)"
+          "flow_temp_static_c": "Fremløbstemperatur, statisk reserveværdi (°C)",
+          "cooler": "Sekundær klimaenhed (valgfri)"
         },
         "data_description": {
           "presets": "Vælg de forudindstillinger, der skal være tilgængelige for denne termostat.",
@@ -173,7 +175,8 @@
           "heating_type": "Varmetype",
           "warm_floor_max_backoff": "Varm Gulv maks. tilbagetrækning (°C)",
           "warm_floor_level": "Varmt gulv-niveau",
-          "warm_floor_sustain_push": "Varmt gulv fastholdelsespush (°C)"
+          "warm_floor_sustain_push": "Varmt gulv fastholdelsespush (°C)",
+          "mpc_v2_plant_preset": "MPC v2 heating system profile"
         },
         "data_description": {
           "protect_overheating": "Nogle TRV'er lukker ikke ventilen helt, når temperaturen er nået. Eller radiatoren har meget hvilevarme. Dette kan forårsage overophedning. Denne mulighed kan forhindre dette.",
@@ -425,7 +428,7 @@
     },
     "boost_fan_mode": {
       "options": {
-        "__no_change__": "Skift ikke ventilatorhastighed"
+        "no_change": "Skift ikke ventilatorhastighed"
       }
     },
     "warm_floor_level": {
@@ -433,7 +436,8 @@
         "level_1": "1 · Øko",
         "level_2": "2 · Afbalanceret",
         "level_3": "3 · Hold det varmt",
-        "custom": "Brugerdefineret"
+        "custom": "Brugerdefineret",
+        "auto": "Auto"
       }
     }
   },
