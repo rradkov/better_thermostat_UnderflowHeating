@@ -1,13 +1,13 @@
 
 
 [![GitHub issues](https://img.shields.io/github/issues/rradkov/better_thermostat_UnderflowHeating?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/issues)
-[![Version](https://img.shields.io/badge/Version-1.9.3.1.3-009688?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/releases)
+[![Version](https://img.shields.io/badge/Version-1.9.3.1.6-009688?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/releases)
 
 **For more info visit: <https://better-thermostat.org/>**
 
 ## Requirements
 
-- Minimum required Home Assistant version: `2026.7.2`
+- Minimum required Home Assistant version: `2026.9.0`
   (_continuously tested against Home Assistant_ [![Tested Home Assistant version](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fraw.githubusercontent.com%2Frradkov%2Fbetter_thermostat_UnderflowHeating%2Fmain%2Fpyproject.toml&search=homeassistant%3E%3D%28%5B0-9.%5D%2B%29&replace=%241&label=&color=009688)](pyproject.toml))
 
 ### Companion UI
@@ -34,7 +34,7 @@ This integration brings some smartness to your connected radiator (and, in this 
 - **Advanced Control Algorithms**: Choose between MPC, PID, TPI, AI Time Based or simple target temperature matching for precise control.
 - **Selectable Presets**: Configure which preset modes are available for your thermostat during setup.
 - **Warm Floor mode** *(fork-only)*: Keeps underfloor heating from fully idling between heat calls, using the same heat-loss/heating-power/solar telemetry BT already tracks — no new thermal model, no fully-cold slab to recover from.
-- **Boost on window reopen** *(fork-only)*: Optionally reuses a configured secondary climate device (a fan-coil, heat pump, air conditioner, or similar) to actively recover the room after a window closes, symmetrically in either direction — a heat boost if the room got too cold, a cool boost if it got too warm. Its diagnostic state distinguishes disabled, configured-idle, pending, heating, and cooling; it never drives Warm Floor relays or assumes a specific installation entity.
+- **Secondary-device Boost** *(development only)*: Suspended in the official `1.9.3.1.6` release while it is redesigned on `dev`. Configuration, automatic activation, the test service, and its status sensor are disabled. Warm Floor and the standard Boost temperature preset remain available.
 
 See [Underfloor heating (Warm Floor) & Boost](docs/Configuration/configuration.md#underfloor-heating-warm-floor-mode) in the configuration guide for details.
 

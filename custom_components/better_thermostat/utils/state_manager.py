@@ -217,7 +217,7 @@ def _is_finite_number(value: Any) -> bool:
     """Return whether *value* can be persisted as a finite float."""
     try:
         return math.isfinite(float(value))
-    except (TypeError, ValueError, OverflowError):
+    except TypeError, ValueError, OverflowError:
         return False
 
 
@@ -810,16 +810,14 @@ class StateManager:
             self._state.preset_cool_temperatures = cool
             self._dirty = True
 
-    def record_user_targets(
-        self, heating: float | None, cooling: float | None
-    ) -> None:
+    def record_user_targets(self, heating: float | None, cooling: float | None) -> None:
         """Persist user intent separately from downstream setpoints."""
         targets: dict[str, float] = {}
         for key, value in (("heating", heating), ("cooling", cooling)):
             try:
                 if value is not None and math.isfinite(float(value)):
                     targets[key] = float(value)
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 continue
         if targets != self._state.user_targets:
             self._state.user_targets = targets

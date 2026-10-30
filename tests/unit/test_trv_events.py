@@ -237,8 +237,7 @@ class TestUnavailableInvalidation:
             return_value=HVACMode.HEAT,
         ):
             await trigger_trv_change(
-                mock_bt,
-                _make_event(mock_bt, old_state=old_state, new_state=recovered),
+                mock_bt, _make_event(mock_bt, old_state=old_state, new_state=recovered)
             )
 
         mock_bt.control_queue_task.put.assert_awaited_once_with(mock_bt)

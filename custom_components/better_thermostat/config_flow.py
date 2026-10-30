@@ -32,6 +32,8 @@ from . import (  # pylint: disable=unused-import
     trv_entity_ids,
 )
 from .adapters.delegate import load_adapter
+from .model_fixes.model_quirks import load_model_quirks, quirk_writes_valve
+from .utils import features
 from .utils.boost_heater import (
     CONF_BOOST_HEATER_ENABLED,
     build_boost_heater_user_fields,
@@ -83,7 +85,6 @@ from .utils.helpers import (
     get_device_model,
     get_trv_intigration,
 )
-from .model_fixes.model_quirks import load_model_quirks, quirk_writes_valve
 from .utils.preset_manager import DEFAULT_ENABLED_PRESETS
 from .utils.underfloor import (
     CONF_HEATING_TYPE,
@@ -876,7 +877,7 @@ def _build_user_fields(
 
     # Boost reuses the Cooler entity, so it's only offered once one is
     # configured - there's nothing for it to boost otherwise.
-    if resolve(CONF_COOLER):
+    if features.SECONDARY_BOOST_AVAILABLE and resolve(CONF_COOLER):
         add_field(
             CONF_BOOST_HEATER_ENABLED,
             bool,
@@ -1094,8 +1095,10 @@ def _normalize_user_submission(
     # Boost can only be enabled while a Cooler is configured - it has
     # nothing to boost otherwise, and a submission where the Cooler was
     # just removed must not leave a stale boost toggle behind.
-    boost_heater_enabled = bool(normalized.get(CONF_COOLER)) and _as_bool(
-        user_input.get(CONF_BOOST_HEATER_ENABLED), False
+    boost_heater_enabled = (
+        features.SECONDARY_BOOST_AVAILABLE
+        and bool(normalized.get(CONF_COOLER))
+        and _as_bool(user_input.get(CONF_BOOST_HEATER_ENABLED), False)
     )
     normalized[CONF_BOOST_HEATER_ENABLED] = boost_heater_enabled
     normalized.update(

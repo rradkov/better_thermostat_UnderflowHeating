@@ -208,3 +208,7 @@ async def test_snapshot_is_only_captured_once_not_overwritten_each_cycle():
     await control_boost(bt)
     assert bt._boost_heater_tracker.previous_hvac_mode == HVACMode.COOL
     assert bt._boost_heater_tracker.previous_temperature == 25.0
+
+
+# Exercise the retained experimental implementation explicitly.
+pytestmark = pytest.mark.usefixtures("enable_development_boost")

@@ -17,6 +17,14 @@ DOMAIN = "better_thermostat"
 ENGLISH_CATALOG = REPO_ROOT / "custom_components" / DOMAIN / "translations" / "en.json"
 
 
+@pytest.fixture
+def enable_development_boost(monkeypatch):
+    """Opt experimental Boost tests into the preserved development implementation."""
+    from custom_components.better_thermostat.utils import features
+
+    monkeypatch.setattr(features, "SECONDARY_BOOST_AVAILABLE", True)
+
+
 def _flatten(obj: dict, prefix: str) -> dict[str, str]:
     """Flatten a catalog into Home Assistant's dotted translation keys."""
     flat: dict[str, str] = {}

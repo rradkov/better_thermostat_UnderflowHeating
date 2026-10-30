@@ -27,6 +27,7 @@ from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.util import dt as dt_util
 
 from .calibration import _get_current_solar_intensity
+from .utils import features
 from .utils.const import CONF_CALIBRATION_MODE, DOMAIN, CalibrationMode
 from .utils.helpers import async_normalize_bt_entity_ids
 
@@ -73,8 +74,9 @@ async def async_setup_entry(
         BetterThermostatHeatLossSensor(bt_climate),
         BetterThermostatSolarIntensitySensor(bt_climate),
         BetterThermostatWarmFloorStatusSensor(bt_climate),
-        BetterThermostatBoostStatusSensor(bt_climate),
     ]
+    if features.SECONDARY_BOOST_AVAILABLE:
+        sensors.append(BetterThermostatBoostStatusSensor(bt_climate))
 
     # Dynamische algorithmus-spezifische Sensor-Erstellung
     algorithm_sensors = await _setup_algorithm_sensors(hass, entry, bt_climate)
@@ -1083,9 +1085,7 @@ class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
 
         # The newest record remains the primary legacy view, while every
         # controlled heater is exposed in the multi-heater attribute.
-        status = max(
-            statuses.values(), key=lambda item: item.get("updated_at", "")
-        )
+        status = max(statuses.values(), key=lambda item: item.get("updated_at", ""))
         heater_statuses = {}
         now = dt_util.utcnow().timestamp()
         for entity_id, item in statuses.items():
@@ -1102,7 +1102,7 @@ class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
                     snapshot["status_age_s"] = max(
                         0, int(now - dt_util.parse_datetime(updated_at).timestamp())
                     )
-                except (AttributeError, TypeError, ValueError):
+                except AttributeError, TypeError, ValueError:
                     pass
             heater_statuses[entity_id] = snapshot
 
@@ -1123,9 +1123,11 @@ class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
                 return reason == "duty_cycle_on" and item.get("duty_phase") == "on"
             return True
 
-        self._attr_native_value = "active" if any(
-            is_currently_active(item) for item in heater_statuses.values()
-        ) else "idle"
+        self._attr_native_value = (
+            "active"
+            if any(is_currently_active(item) for item in heater_statuses.values())
+            else "idle"
+        )
         self._attr_extra_state_attributes = {
             "enabled": True,
             "heater_count": len(heater_statuses),
@@ -1147,9 +1149,9 @@ class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
             "actuator_minimum_until": status.get("actuator_minimum_until"),
             "actuator_guard": status.get("actuator_guard"),
             "phase_recovered": status.get("phase_recovered"),
-            "status_age_s": heater_statuses.get(
-                status.get("entity_id"), {}
-            ).get("status_age_s"),
+            "status_age_s": heater_statuses.get(status.get("entity_id"), {}).get(
+                "status_age_s"
+            ),
             "current_temp_c": status.get("current_temp_c"),
             "target_temp_c": status.get("target_temp_c"),
             "hvac_action": status.get("hvac_action"),

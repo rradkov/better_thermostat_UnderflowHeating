@@ -257,3 +257,7 @@ class TestBoostTrendHasStandingMemoryBeforeBoostStarts:
         bt.hass.services.async_call.assert_not_called()
         # Still armed - an unavailable device doesn't silently cancel the boost.
         assert bt._boost_heater_tracker.boost_active is True
+
+
+# Exercise the retained experimental implementation explicitly.
+pytestmark = pytest.mark.usefixtures("enable_development_boost")

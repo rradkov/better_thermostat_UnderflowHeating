@@ -11,6 +11,7 @@ heat one.
 from __future__ import annotations
 
 from homeassistant.components.climate.const import HVACMode
+import pytest
 
 from custom_components.better_thermostat.utils.boost_heater import BoostHeaterTracker
 
@@ -120,3 +121,7 @@ def test_clear_only_starts_the_cooldown_clock_if_the_boost_actually_started():
     assert tracker.boost_started_ts is None
     tracker.clear(now_ts=200.0)
     assert tracker.last_boost_end_ts is None
+
+
+# Exercise the retained experimental implementation explicitly.
+pytestmark = pytest.mark.usefixtures("enable_development_boost")

@@ -347,10 +347,7 @@ async def trigger_trv_change(
         old_state is not None
         and (
             old_state.state == STATE_UNAVAILABLE
-            or (
-                old_state.state == STATE_UNKNOWN
-                and not state_unknown_as_available
-            )
+            or (old_state.state == STATE_UNKNOWN and not state_unknown_as_available)
         )
         and _org_trv_state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
     )

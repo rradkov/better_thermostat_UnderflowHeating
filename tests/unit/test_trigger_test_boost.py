@@ -98,3 +98,7 @@ async def test_cool_direction_arms_symmetrically():
     ):
         await trigger_test_boost(bt, HVACMode.COOL)
     assert bt._boost_heater_tracker.boost_direction == HVACMode.COOL
+
+
+# Exercise the retained experimental implementation explicitly.
+pytestmark = pytest.mark.usefixtures("enable_development_boost")

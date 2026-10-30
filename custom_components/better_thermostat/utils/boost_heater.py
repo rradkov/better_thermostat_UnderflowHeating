@@ -36,6 +36,7 @@ from typing import Any, Final
 from homeassistant.components.climate.const import HVACAction, HVACMode
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 
+from custom_components.better_thermostat.utils import features
 from custom_components.better_thermostat.utils.helpers import (
     matches_any_setpoint,
     read_setpoint_celsius,
@@ -185,9 +186,7 @@ class BoostHeaterTracker:
             self.slow_ema = self.slow_ema + alpha * (value - self.slow_ema)
         self._slow_ema_ts = now_ts
 
-    def clear(
-        self, *, now_ts: float | None = None, reason: str = "cleared"
-    ) -> None:
+    def clear(self, *, now_ts: float | None = None, reason: str = "cleared") -> None:
         """Reset all boost-cycle state - called on cancellation or completion.
 
         Records ``last_boost_end_ts`` only when the boost had actually begun
@@ -385,7 +384,9 @@ def record_window_transition(bt, role, is_open: bool) -> None:
     reach this function. A no-op whenever boost isn't enabled or no Cooler
     is configured to boost.
     """
-    if not getattr(bt, "boost_enabled", False):
+    if not features.SECONDARY_BOOST_AVAILABLE or not getattr(
+        bt, "boost_enabled", False
+    ):
         return
     if getattr(bt, "cooler_entity_id", None) is None:
         return
@@ -710,6 +711,8 @@ def update_boost_trend(bt) -> None:
     published when Boost is disabled, so diagnostics distinguish a disabled
     feature from an enabled but idle Boost.
     """
+    if not features.SECONDARY_BOOST_AVAILABLE:
+        return
     tracker: BoostHeaterTracker | None = getattr(bt, "_boost_heater_tracker", None)
     if tracker is None:
         return
@@ -727,6 +730,8 @@ async def control_boost(self) -> None:
     same entity in the same cycle. ``control_cooler()`` resumes as soon as
     the boost ends (``tracker.boost_direction`` goes back to ``None``).
     """
+    if not features.SECONDARY_BOOST_AVAILABLE:
+        return
     tracker: BoostHeaterTracker = self._boost_heater_tracker
     now_ts = monotonic()
     # update_boost_trend() already ran this cycle (control_queue() calls it
@@ -844,6 +849,8 @@ async def trigger_test_boost(bt, direction: HVACMode) -> None:
     behaves exactly like a normally-armed boost: same termination guards,
     same cooldown bookkeeping, same cancellation on an open contact.
     """
+    if not features.SECONDARY_BOOST_AVAILABLE:
+        return
     if not getattr(bt, "boost_enabled", False):
         tracker = getattr(bt, "_boost_heater_tracker", None)
         if tracker is not None:

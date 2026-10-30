@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import pytest
+
 from custom_components.better_thermostat import config_flow as config_flow_module
 from custom_components.better_thermostat.utils.boost_heater import (
     CONF_BOOST_ASYMMETRIC_THRESHOLD,
@@ -246,3 +248,7 @@ def test_normalize_cooldown_clamps_to_bounds():
         mode="create",
     )
     assert too_low[CONF_BOOST_COOLDOWN_MINUTES] == 0.0
+
+
+# Exercise the retained experimental implementation explicitly.
+pytestmark = pytest.mark.usefixtures("enable_development_boost")

@@ -99,6 +99,7 @@ from .events.window import trigger_window_change, window_queue
 from .model_fixes.model_quirks import initial_tweak, load_model_quirks, lowest_setpoint
 from .switch import restored_child_lock
 from .trv import Trv
+from .utils import features
 from .utils.boost_heater import (
     CONF_BOOST_COOLDOWN_MINUTES,
     CONF_BOOST_FAN_MODE,
@@ -120,7 +121,6 @@ from .utils.calibration.pid import (
     resolve_unique_id,
     round_to_bucket,
 )
-from .utils.underfloor import CONF_HEATING_TYPE, HeatingType
 from .utils.const import (
     ATTR_STATE_BATTERIES,
     ATTR_STATE_CALL_FOR_HEAT,
@@ -230,6 +230,7 @@ from .utils.thermal_learning import (
     LossCycle,
     LossStats,
 )
+from .utils.underfloor import CONF_HEATING_TYPE, HeatingType
 from .utils.valve_maintenance import (
     build_trv_snapshots,
     collect_maintenance_trvs,
@@ -338,9 +339,11 @@ async def async_setup_entry(hass, entry, async_add_entities):
         BETTERTHERMOSTAT_RESET_PID_SCHEMA,
         "reset_pid_learnings_service",
     )
-    platform.async_register_entity_service(
-        SERVICE_TEST_BOOST, BETTERTHERMOSTAT_TEST_BOOST_SCHEMA, "test_boost_service"
-    )
+    # Secondary-device Boost is suspended in production releases.
+    if features.SECONDARY_BOOST_AVAILABLE:
+        platform.async_register_entity_service(
+            SERVICE_TEST_BOOST, BETTERTHERMOSTAT_TEST_BOOST_SCHEMA, "test_boost_service"
+        )
 
     bt_entity = BetterThermostat(
         entry.data.get(CONF_NAME),
@@ -694,7 +697,7 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
             )
         except TypeError, ValueError:
             self.min_cooler_resend_interval_s = 0.0
-        self.boost_enabled = bool(boost_enabled)
+        self.boost_enabled = features.SECONDARY_BOOST_AVAILABLE and bool(boost_enabled)
         self.boost_threshold_k = (
             float(boost_threshold_k)
             if isinstance(boost_threshold_k, (int, float))
@@ -1062,7 +1065,7 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
                 parsed = dt_util.parse_datetime(updated_at)
                 if parsed is not None:
                     ages.append(max(0.0, now - parsed.timestamp()))
-            except (AttributeError, TypeError, ValueError):
+            except AttributeError, TypeError, ValueError:
                 continue
         return min(ages) if ages else None
 
@@ -1084,7 +1087,7 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
                     if control_task is not None and not control_task.cancelled():
                         try:
                             error = control_task.exception()
-                        except (asyncio.CancelledError, asyncio.InvalidStateError):
+                        except asyncio.CancelledError, asyncio.InvalidStateError:
                             error = None
                         if error is not None:
                             _LOGGER.error(
@@ -1399,9 +1402,7 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
             async_track_time_interval(
                 self.hass,
                 partial(
-                    self._start_owned_timer_work,
-                    self._trigger_time,
-                    "bt_periodic_tick",
+                    self._start_owned_timer_work, self._trigger_time, "bt_periodic_tick"
                 ),
                 timedelta(minutes=1),
             )
@@ -3325,9 +3326,7 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
         """Persist room intent, excluding Warm Floor actuator setpoints."""
         if self.state_mgr is None:
             return
-        self.state_mgr.record_user_targets(
-            self.bt_target_temp, self.bt_target_cooltemp
-        )
+        self.state_mgr.record_user_targets(self.bt_target_temp, self.bt_target_cooltemp)
         self.state_mgr.record_preset_state(
             self.preset_mgr.mode,
             self.preset_mgr.temperatures,
@@ -4737,6 +4736,8 @@ class BetterThermostat(ClimateEntity, RestoreEntity, ABC):
 
     async def test_boost_service(self, direction: str = "heat") -> None:
         """Entity service: manually trigger a Boost cycle, for testing wiring."""
+        if not features.SECONDARY_BOOST_AVAILABLE:
+            return
         try:
             hvac_mode = HVACMode.COOL if direction == "cool" else HVACMode.HEAT
             await trigger_test_boost(self, hvac_mode)

@@ -8,6 +8,7 @@ and a direction the device doesn't support is never armed.
 from __future__ import annotations
 
 from homeassistant.components.climate.const import HVACMode
+import pytest
 
 from custom_components.better_thermostat.utils.boost_heater import BoostHeaterTracker
 
@@ -188,3 +189,7 @@ def test_update_slow_ema_ignores_none_values():
     tracker.update_slow_ema(20.0, now_ts=0.0)
     tracker.update_slow_ema(None, now_ts=60.0)
     assert tracker.slow_ema == 20.0
+
+
+# Exercise the retained experimental implementation explicitly.
+pytestmark = pytest.mark.usefixtures("enable_development_boost")

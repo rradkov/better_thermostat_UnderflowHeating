@@ -44,6 +44,12 @@ Because the mechanism keys entirely off "is the computed setpoint already pinned
 
 ## Boost: symmetric recovery on window reopen
 
+> **Production availability:** Secondary-device Boost is suspended in release
+> `1.9.3.1.6`. Its settings, test service, status sensor, and automatic activation
+> are unavailable, including for previously enabled configurations. The following
+> describes the retained development implementation. Warm Floor and the standard
+> temperature preset Boost remain available.
+
 ### Boost is an optional secondary-device feature
 
 Boost is not another Warm Floor level and is not a generic relay command. It can only command the Secondary climate entity configured for this Better Thermostat instance. That separation matters for mixed installations: Warm Floor may maintain an underfloor loop, while Boost may use a fan-coil, heat pump, or another `climate.*` device for fast recovery. If no compatible Secondary device is configured, Boost remains disabled and sends no command.

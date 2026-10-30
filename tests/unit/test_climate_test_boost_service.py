@@ -63,3 +63,7 @@ async def test_an_exception_is_swallowed_not_raised(bt):
         new=AsyncMock(side_effect=RuntimeError("boom")),
     ):
         await BetterThermostat.test_boost_service(bt)  # must not raise
+
+
+# Exercise the retained experimental implementation explicitly.
+pytestmark = pytest.mark.usefixtures("enable_development_boost")

@@ -143,7 +143,9 @@ async def test_warm_floor_tick_uses_heating_capability_not_adapter_label():
 
     assert bt._trigger_time in callbacks
     periodic_call = next(
-        call for call in track_interval.call_args_list if call.args[1].args[1] == "bt_periodic_tick"
+        call
+        for call in track_interval.call_args_list
+        if call.args[1].args[1] == "bt_periodic_tick"
     )
     assert periodic_call.args[2].total_seconds() == 60
 
@@ -161,10 +163,7 @@ def test_warm_floor_watchdog_starts_after_heater_capability_is_available():
     bt._spawn_owned = MagicMock()
 
     assert BetterThermostat._start_warm_floor_watchdog(bt) is True
-    bt._spawn_owned.assert_called_once_with(
-        None,
-        name="bt_warm_floor_watchdog_Test BT",
-    )
+    bt._spawn_owned.assert_called_once_with(None, name="bt_warm_floor_watchdog_Test BT")
     assert bt._warm_floor_watchdog_started is True
 
 

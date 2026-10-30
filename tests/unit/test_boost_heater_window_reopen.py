@@ -238,3 +238,7 @@ async def test_cooldown_blocks_a_rearm_reached_through_the_real_event_path():
 
     # Still inside the 15-minute cooldown - must not have rearmed.
     assert bt._boost_heater_tracker.boost_active is False
+
+
+# Exercise the retained experimental implementation explicitly.
+pytestmark = pytest.mark.usefixtures("enable_development_boost")

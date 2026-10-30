@@ -260,7 +260,7 @@ def build_underfloor_advanced_fields(
         vol.Optional(
             CONF_HEATING_TYPE,
             default=get_value(CONF_HEATING_TYPE, DEFAULT_HEATING_TYPE_WHEN_SHOWN.value),
-        ): heating_type_selector,
+        ): heating_type_selector
     }
 
     # Warm Floor is a capability of an underfloor heater, not a general
@@ -856,19 +856,22 @@ def _warm_floor_auto_candidate(bt, demand_factor: float) -> str:
     long_ema = getattr(bt, "external_temp_ema_1h", None)
     ema_delta = (
         float(short_ema) - float(long_ema)
-        if isinstance(short_ema, (int, float))
-        and isinstance(long_ema, (int, float))
+        if isinstance(short_ema, (int, float)) and isinstance(long_ema, (int, float))
         else None
     )
     slope = getattr(bt, "temp_slope", None)
 
     cooling = (
-        isinstance(ema_delta, (int, float))
-        and ema_delta <= WARM_FLOOR_AUTO_EMA_COOLING_DELTA_C
-    ) or (
-        isinstance(slope, (int, float))
-        and slope <= WARM_FLOOR_AUTO_COOLING_SLOPE_K_MIN
-    ) or demand_factor >= 0.65
+        (
+            isinstance(ema_delta, (int, float))
+            and ema_delta <= WARM_FLOOR_AUTO_EMA_COOLING_DELTA_C
+        )
+        or (
+            isinstance(slope, (int, float))
+            and slope <= WARM_FLOOR_AUTO_COOLING_SLOPE_K_MIN
+        )
+        or demand_factor >= 0.65
+    )
     warming = (
         isinstance(ema_delta, (int, float))
         and ema_delta >= WARM_FLOOR_AUTO_EMA_WARMING_DELTA_C
@@ -908,11 +911,7 @@ def _warm_floor_auto_candidate(bt, demand_factor: float) -> str:
             )
             or demand_factor >= 0.85
         )
-        return (
-            WARM_FLOOR_LEVEL_BALANCED
-            if strong_cooling
-            else WARM_FLOOR_LEVEL_ECO
-        )
+        return WARM_FLOOR_LEVEL_BALANCED if strong_cooling else WARM_FLOOR_LEVEL_ECO
 
     if cooling:
         return WARM_FLOOR_LEVEL_KEEP_HOT
@@ -940,11 +939,7 @@ def _warm_floor_auto_policy(bt, demand_factor: float) -> str:
     """
     now = monotonic()
     current = getattr(bt, "_warm_floor_auto_policy", None)
-    valid = {
-        WARM_FLOOR_LEVEL_ECO,
-        WARM_FLOOR_LEVEL_BALANCED,
-        WARM_FLOOR_LEVEL_KEEP_HOT,
-    }
+    valid = {WARM_FLOOR_LEVEL_ECO, WARM_FLOOR_LEVEL_BALANCED, WARM_FLOOR_LEVEL_KEEP_HOT}
     if current not in valid:
         # Bootstrap conservatively. The first eligible at/above-target window
         # gets a strong baseline, then later ticks may choose another policy
@@ -1013,15 +1008,12 @@ def _warm_floor_level_intensity(
     if bt is not None:
         bt._warm_floor_auto_policy = None
     return WARM_FLOOR_LEVEL_INTENSITY.get(
-        str(level),
-        WARM_FLOOR_LEVEL_INTENSITY[DEFAULT_WARM_FLOOR_LEVEL],
+        str(level), WARM_FLOOR_LEVEL_INTENSITY[DEFAULT_WARM_FLOOR_LEVEL]
     )
 
 
 def _warm_floor_demand_factor(
-    bt,
-    entity_id: str | None = None,
-    calibration_mode: CalibrationMode | None = None,
+    bt, entity_id: str | None = None, calibration_mode: CalibrationMode | None = None
 ) -> float:
     """Estimate current slab-heating demand from live controller telemetry.
 
@@ -1070,10 +1062,7 @@ def _warm_floor_demand_factor(
     slope = getattr(bt, "temp_slope", None)
     if isinstance(slope, (int, float)) and slope < 0.0:
         slope_demand = _clamp(abs(float(slope)) / UNDERSHOOT_SLOPE_GUARD, 0.0, 1.0)
-        demand = max(
-            demand,
-            slope_demand,
-        )
+        demand = max(demand, slope_demand)
         non_plant_demand = max(non_plant_demand, slope_demand)
 
     # The short EMA reacts to the current room movement; the one-hour EMA
@@ -1109,10 +1098,9 @@ def _warm_floor_demand_factor(
     # when available, so the duty cycle follows the same learned plant data as
     # the structural Warm Floor floor. Missing or invalid estimates remain a
     # no-op for non-MPC and not-yet-trained installations.
-    if (
-        entity_id is not None
-        and calibration_mode
-        in (CalibrationMode.MPC_CALIBRATION, CalibrationMode.MPC_V2_CALIBRATION)
+    if entity_id is not None and calibration_mode in (
+        CalibrationMode.MPC_CALIBRATION,
+        CalibrationMode.MPC_V2_CALIBRATION,
     ):
         mpc_state = _get_mpc_state(bt, entity_id)
         mpc_loss = getattr(mpc_state, "loss_est", None) if mpc_state else None
@@ -1212,8 +1200,7 @@ def _warm_floor_preheat_risk(bt) -> float:
     long_ema = getattr(bt, "external_temp_ema_1h", None)
     ema_delta = (
         float(short_ema) - float(long_ema)
-        if isinstance(short_ema, (int, float))
-        and isinstance(long_ema, (int, float))
+        if isinstance(short_ema, (int, float)) and isinstance(long_ema, (int, float))
         else None
     )
     slope = getattr(bt, "temp_slope", None)
@@ -1255,8 +1242,7 @@ def _warm_floor_preheat_risk(bt) -> float:
         evidence = max(evidence, _clamp(abs(slope) / cooling_rate, 0.0, 1.0))
     if ema_delta is not None and ema_delta < 0.0:
         evidence = max(
-            evidence,
-            _clamp((abs(ema_delta) / 60.0) / cooling_rate, 0.0, 1.0),
+            evidence, _clamp((abs(ema_delta) / 60.0) / cooling_rate, 0.0, 1.0)
         )
     if (
         isinstance(heat_loss, (int, float))
@@ -1265,11 +1251,7 @@ def _warm_floor_preheat_risk(bt) -> float:
     ):
         evidence = max(
             evidence,
-            _clamp(
-                (float(heat_loss) - float(heating_power)) / cooling_rate,
-                0.0,
-                1.0,
-            ),
+            _clamp((float(heat_loss) - float(heating_power)) / cooling_rate, 0.0, 1.0),
         )
     if isinstance(mpc_disturbance, (int, float)) and float(mpc_disturbance) > 0.0:
         evidence = max(
@@ -1284,9 +1266,7 @@ def _warm_floor_rising_factor(bt) -> float:
     slope = getattr(bt, "temp_slope", None)
     if isinstance(slope, (int, float)) and slope > 0.0:
         factor *= _clamp(
-            1.0 - float(slope) / 0.10 * 0.65,
-            WARM_FLOOR_MIN_RISING_DUTY_RATIO,
-            1.0,
+            1.0 - float(slope) / 0.10 * 0.65, WARM_FLOOR_MIN_RISING_DUTY_RATIO, 1.0
         )
 
     short_ema = getattr(bt, "cur_temp_filtered", None)
@@ -1338,12 +1318,15 @@ def _warm_floor_target_balance_factor(bt, demand_factor: float) -> float:
     trajectory_need = 0.0
     if isinstance(slope, (int, float)) and slope < 0.0:
         trajectory_need = max(
-            trajectory_need, _clamp(abs(float(slope)) / UNDERSHOOT_SLOPE_GUARD, 0.0, 1.0)
+            trajectory_need,
+            _clamp(abs(float(slope)) / UNDERSHOOT_SLOPE_GUARD, 0.0, 1.0),
         )
     if isinstance(short_ema, (int, float)) and isinstance(long_ema, (int, float)):
         ema_delta = float(short_ema) - float(long_ema)
         if ema_delta < 0.0:
-            trajectory_need = max(trajectory_need, _clamp(abs(ema_delta) / 0.5, 0.0, 1.0))
+            trajectory_need = max(
+                trajectory_need, _clamp(abs(ema_delta) / 0.5, 0.0, 1.0)
+            )
 
     # The target band is a dynamic proportion, not a second fixed ceiling:
     # farther above target means less heating.  Cooling evidence is allowed
@@ -1417,7 +1400,9 @@ def _actuator_travel_s(trv_state, phase: str) -> float:
     return WARM_FLOOR_ACTUATOR_TRAVEL_S
 
 
-def _latch_generic_actuator_phase(trv_state, requested_on: bool) -> tuple[bool, str | None]:
+def _latch_generic_actuator_phase(
+    trv_state, requested_on: bool
+) -> tuple[bool, str | None]:
     """Latch a Generic Thermostat phase for the actuator travel time.
 
     The wall-clock duty profile is only allowed to choose the next phase after
@@ -1476,9 +1461,11 @@ def _latch_generic_actuator_phase(trv_state, requested_on: bool) -> tuple[bool, 
                 )
             )
             return current_phase == "on", trv_state.warm_floor_actuator_guard
-        trv_state.warm_floor_actuator_guard = "recovery_hold" if (
-            getattr(trv_state, "warm_floor_phase_recovered", False)
-        ) else None
+        trv_state.warm_floor_actuator_guard = (
+            "recovery_hold"
+            if (getattr(trv_state, "warm_floor_phase_recovered", False))
+            else None
+        )
         return current_phase == "on", trv_state.warm_floor_actuator_guard
 
     trv_state.warm_floor_phase_recovered = False
@@ -1486,8 +1473,8 @@ def _latch_generic_actuator_phase(trv_state, requested_on: bool) -> tuple[bool, 
     if requested_phase != current_phase:
         trv_state.warm_floor_actuator_phase = requested_phase
         trv_state.warm_floor_phase_started_at = now
-        trv_state.warm_floor_phase_minimum_until = (
-            now + _actuator_travel_s(trv_state, requested_phase)
+        trv_state.warm_floor_phase_minimum_until = now + _actuator_travel_s(
+            trv_state, requested_phase
         )
         trv_state.warm_floor_force_setpoint_write = True
     return requested_on, None
@@ -1501,8 +1488,7 @@ def _interrupt_generic_actuator_phase(trv_state, reason: str) -> None:
     if (
         getattr(trv_state, "warm_floor_actuator_phase", None) == "off"
         and isinstance(
-            getattr(trv_state, "warm_floor_phase_minimum_until", None),
-            (int, float),
+            getattr(trv_state, "warm_floor_phase_minimum_until", None), (int, float)
         )
         and now < float(trv_state.warm_floor_phase_minimum_until)
     ):
@@ -1588,9 +1574,7 @@ def _apply_generic_duty_cycle(
         return result, "outside_duty_window", period_s, on_s
 
     requested_on = _generic_duty_cycle_is_on(period_s, on_s)
-    phase_on, _phase_guard = _latch_generic_actuator_phase(
-        trv_state, requested_on
-    )
+    phase_on, _phase_guard = _latch_generic_actuator_phase(trv_state, requested_on)
     if not phase_on:
         return result, "outside_duty_window", period_s, on_s
 
@@ -1659,15 +1643,25 @@ def apply_warm_floor_floor(
     # Never override the window/door OFF gate or the outdoor call-for-heat gate.
     if getattr(bt, "contact_open", False):
         _interrupt_generic_actuator_phase(trv_state, "contact_open")
-        _record_status(bt, entity_id, active=False, sustaining_setpoint=None, reason="contact_open")
+        _record_status(
+            bt, entity_id, active=False, sustaining_setpoint=None, reason="contact_open"
+        )
         return computed_value
     if getattr(bt, "call_for_heat", True) is False:
         _interrupt_generic_actuator_phase(trv_state, "outdoor_cutoff")
-        _record_status(bt, entity_id, active=False, sustaining_setpoint=None, reason="outdoor_cutoff")
+        _record_status(
+            bt,
+            entity_id,
+            active=False,
+            sustaining_setpoint=None,
+            reason="outdoor_cutoff",
+        )
         return computed_value
     if getattr(bt, "bt_hvac_mode", None) == HVACMode.OFF:
         _interrupt_generic_actuator_phase(trv_state, "hvac_off")
-        _record_status(bt, entity_id, active=False, sustaining_setpoint=None, reason="hvac_off")
+        _record_status(
+            bt, entity_id, active=False, sustaining_setpoint=None, reason="hvac_off"
+        )
         return computed_value
 
     # Warm Floor is a maintenance feature, never a second heating controller.
@@ -1696,11 +1690,7 @@ def apply_warm_floor_floor(
         reason = "below_target"
         _interrupt_generic_actuator_phase(trv_state, reason)
         _record_status(
-            bt,
-            entity_id,
-            active=False,
-            sustaining_setpoint=None,
-            reason=reason,
+            bt, entity_id, active=False, sustaining_setpoint=None, reason=reason
         )
         return computed_value
 
@@ -1731,11 +1721,7 @@ def apply_warm_floor_floor(
         # unknown/stale telemetry, but do not treat a valid positive slope as
         # proof that the slab should be allowed to cool completely.
         _record_status(
-            bt,
-            entity_id,
-            active=False,
-            sustaining_setpoint=None,
-            reason="sensor_stale",
+            bt, entity_id, active=False, sustaining_setpoint=None, reason="sensor_stale"
         )
         return computed_value
     if isinstance(temp_slope, (int, float)) and temp_slope < -UNDERSHOOT_SLOPE_GUARD:
@@ -1762,7 +1748,13 @@ def apply_warm_floor_floor(
         bt, entity_id, structural_scale, solar_scale
     )
     if sustaining_setpoint is None:
-        _record_status(bt, entity_id, active=False, sustaining_setpoint=None, reason="no_sustaining_floor")
+        _record_status(
+            bt,
+            entity_id,
+            active=False,
+            sustaining_setpoint=None,
+            reason="no_sustaining_floor",
+        )
         return computed_value
 
     sustain_push_c = None
@@ -1807,7 +1799,9 @@ def apply_warm_floor_floor(
         # window even when its cached setpoint happens to compare equal.
         if _is_generic_thermostat(trv_state):
             duty_phase = (
-                "on" if duty_reason == "duty_cycle_on" else "off"
+                "on"
+                if duty_reason == "duty_cycle_on"
+                else "off"
                 if duty_reason in {"outside_duty_window", "rising"}
                 else None
             )
@@ -1888,9 +1882,7 @@ def apply_warm_floor_floor(
         offset_ceiling = sustaining_setpoint - float(trv_internal_temp)
         result = min(computed_value, offset_ceiling)
 
-    _apply_valve_floor(
-        bt, entity_id, structural_scale, solar_scale, demand_factor
-    )
+    _apply_valve_floor(bt, entity_id, structural_scale, solar_scale, demand_factor)
     valve_min_pct = None
     balance = getattr(trv_state, "calibration_balance", None)
     if isinstance(balance, dict) and balance.get("apply_valve"):
@@ -1929,7 +1921,8 @@ def apply_warm_floor_floor(
         active=(
             duty_reason == "duty_cycle_on"
             or (
-                duty_reason not in {
+                duty_reason
+                not in {
                     "duty_cycle_on",
                     "outside_duty_window",
                     "idle_release",

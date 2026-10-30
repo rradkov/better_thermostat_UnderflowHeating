@@ -158,6 +158,12 @@ A **Warm Floor Status** diagnostic sensor is created per instance. `active` mean
 
 ## Boost on window reopen
 
+> **Production availability:** Secondary-device Boost is suspended in release
+> `1.9.3.1.6`. Its settings, test service, status sensor, and automatic activation
+> are unavailable, including for previously enabled configurations. The following
+> describes the retained development implementation. Warm Floor and the standard
+> temperature preset Boost remain available.
+
 Boost is optional and deliberately separate from Warm Floor: it never drives a Warm Floor relay, a switch, or the Better Thermostat's normal heater. It only commands the configured Secondary climate entity. There is no installation-specific default device.
 
 If you've configured a **Secondary climate device** (top of the first step), you can also use it for cooling and fast recovery after a window reopens — most fan-coil/hydronic units, heat pumps and air conditioners already run in both directions, so the same device can boost-heat a cold room back to temperature after airing it out.

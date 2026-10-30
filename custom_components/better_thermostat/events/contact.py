@@ -16,6 +16,7 @@ from typing import Final, Literal
 from homeassistant.helpers import issue_registry as ir
 
 from custom_components.better_thermostat import DOMAIN
+from custom_components.better_thermostat.utils import features
 from custom_components.better_thermostat.utils.boost_heater import (
     record_window_transition,
 )
@@ -230,7 +231,7 @@ async def contact_queue(self, role: ContactRole):
                     # make sure the current state is the suggested change state to prevent a false positive:
                     if current_contact_state == contact_event_to_process:
                         setattr(self, role.open_attr, contact_event_to_process)
-                        if role.kind == "window":
+                        if features.SECONDARY_BOOST_AVAILABLE and role.kind == "window":
                             record_window_transition(
                                 self, role, contact_event_to_process
                             )

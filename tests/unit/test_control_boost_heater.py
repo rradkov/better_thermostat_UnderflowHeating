@@ -361,3 +361,7 @@ class TestBoostStatusReflectsTheSameCycleItStops:
         await control_boost(bt)
         assert bt._boost_status["active"] is True
         assert bt._boost_status["direction"] == HVACMode.HEAT
+
+
+# Exercise the retained experimental implementation explicitly.
+pytestmark = pytest.mark.usefixtures("enable_development_boost")

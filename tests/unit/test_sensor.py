@@ -896,9 +896,12 @@ class TestAsyncSetupEntry:
         async_add_entities.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_creates_eight_core_sensors(self):
-        """Should create 8 core sensors when climate exists: the original 6
-        telemetry sensors plus the Warm Floor and Boost status diagnostics."""
+    @pytest.mark.parametrize("boost_available", [False, True])
+    async def test_creates_core_sensors(self, monkeypatch, boost_available):
+        """Warm Floor diagnostics remain available with production Boost suspended."""
+        from custom_components.better_thermostat.utils import features
+
+        monkeypatch.setattr(features, "SECONDARY_BOOST_AVAILABLE", boost_available)
         bt = _make_bt_climate()
         hass = MagicMock()
         hass.data = {DOMAIN: {"entry_1": {"climate": bt}}}
@@ -918,7 +921,12 @@ class TestAsyncSetupEntry:
 
         async_add_entities.assert_called_once()
         sensors = async_add_entities.call_args[0][0]
-        assert len(sensors) == 8
+        assert len(sensors) == 7 + int(boost_available)
+        assert any(s._attr_translation_key == "warm_floor_status" for s in sensors)
+        assert (
+            any(s._attr_translation_key == "boost_status" for s in sensors)
+            == boost_available
+        )
 
 
 # ===========================================================================

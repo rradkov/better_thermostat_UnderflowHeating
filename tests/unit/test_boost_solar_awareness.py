@@ -167,3 +167,7 @@ async def test_unlearned_solar_gain_is_a_strict_no_op():
     assert bt_no_trvs._boost_heater_tracker.boost_active == (
         bt_unlearned._boost_heater_tracker.boost_active
     )
+
+
+# Exercise the retained experimental implementation explicitly.
+pytestmark = pytest.mark.usefixtures("enable_development_boost")

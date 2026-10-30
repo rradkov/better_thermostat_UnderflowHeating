@@ -358,10 +358,7 @@ def test_generic_duty_phase_edge_requests_a_write_once_per_transition(monkeypatc
     # The requested wall-clock phase is OFF, but the thermal actuator is still
     # inside its minimum ON travel interval, so the effective phase stays ON.
     assert bt.real_trvs["climate.trv"].warm_floor_duty_phase == "on"
-    assert (
-        bt.real_trvs["climate.trv"].warm_floor_actuator_guard
-        == "minimum_on_hold"
-    )
+    assert bt.real_trvs["climate.trv"].warm_floor_actuator_guard == "minimum_on_hold"
     # No OFF write is armed yet: the current ON phase remains latched until
     # the actuator's minimum opening interval has elapsed.
     assert bt.real_trvs["climate.trv"].warm_floor_force_setpoint_write is False
@@ -431,12 +428,8 @@ def test_stronger_rising_slope_reduces_duty_demand_without_blanket_off(monkeypat
     strong.heating_power = 1.0
     monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: True)
 
-    gentle_result = apply_warm_floor_floor(
-        gentle, "climate.trv", 22.0, is_offset=False
-    )
-    strong_result = apply_warm_floor_floor(
-        strong, "climate.trv", 22.0, is_offset=False
-    )
+    gentle_result = apply_warm_floor_floor(gentle, "climate.trv", 22.0, is_offset=False)
+    strong_result = apply_warm_floor_floor(strong, "climate.trv", 22.0, is_offset=False)
 
     assert gentle_result > gentle.bt_target_temp
     assert strong_result > strong.bt_target_temp
@@ -474,9 +467,10 @@ def test_auto_bootstraps_keep_hot_before_confirming_warming(monkeypatch):
     )
 
     assert bt._warm_floor_auto_policy == underfloor.WARM_FLOOR_LEVEL_KEEP_HOT
-    assert first == underfloor.WARM_FLOOR_LEVEL_INTENSITY[
-        underfloor.WARM_FLOOR_LEVEL_KEEP_HOT
-    ]
+    assert (
+        first
+        == underfloor.WARM_FLOOR_LEVEL_INTENSITY[underfloor.WARM_FLOOR_LEVEL_KEEP_HOT]
+    )
 
     # Strong warming is first confirmed, then Auto can move directly to Eco
     # after the minimum dwell and confirmation windows.
@@ -582,14 +576,10 @@ def test_duty_profile_reduces_intensity_above_target_but_keeps_minimum_floor():
     far.external_temp_ema_1h = 24.0
 
     near_profile = underfloor._effective_duty_profile(
-        near,
-        near.real_trvs["climate.trv"],
-        demand_factor=0.0,
+        near, near.real_trvs["climate.trv"], demand_factor=0.0
     )
     far_profile = underfloor._effective_duty_profile(
-        far,
-        far.real_trvs["climate.trv"],
-        demand_factor=0.0,
+        far, far.real_trvs["climate.trv"], demand_factor=0.0
     )
 
     assert far_profile[2] < near_profile[2]
@@ -604,9 +594,7 @@ def test_far_above_target_uses_minimum_on_and_longer_pause():
     bt.external_temp_ema_1h = 24.9
 
     period_s, on_s, intensity = underfloor._effective_duty_profile(
-        bt,
-        bt.real_trvs["climate.trv"],
-        demand_factor=0.0,
+        bt, bt.real_trvs["climate.trv"], demand_factor=0.0
     )
 
     assert on_s == underfloor.WARM_FLOOR_ACTUATOR_TRAVEL_S
@@ -625,14 +613,10 @@ def test_far_above_target_does_not_increase_heat_just_because_room_is_cooling():
     cooling.temp_slope = -0.02
 
     stable_profile = underfloor._effective_duty_profile(
-        stable,
-        stable.real_trvs["climate.trv"],
-        demand_factor=0.0,
+        stable, stable.real_trvs["climate.trv"], demand_factor=0.0
     )
     cooling_profile = underfloor._effective_duty_profile(
-        cooling,
-        cooling.real_trvs["climate.trv"],
-        demand_factor=0.8,
+        cooling, cooling.real_trvs["climate.trv"], demand_factor=0.8
     )
 
     assert cooling_profile[2] <= stable_profile[2]
@@ -650,14 +634,10 @@ def test_near_target_cooling_restores_maintenance_to_hold_zero_slope():
     cooling.temp_slope = -0.02
 
     stable_profile = underfloor._effective_duty_profile(
-        stable,
-        stable.real_trvs["climate.trv"],
-        demand_factor=0.0,
+        stable, stable.real_trvs["climate.trv"], demand_factor=0.0
     )
     cooling_profile = underfloor._effective_duty_profile(
-        cooling,
-        cooling.real_trvs["climate.trv"],
-        demand_factor=0.0,
+        cooling, cooling.real_trvs["climate.trv"], demand_factor=0.0
     )
 
     assert cooling_profile[2] > stable_profile[2]
@@ -675,9 +655,11 @@ def test_warm_floor_level_increases_direct_valve_floor_when_raised():
         underfloor._apply_valve_floor(bt, "climate.trv", 0.5, 1.0)
         return trv.calibration_balance["valve_percent"]
 
-    assert valve_floor(underfloor.WARM_FLOOR_LEVEL_ECO) < valve_floor(
-        underfloor.WARM_FLOOR_LEVEL_BALANCED
-    ) < valve_floor(underfloor.WARM_FLOOR_LEVEL_KEEP_HOT)
+    assert (
+        valve_floor(underfloor.WARM_FLOOR_LEVEL_ECO)
+        < valve_floor(underfloor.WARM_FLOOR_LEVEL_BALANCED)
+        < valve_floor(underfloor.WARM_FLOOR_LEVEL_KEEP_HOT)
+    )
 
 
 def test_generic_duty_profile_adapts_to_falling_temperature():
@@ -812,9 +794,7 @@ def test_generic_duty_demand_uses_per_heater_mpc_feedback(monkeypatch):
     monkeypatch.setattr(underfloor, "_get_mpc_state", lambda *_: mpc_state)
 
     demand = underfloor._warm_floor_demand_factor(
-        bt,
-        "climate.trv",
-        CalibrationMode.MPC_V2_CALIBRATION,
+        bt, "climate.trv", CalibrationMode.MPC_V2_CALIBRATION
     )
 
     assert bt._warm_floor_raw_demand_factor == pytest.approx(0.5)
@@ -879,9 +859,10 @@ def test_dynamic_duty_profiles_converge_when_cooling_demand_is_high():
     # Diagnostics, rather than the level's old fixed clock schedule, drive
     # the profiles toward a sustained maintenance response.
     assert all(profile[2] > 0.9 for profile in profiles)
-    assert profiles[0][2] > underfloor.WARM_FLOOR_LEVEL_INTENSITY[
-        underfloor.WARM_FLOOR_LEVEL_ECO
-    ]
+    assert (
+        profiles[0][2]
+        > underfloor.WARM_FLOOR_LEVEL_INTENSITY[underfloor.WARM_FLOOR_LEVEL_ECO]
+    )
 
 
 def test_dynamic_duty_profile_keeps_a_minimum_maintenance_cadence():
@@ -891,9 +872,7 @@ def test_dynamic_duty_profile_keeps_a_minimum_maintenance_cadence():
     bt.external_temp_ema_1h = 22.0
 
     period_s, on_s, intensity = underfloor._effective_duty_profile(
-        bt,
-        bt.real_trvs["climate.trv"],
-        0.0,
+        bt, bt.real_trvs["climate.trv"], 0.0
     )
 
     assert intensity >= underfloor.WARM_FLOOR_DUTY_MIN_INTENSITY
@@ -1062,6 +1041,8 @@ def test_setpoint_floor_moves_toward_target_when_room_is_cooling():
     falling.temp_slope = -0.02
 
     stable_result = apply_warm_floor_floor(stable, "climate.trv", 20.0, is_offset=False)
-    falling_result = apply_warm_floor_floor(falling, "climate.trv", 20.0, is_offset=False)
+    falling_result = apply_warm_floor_floor(
+        falling, "climate.trv", 20.0, is_offset=False
+    )
 
     assert falling_result > stable_result

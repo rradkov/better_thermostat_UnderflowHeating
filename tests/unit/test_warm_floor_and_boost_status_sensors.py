@@ -11,6 +11,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from homeassistant.components.climate.const import HVACMode
+import pytest
 
 from custom_components.better_thermostat.sensor import (
     BetterThermostatBoostStatusSensor,
@@ -37,7 +38,7 @@ def _make_bt_climate(**overrides):
 # ---------------------------------------------------------------------------
 
 
-def test_no_status_published_reads_disabled():
+def test_warm_floor_without_status_reads_disabled():
     """Before any calibration cycle has run (or no heater is underfloor)."""
     bt = _make_bt_climate()
     del bt._warm_floor_status  # MagicMock would otherwise auto-vivify a Mock
@@ -195,8 +196,7 @@ def test_blocked_heater_refreshes_warm_floor_status():
     trv = MagicMock()
     trv.advanced = {"heating_type": "underfloor"}
     bt = _make_bt_climate(
-        real_trvs={"climate.ufh_living_room": trv},
-        bt_target_temp=22.0,
+        real_trvs={"climate.ufh_living_room": trv}, bt_target_temp=22.0
     )
     record_warm_floor_blocked_status(
         bt, "climate.ufh_living_room", "heater_unavailable"
@@ -213,7 +213,7 @@ def test_blocked_heater_refreshes_warm_floor_status():
 # ---------------------------------------------------------------------------
 
 
-def test_no_status_published_reads_disabled():
+def test_boost_without_status_reads_disabled():
     bt = _make_bt_climate()
     del bt._boost_status
     sensor = BetterThermostatBoostStatusSensor(bt)
@@ -285,3 +285,7 @@ def test_active_cool_status_reads_cooling():
     sensor = BetterThermostatBoostStatusSensor(bt)
     sensor._update_state()
     assert sensor._attr_native_value == "cooling"
+
+
+# Exercise the retained experimental implementation explicitly.
+pytestmark = pytest.mark.usefixtures("enable_development_boost")

@@ -481,10 +481,9 @@ class TestControlQueue:
                 except asyncio.CancelledError:
                     pass
 
-        # The queued request is now actually processed after the successful
-        # cycle releases ignore_states; before the fix the queue stopped after
-        # the first successful pass and this count was three by accident.
-        assert mock_control_trv.await_count == 4
+        # One failed cycle and the two requests queued while it runs. There
+        # must be no duplicate immediate control pass inside a failed cycle.
+        assert mock_control_trv.await_count == 3
         assert queue.empty()
 
     @pytest.mark.asyncio
@@ -516,9 +515,8 @@ class TestControlQueue:
             except asyncio.CancelledError:
                 pass
 
-        # The failed cycle gets one immediate retry pass before the paced
-        # backoff; the queue must then remain bounded rather than spin.
-        assert mock_control_trv.await_count == 2
+        # Retries must observe the backoff, including the first retry.
+        assert mock_control_trv.await_count == 1
 
     @pytest.mark.asyncio
     async def test_sets_ignore_states_during_processing(self):
