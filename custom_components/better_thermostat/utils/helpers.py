@@ -871,7 +871,7 @@ def is_reasonable_temperature(value: float | None) -> bool:
 
 
 def convert_to_float(
-    value: str | int | float | None, instance_name: str, context: str
+    value: str | int | float | None, instance_name: str | None, context: str
 ) -> float | None:
     """Convert value to float or print error message.
 
@@ -883,7 +883,7 @@ def convert_to_float(
     ----------
     value : str | int | float | None
             the value to convert to float
-    instance_name : str
+    instance_name : str | None
             the name of the instance thermostat
     context : str
             the name of the function which is using this, for printing an error message

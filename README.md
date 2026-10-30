@@ -1,9 +1,11 @@
-
+# Better Thermostat Underflow Heating
 
 [![GitHub issues](https://img.shields.io/github/issues/rradkov/better_thermostat_UnderflowHeating?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/issues)
 [![Version](https://img.shields.io/badge/Version-1.9.3.1.6-009688?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/releases)
 
-**For more info visit: <https://better-thermostat.org/>**
+A Home Assistant custom integration based on [Better Thermostat](https://github.com/KartoffelToby/better_thermostat), with adaptive underfloor maintenance.
+
+Use the [configuration guide](docs/Configuration/configuration.md) for fork features. The [upstream website](https://better-thermostat.org/) documents shared features.
 
 ## Requirements
 
@@ -33,7 +35,7 @@ This integration brings some smartness to your connected radiator (and, in this 
 - Dynamic preset temperature learning & persistence (baseline/"no preset" remembers the last temperature you set and survives restarts)
 - **Advanced Control Algorithms**: Choose between MPC, PID, TPI, AI Time Based or simple target temperature matching for precise control.
 - **Selectable Presets**: Configure which preset modes are available for your thermostat during setup.
-- **Warm Floor mode** *(fork-only)*: Keeps underfloor heating from fully idling between heat calls, using the same heat-loss/heating-power/solar telemetry BT already tracks — no new thermal model, no fully-cold slab to recover from.
+- **Warm Floor mode** *(fork-only)*: Keeps underfloor heating from fully idling between heat calls, using the same heat-loss/heating-power/solar telemetry BT already tracks — with bounded maintenance that responds to the room.
 - **Secondary-device Boost** *(development only)*: Suspended in the official `1.9.3.1.6` release while it is redesigned on `dev`. Configuration, automatic activation, the test service, and its status sensor are disabled. Warm Floor and the standard Boost temperature preset remain available.
 
 See [Underfloor heating (Warm Floor) & Boost](docs/Configuration/configuration.md#underfloor-heating-warm-floor-mode) in the configuration guide for details.
@@ -42,13 +44,13 @@ See [Underfloor heating (Warm Floor) & Boost](docs/Configuration/configuration.m
 
 Warm Floor is designed for slow underfloor actuators and remains heat-source-neutral. It can be used with a heat pump, boiler, district heating, electric boiler, buffer tank, or another water-heating source.
 
-- **Safety boundary:** Warm Floor maintenance is allowed when the room temperature is at or above the Better Thermostat target (`current_temperature >= target_temperature`). Below target, normal heating remains in control and Warm Floor sends no maintenance command. At exact target, Auto uses the live diagnostics to maintain a near-zero slope and keep the slab warm.
+- **Safety boundary:** Warm Floor maintenance is allowed when the room temperature is at or above the Better Thermostat target (`current_temperature >= target_temperature`). Below target, normal heating remains in control and Warm Floor sends no maintenance command. At exact target, maintenance remains eligible; actual heat delivery depends on the downstream controller and installation.
 - **Dynamic Eco, Balanced, and Keep it Hot levels:** The three levels are adaptive baselines, not fixed clock schedules. ON and OFF durations are recalculated from temperature slope, short/one-hour EMA, heat loss, heating power, solar/residual warming, target margin, and learned MPC data.
 - **Target-centred maintenance:** At or above target, Warm Floor reduces heating as the room rises above the target band, uses the actuator's four-minute minimum ON travel, and lengthens the pause dynamically. Cooling slope or a falling short EMA can restore maintenance before the room reaches the target; below target, normal Better Thermostat heating remains in control.
-- **Actuator-aware duty cycle:** ON and OFF phases respect the configured mechanical travel minimum of slow electrothermal underfloor actuators, so short pulses are not treated as useful heating.
+- **Actuator-aware duty cycle:** ON and OFF phases respect an internal four-minute mechanical travel minimum of slow electrothermal underfloor actuators, so short pulses are not treated as useful heating.
 - **Optional outdoor compensation:** If `outdoor_sensor` is configured, Warm Floor uses its current temperature as a bounded heat-loss hint. If it is unavailable, the configured `weather_entity` temperature is used when available. These are reused from the normal Better Thermostat configuration; no second outdoor sensor setting is required.
 - **Optional water-temperature compensation:** If `flow_temp_sensor` is configured, its live value is used as a bounded heat-capacity hint. If it is unavailable, `flow_temp_static_c` is used as a manual estimate. If neither is configured, the previous telemetry-only behavior remains active.
-- **Auto level:** The new `Auto` level smoothly selects an Eco-like, Balanced, or Keep-it-Hot baseline from live demand, including room response, outdoor conditions, and optional water temperature.
+- **Auto level:** The `Auto` level selects an Eco-like, Balanced, or Keep-it-Hot baseline from live demand, including room response, outdoor conditions, and optional water temperature.
 - **Explainable diagnostics:** Warm Floor status includes the current decision, duty phase, reason, demand factor, actuator phase, optional outdoor/water values and their sources, and the resolved Auto policy.
 - **Multi-heater zones:** Each configured underfloor heater is evaluated independently. Relays may alternate when safe, while every selected pulse still respects actuator travel time and must produce a real maintenance opportunity.
 
@@ -114,7 +116,13 @@ We support all thermostats which are compatible with Home Assistant as long as t
 
 ### How to setup
 
-Install this integration via HACS or copy the files from the [latest release](https://github.com/rradkov/better_thermostat_UnderflowHeating/releases/latest)
+Add `https://github.com/rradkov/better_thermostat_UnderflowHeating` as a **custom repository** in HACS, category **Integration**, then install Better Thermostat and restart Home Assistant.
+
+For manual installation, copy `custom_components/better_thermostat` from the [latest release](https://github.com/rradkov/better_thermostat_UnderflowHeating/releases/latest) into your Home Assistant `custom_components` directory, then restart. This fork shares the `better_thermostat` integration domain with upstream; install one implementation at a time.
+
+See [Getting started](docs/setup/getting-started.md), [Upgrade and migration](docs/setup/upgrading.md), and [release notes](docs/releases/1.9.3.1.6.md).
+
+Development uses `dev` in this repository. Confirmed releases come from `main`; see the [development workflow](docs/DEVELOPMENT_WORKFLOW.md).
 
 Configuration details can be found in the [documentation](docs/Configuration/configuration.md) or on our website: [better-thermostat.org](https://better-thermostat.org/configuration)
 

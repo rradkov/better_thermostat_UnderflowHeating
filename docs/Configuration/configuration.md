@@ -121,7 +121,7 @@ Better Thermostat offers several algorithms to control your heating:
 
 ## Underfloor heating (Warm Floor mode)
 
-Underfloor heating (UFH) has much higher thermal inertia than a radiator TRV: once the room is satisfied and BT backs a heater fully off, the slab keeps cooling for a long time, so recovering from a fully-cold floor is slow and energy-costly. Warm Floor mode keeps a low, continuous background heat level in UFH-flagged heaters instead of letting them fully idle, but only while the measured room temperature is strictly above the Better Thermostat target. At or below target, normal BT heating owns the actuator and Warm Floor contributes nothing. For Generic Thermostat heaters, every permitted ON window sends the downstream setpoint above the Better Thermostat target so the relay can actually turn on; the target temperature shown on the card never changes.
+Underfloor heating (UFH) has much higher thermal inertia than a radiator TRV: once the room is satisfied and BT backs a heater fully off, the slab keeps cooling for a long time, so recovering from a fully-cold floor is slow and energy-costly. Warm Floor mode keeps a low, continuous background heat level in UFH-flagged heaters instead of letting them fully idle, but when the measured room temperature is at or above the Better Thermostat target, subject to its guards. Below target, normal BT heating owns the actuator and Warm Floor contributes nothing. For Generic Thermostat heaters, every permitted ON window sends the downstream setpoint above the Better Thermostat target so the relay can actually turn on; the target temperature shown on the card never changes.
 
 This works with any `climate.*` heater, including Home Assistant's own **Generic Thermostat** helper (external sensor + on/off relay) — the most common way to wire up UFH — with no extra plumbing.
 
@@ -148,49 +148,44 @@ Choosing `Custom` reveals both raw °C fields below so you can set them directly
 - **The room's real-time trend** — active warming reduces the maintenance duty instead of disabling it outright, while the safe upper band prevents overshoot; the floor tightens immediately if the room is falling faster than expected.
 - **The selected level** — Eco, Balanced, and Keep it Hot start from different baseline intensities, but none has a fixed ON/pause schedule. Cooling demand can make the levels more assertive, while solar/residual warming and a larger margin above target make the pulses shorter and less frequent.
 
-**Warm Floor sustain push (°C)** — optional extension above the mandatory Generic Thermostat duty-cycle pulse. A value of `0.0` still permits the normal ON window when the room is strictly above target, which raises the downstream Generic Thermostat setpoint by at least one valid device step above target. A larger value can extend that setpoint further, scaled down by the same structural-affordability factor as the backoff amount. Range `0.0–1.5°C`. It never changes the target shown on the card and never bypasses the above-target, rising-temperature, stale-sensor, window/door, outdoor, or HVAC-off guards.
+**Warm Floor sustain push (°C)** — optional extension above the mandatory Generic Thermostat duty-cycle pulse. A value of `0.0` still permits the normal ON window when the room is at or above target, which raises the downstream Generic Thermostat setpoint by at least one valid device step above target. A larger value can extend that setpoint further, scaled down by the same structural-affordability factor as the backoff amount. Range `0.0–1.5°C`. It never changes the target shown on the card and never bypasses the temperature-margin, rising-temperature, stale-sensor, window/door, outdoor, or HVAC-off guards.
 
 **Show all calibration modes** (top-level toggle, shown once Underfloor Heating is enabled) — off by default. While off, a heater flagged `Under` only offers **MPC Predictive**, **(AI) MPC v2**, **TPI Controller**, and **PID Controller** in its **Calibration mode** dropdown — the four modes proven to work correctly on a non-valve UFH heater without relying on sustain push. Turn this on to see all 8 modes again; a valve-capable UFH actuator (e.g. a TRV head on a manifold) works correctly on any of them regardless of this setting.
 
-This never overrides an open window/door, a `call_for_heat=false` weather/outdoor gate, or BT being switched off — Warm Floor only ever raises what would otherwise be a fully-idle cycle while the room is strictly above target. It never fights the normal heating computation or forces heat the room doesn't need.
+This never overrides an open window/door, a `call_for_heat=false` weather/outdoor gate, or BT being switched off — Warm Floor only contributes bounded maintenance while the room is at or above target. It never fights the normal heating computation or forces heat the room doesn't need.
 
 A **Warm Floor Status** diagnostic sensor is created per instance. `active` means a sustaining command is currently being applied, `idle` means Warm Floor is enabled but currently paused or guarded (including a Generic Thermostat OFF duty window), and `disabled` means no underfloor heater has reported a decision. The `enabled` attribute distinguishes an enabled feature from the current actuator phase. The sensor also exposes the current sustaining setpoint, backoff amount, and sustain push amount.
 
+### Auto policy, phase timing, and optional inputs
+
+Auto starts with Keep it Hot and selects among Eco, Balanced, and Keep it Hot
+using room response and available load information. Switching normally requires
+10 minutes of candidate confirmation (5 minutes for Keep it Hot) and a 15-minute
+minimum policy dwell time. These are internal guards rather than editable fields.
+The levels are adaptive baselines, not fixed schedules.
+
+Generic Thermostat ON and OFF phases have an internal four-minute minimum for
+slow actuator travel. This is not configurable in this release. Safety and normal
+heating may interrupt a phase. At exact target, maintenance remains eligible;
+above target, a growing margin and warming trend reduce maintenance. Heaters in
+a zone may alternate without requiring simultaneous relay operation.
+
+Optional `outdoor_sensor` and `weather_entity` provide outdoor information. The
+outdoor sensor is preferred when valid. Optional `flow_temp_sensor` provides
+water temperature, with `flow_temp_static_c` as a fallback estimate. Without
+these inputs, available room and learned thermal information still applies.
+These are inputs only: no heating-curve offset or source water setpoint is changed.
+
+Diagnostic `active` describes a calculated maintenance command, not proof of
+valve travel, pump operation, hydraulic flow, floor temperature, or savings.
+Verify downstream and physical behavior. See [Upgrade and migration](../setup/upgrading.md).
+
 ## Boost on window reopen
 
-> **Production availability:** Secondary-device Boost is suspended in release
-> `1.9.3.1.6`. Its settings, test service, status sensor, and automatic activation
-> are unavailable, including for previously enabled configurations. The following
-> describes the retained development implementation. Warm Floor and the standard
-> temperature preset Boost remain available.
+**Unavailable in official release `1.9.3.1.6`.** Secondary-device recovery has no
+setup fields, test service, status sensor, or automatic activation in production.
+Previously saved enabled settings cannot activate it. Normal secondary-device
+cooling and the standard **Boost temperature preset** remain available.
 
-Boost is optional and deliberately separate from Warm Floor: it never drives a Warm Floor relay, a switch, or the Better Thermostat's normal heater. It only commands the configured Secondary climate entity. There is no installation-specific default device.
-
-If you've configured a **Secondary climate device** (top of the first step), you can also use it for cooling and fast recovery after a window reopens — most fan-coil/hydronic units, heat pumps and air conditioners already run in both directions, so the same device can boost-heat a cold room back to temperature after airing it out.
-
-**Enable Boost on window reopen** — shown once a Secondary climate device is configured. When on, if the room temperature drifts by more than the configured threshold while a window is open, closing the window arms a boost: colder than the threshold arms a **heat** boost, warmer arms a **cool** boost (checked against what the secondary device actually reports supporting). Either way it targets your normal target temperature, temporarily taking the secondary device over from its normal duty. Once the boost ends, the device is restored to exactly the mode, temperature, and fan setting it had the moment the boost took over.
-
-**Boost temperature-drift threshold (°C)** — default `5.0°C`, range `0.1–15.0°C`.
-
-**Use a different threshold for cooling** — off by default (one threshold covers both directions). Turn this on to set a separate, lower or higher **Boost cooling threshold (°C)** for the warm-day case, independent of the heat-boost threshold.
-
-**Boost fan speed** — only shown if the Secondary climate device reports fan modes. Optionally forces the device's fan speed (e.g. to maximum) while boosting, restored automatically once the boost ends. Leave as "Don't change fan mode" to skip this.
-
-**Boost anticipation (minutes)** — default `5`, range `0–30`. How many minutes of residual heating/cooling the device keeps delivering into the room after being told to stop; used to stop the boost *before* the room actually reaches target, avoiding overshoot in either direction. When the room's own learned solar gain is available, it's factored in too — a heat boost on a sunny day can stop a little earlier, a cool boost needs a little more margin.
-
-**Boost safety timeout (minutes)** — default `60`, range `5–240`. Forces the boost off after this long regardless of temperature, as a guard against a stuck sensor or a device that isn't actually acting.
-
-**Boost cooldown (minutes)** — default `15`, range `0–120`. Minimum time after a boost ends before another one can arm, so a room that keeps drifting past the threshold (e.g. repeated window in/out) doesn't short-cycle the shared device.
-
-A **Boost Status** diagnostic sensor is created per instance. Its states are:
-
-- `disabled` — Boost is switched off, or no Secondary climate device is configured. This is not an idle Boost cycle.
-- `off` — Boost is enabled and correctly configured, but no cycle is armed.
-- `pending` — a cycle is armed but the Secondary device is currently unavailable; it is cancelled after the safety pending timeout.
-- `heating` / `cooling` — the Boost is actively commanding the reported HVAC direction.
-
-The attributes include `reason`, `enabled`, `configured`, `cooler_entity_id`, and the current armed/active ages. This makes a failed test distinguishable from an idle feature instead of hiding both behind `off`.
-
-**Manually testing it** — the `better_thermostat.test_boost` service arms a boost cycle on demand (pick `heat` or `cool`) so you can confirm the wiring — target device, fan mode, threshold reachability — without needing to actually open and close a window. It does not bypass required configuration: with Boost disabled, without a Secondary device, or when that device does not report the requested HVAC mode, no command is sent and the diagnostic sensor records the reason.
-
-**Safety and ownership** — Boost only takes ownership after a valid window-close decision and only while the BT mode, contact state, and `call_for_heat` gate allow it. It snapshots the Secondary device's HVAC mode, setpoint, and fan mode, then restores them. A maximum runtime and cooldown prevent a stuck sensor or repeated window events from running the device indefinitely. The implementation is capability-based and heat-source-neutral: users may select any compatible `climate.*` entity that supports the requested mode; no specific room, relay, heat pump, or installation entity is assumed.
+See the [development reference](../development/secondary-boost.md) for the retained
+implementation and [Upgrade and migration](../setup/upgrading.md) for existing installations.

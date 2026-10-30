@@ -1099,9 +1099,11 @@ class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
             updated_at = snapshot.get("updated_at")
             if updated_at:
                 try:
-                    snapshot["status_age_s"] = max(
-                        0, int(now - dt_util.parse_datetime(updated_at).timestamp())
-                    )
+                    updated = dt_util.parse_datetime(updated_at)
+                    if updated is not None:
+                        snapshot["status_age_s"] = max(
+                            0, int(now - updated.timestamp())
+                        )
                 except AttributeError, TypeError, ValueError:
                     pass
             heater_statuses[entity_id] = snapshot

@@ -26,7 +26,7 @@ from enum import StrEnum
 import logging
 import math
 from time import monotonic
-from typing import Any, Final
+from typing import Any, Final, overload
 
 from homeassistant.components.climate.const import HVACAction, HVACMode
 from homeassistant.util import dt as dt_util
@@ -412,7 +412,9 @@ def _get_mpc_state(bt, entity_id: str):
         return None
 
 
-def _structural_scale(bt, entity_id: str, calibration_mode: CalibrationMode) -> float:
+def _structural_scale(
+    bt, entity_id: str, calibration_mode: CalibrationMode | str
+) -> float:
     """How much of the configured backoff a room's structure can safely afford.
 
     A leaky/drafty room or a weak UFH loop must *not* be allowed to drift far
@@ -480,7 +482,7 @@ def _structural_scale(bt, entity_id: str, calibration_mode: CalibrationMode) -> 
 
 
 def estimate_solar_gain_rate(
-    bt, entity_id: str, calibration_mode: CalibrationMode
+    bt, entity_id: str, calibration_mode: CalibrationMode | str
 ) -> float | None:
     """Best-effort current solar gain rate (°C/min) for a heater's room, or None.
 
@@ -517,7 +519,7 @@ def estimate_solar_gain_rate(
     return float(solar_gain_est) * float(solar_intensity)
 
 
-def _solar_scale(bt, entity_id: str, calibration_mode: CalibrationMode) -> float:
+def _solar_scale(bt, entity_id: str, calibration_mode: CalibrationMode | str) -> float:
     """How much of the current apparent comfort is transient solar gain.
 
     Only meaningful for MPC-calibrated heaters that have actually learned a
@@ -940,7 +942,7 @@ def _warm_floor_auto_policy(bt, demand_factor: float) -> str:
     now = monotonic()
     current = getattr(bt, "_warm_floor_auto_policy", None)
     valid = {WARM_FLOOR_LEVEL_ECO, WARM_FLOOR_LEVEL_BALANCED, WARM_FLOOR_LEVEL_KEEP_HOT}
-    if current not in valid:
+    if not isinstance(current, str) or current not in valid:
         # Bootstrap conservatively. The first eligible at/above-target window
         # gets a strong baseline, then later ticks may choose another policy
         # after proof of the live trend. This state is policy-only; the caller still blocks the
@@ -1013,7 +1015,9 @@ def _warm_floor_level_intensity(
 
 
 def _warm_floor_demand_factor(
-    bt, entity_id: str | None = None, calibration_mode: CalibrationMode | None = None
+    bt,
+    entity_id: str | None = None,
+    calibration_mode: CalibrationMode | str | None = None,
 ) -> float:
     """Estimate current slab-heating demand from live controller telemetry.
 
@@ -1607,6 +1611,18 @@ def _apply_generic_duty_cycle(
             return result, "duty_cycle_on", period_s, on_s
         return result, None, period_s, on_s
     return pulse_setpoint, "duty_cycle_on", period_s, on_s
+
+
+@overload
+def apply_warm_floor_floor(
+    bt: Any, entity_id: str, computed_value: float, *, is_offset: bool
+) -> float: ...
+
+
+@overload
+def apply_warm_floor_floor(
+    bt: Any, entity_id: str, computed_value: None, *, is_offset: bool
+) -> None: ...
 
 
 def apply_warm_floor_floor(

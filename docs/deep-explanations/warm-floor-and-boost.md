@@ -9,7 +9,7 @@ Two related features aimed at rooms with high thermal inertia (underfloor heatin
 
 A radiator TRV backing off to 0% between heat calls is nearly free to recover from — it's a small metal object with little thermal mass. An underfloor slab is the opposite: once it's let go fully cold, bringing it back up costs a long, energy-heavy recovery, and the room feels the dip the whole time.
 
-Warm Floor keeps a low, continuous background heat level in underfloor-flagged heaters instead of letting them idle to zero — a *sustaining floor* on the setpoint (or offset/valve %, depending on calibration type), never a ceiling. It is eligible while the measured room temperature is at or above the Better Thermostat room target. At or below target, normal BT heating owns the actuator and Warm Floor returns the normal command unchanged; equality is the maintenance boundary and below-target heating remains authoritative. For Generic Thermostat heaters, the duty-cycle ON phase must send the downstream setpoint above the Better Thermostat room target; otherwise the Generic Thermostat cannot turn its relay on. This never changes the user-facing target.
+Warm Floor keeps a low, continuous background heat level in underfloor-flagged heaters instead of letting them idle to zero — a *sustaining floor* on the setpoint (or offset/valve %, depending on calibration type), never a ceiling. It is eligible while the measured room temperature is at or above the Better Thermostat room target. Below target, normal BT heating owns the actuator and Warm Floor returns the normal command unchanged; equality is the maintenance boundary and below-target heating remains authoritative. For Generic Thermostat heaters, the duty-cycle ON phase must send the downstream setpoint above the Better Thermostat room target; otherwise the Generic Thermostat cannot turn its relay on. This never changes the user-facing target.
 
 For Generic Thermostat heaters, an idle cycle also has to release any previous
 downstream pulse. The relay is controlled only by the Generic Thermostat's
@@ -30,7 +30,7 @@ The configured "max backoff" is a ceiling, not a fixed value. Each cycle, BT sca
 - **Short versus one-hour temperature EMA** — the short EMA follows recent room movement, while the one-hour EMA is a slower thermal baseline. When the short EMA is below the one-hour value, Warm Floor treats the room as undergoing sustained cooling even if the instantaneous slope is flat and increases maintenance demand. When it is above the baseline, solar or residual heat is likely helping and the existing maintenance demand is reduced, without removing the selected level or bypassing safety limits.
 - **The external sensor's own freshness** — some real-world temperature sensors only report hourly, or on a ~0.5°C change, which can leave `temp_slope` reading artificially flat for long stretches even while the room is genuinely still moving. If the sensor's last real update is more than ~20 minutes old, BT can't trust that flatness as evidence the room has actually settled - it's treated the same as "still actively gaining," the same suppression as the live-trend guard above, not the more permissive "no trend data available" fallback that applies when a *fresh* reading simply has no slope to report yet.
 
-For Generic Thermostat heaters, the three Warm Floor levels are baseline intensities, not fixed timers. Each control tick converts the selected baseline plus the live thermal demand into a new ON duration and pause. The calculation respects the actuator's minimum travel time, increases maintenance when cooling, heat loss, heating power, or MPC data show a real load, and reduces it when the slope/EMA shows warming or the room is further above target. Above the target band, the measured distance to target is the primary correction signal: the floor still receives the minimum valid maintenance pulse, but ON time bottoms out at the configured four-minute actuator travel time and the pause expands dynamically. A negative slope or a falling short EMA can restore maintenance as the room returns toward target. The wall-clock window is only the mechanism needed to operate a slow ON/OFF actuator; its values are dynamic outputs, not level presets.
+For Generic Thermostat heaters, the three Warm Floor levels are baseline intensities, not fixed timers. Each control tick converts the selected baseline plus the live thermal demand into a new ON duration and pause. The calculation respects the actuator's minimum travel time, increases maintenance when cooling, heat loss, heating power, or MPC data show a real load, and reduces it when the slope/EMA shows warming or the room is further above target. Above the target band, the measured distance to target is the primary correction signal: the floor still receives the minimum valid maintenance pulse, but ON time bottoms out at the internal four-minute actuator travel time and the pause expands dynamically. A negative slope or a falling short EMA can restore maintenance as the room returns toward target. The wall-clock window is only the mechanism needed to operate a slow ON/OFF actuator; its values are dynamic outputs, not level presets.
 
 ## Closing the no-op gap: sustain push
 
@@ -42,42 +42,21 @@ The configurable sustain push is an optional extension of that ON command. Even 
 
 Because the mechanism keys entirely off "is the computed setpoint already pinned at target while idle," not off which calibration mode produced it, it can in principle also engage on the four already-working modes on the rare cycle where they land exactly on target too - it simply has nothing to do most of the time there, since their setpoint is already below target whenever there's real backoff to give.
 
-## Boost: symmetric recovery on window reopen
+## Secondary-device Boost availability
 
-> **Production availability:** Secondary-device Boost is suspended in release
-> `1.9.3.1.6`. Its settings, test service, status sensor, and automatic activation
-> are unavailable, including for previously enabled configurations. The following
-> describes the retained development implementation. Warm Floor and the standard
-> temperature preset Boost remain available.
+Secondary-device Boost is suspended in official release `1.9.3.1.6`. Its setup
+fields, diagnostic sensor, window hooks, manual service, and control routing are
+blocked, including for previously enabled configurations. The standard Boost
+preset and normal secondary-device cooling remain available.
 
-### Boost is an optional secondary-device feature
+See the [development reference](../development/secondary-boost.md) for the retained
+experimental implementation. Production setup and phase timing are described
+in the [configuration guide](../Configuration/configuration.md#underfloor-heating-warm-floor-mode).
 
-Boost is not another Warm Floor level and is not a generic relay command. It can only command the Secondary climate entity configured for this Better Thermostat instance. That separation matters for mixed installations: Warm Floor may maintain an underfloor loop, while Boost may use a fan-coil, heat pump, or another `climate.*` device for fast recovery. If no compatible Secondary device is configured, Boost remains disabled and sends no command.
+## Limits
 
-The diagnostic lifecycle is explicit:
-
-`disabled` → `off` → `pending` → `heating`/`cooling` → `off`
-
-`disabled` means the feature is not usable yet (toggle off or no Secondary device). `off` means it is enabled and configured but idle. `pending` means a valid boost was armed but the device is unavailable; the pending timeout cancels it safely. The status also exposes a reason, configuration flags, the selected entity, and elapsed ages, so an unsuccessful manual test cannot look like a normal idle cycle.
-
-The manual `better_thermostat.test_boost` service is a wiring test, not an override of the safety model. It refuses to arm when Boost is disabled, no Secondary entity is configured, or the requested HVAC mode is not reported by that entity. Normal window-close Boost additionally respects the cooldown, contact/door gate, BT HVAC mode, and `call_for_heat` gate. When Boost owns the Secondary entity it snapshots the previous HVAC mode, setpoint, and fan mode and restores them when the cycle completes, is cancelled, or reaches the safety timeout. No installation-specific entity is used as a default.
-
-The original ask was narrower — a fan-coil that kicks in after a window closes if the room got too cold. In practice the same device usually does double duty (heating and cooling), and a hot day with cooling suppressed by an open window can overheat a room just as a cold day can under-heat it. So Boost is symmetric: a drop past the threshold arms a **heat** boost, a rise arms a **cool** boost, checked against what the shared device's `hvac_modes` actually report supporting.
-
-Because the boost channel and the normal cooler control both drive the same entity, an active boost preempts the regular cooling pass for as long as it runs, and control reverts automatically once the boost ends.
-
-### Stopping before overshoot, not after
-
-A naive "stop once within tolerance of target" both overshoots (the device keeps delivering residual heat/cooling for a few minutes after being told to stop) and risks stopping too early on a noisy blip. Boost's termination is anticipatory instead:
-
-- It projects the room's trajectory forward by a configurable **anticipation window** (the time residual heat/cooling keeps flowing after the device is told to stop) using the room's current rate of change, and stops the instant that projection is expected to reach target — not once it's already there.
-- **Solar gain**, once learned, is folded into that projection too: solar is always a warming contribution, so it always pushes the projected temperature warmer. For a heat boost that means stopping a little earlier (the sun keeps finishing the job); for a cool boost it means needing a little more margin (the sun keeps fighting it).
-- A slower, locally-tracked trend signal guards against stopping early on a single noisy reading — fed every control cycle, not just while a boost is active, so it has genuine standing memory of the room's actual recent state by the time a boost starts.
-- A safety timeout force-stops the boost regardless of temperature, guarding against a stuck sensor or a device that isn't actually acting.
-- A cooldown after each boost ends prevents a room that keeps drifting past the threshold (repeated window in/out) from short-cycling the shared device.
-
-## What's deliberately out of scope
-
-- No bespoke thermal model for either feature — everything above reuses telemetry (heat loss, heating power, MPC Loss/Gain/Ka, solar gain, temperature slope) BT already maintains for its calibration algorithms.
-- No switch-domain relay dispatch — both features work through ordinary `climate.*` entities, including Home Assistant's own Generic Thermostat helper, which already covers the common on/off-relay underfloor-heating setup.
-- Warm Floor never forces heat and Boost never bypasses the open-window/door gate — both sit strictly on top of the existing control decisions, never underneath them.
+The four-minute Generic Thermostat actuator phase minimum is an internal default,
+not a configurable timing field. Safety and normal-heating handover take priority.
+Warm Floor acts through supported climate entities and does not directly control
+a relay, heat source, heating curve, or water-temperature setpoint. Its status
+cannot prove actual water flow, floor warmth, or energy savings.

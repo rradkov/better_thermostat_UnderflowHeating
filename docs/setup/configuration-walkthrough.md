@@ -102,3 +102,18 @@ Use [Algorithm selection](/optimal-settings/algorithm-selection/) for decision h
 </div>
 
 </div>
+
+## Underfloor heating in this fork
+
+Enable **Underfloor Heating** on the first screen, then select the underfloor
+heating type for each relevant heater on the advanced screen. Choose Eco,
+Balanced, Keep it Hot, Auto, or Custom. The internal actuator phase minimum is
+four minutes in this release; there is no separate timing field.
+
+Maintenance is eligible at or above the room target, subject to guards. Below
+target, normal heating takes over. Optional outdoor and water-temperature inputs
+inform maintenance; they do not control the heating source.
+
+See the [full Warm Floor guide](../Configuration/configuration.md#underfloor-heating-warm-floor-mode)
+for modes, fallbacks, and diagnostics. Secondary-device Boost is suspended in
+release `1.9.3.1.6`, so its controls are intentionally absent.

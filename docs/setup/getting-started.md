@@ -9,9 +9,15 @@ Installing Better Thermostat and setting up your first room takes a few minutes.
 
 ## 1) Install the integration
 
-The easiest way to install Better Thermostat is using HACS (Home Assistant Community Store):
+This fork requires **Home Assistant 2026.9.0 or later**. In HACS, add
+`https://github.com/rradkov/better_thermostat_UnderflowHeating` as a custom repository
+with category **Integration**, then install Better Thermostat. Use an official
+release for production; `dev` is for controlled development testing.
 
-<a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=KartoffelToby&amp;repository=better_thermostat&amp;category=integration"><img alt="Open HACS repository" src="https://my.home-assistant.io/badges/hacs_repository.svg" /></a>
+This fork and upstream share the same integration domain. Keep one implementation
+installed; see [Upgrade and migration](upgrading.md) when replacing an installation.
+
+<a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=rradkov&amp;repository=better_thermostat_UnderflowHeating&amp;category=integration"><img alt="Open HACS repository" src="https://my.home-assistant.io/badges/hacs_repository.svg" /></a>
 
 After installation, remember to restart Home Assistant.
 
@@ -27,7 +33,7 @@ Or click this button to start directly:
 
 Before setting up a room, make sure you have these devices ready in Home Assistant:
 
-- **A smart radiator valve or thermostat** (required)
+- **A supported climate heater** (required), such as a radiator thermostat or a Generic Thermostat controlling an underfloor relay
 - **A separate room temperature sensor** (required: the sensor inside the radiator valve sits too close to the heat source to read the room, and the setup form will not let you finish without one)
 - *Optional:* A window sensor (to automatically pause heating when you air out the room)
 - *Optional:* A weather integration or outdoor temperature sensor (to stop heating when it's warm outside)
@@ -39,3 +45,10 @@ The [Configuration walkthrough](/setup/configuration-walkthrough/) goes through 
 ## 5) Apply recommended defaults
 
 If you are unsure what to pick, start from [Recommended settings](/optimal-settings/recommended-settings/) and adjust from there.
+
+## Underfloor heating
+
+Enable Underfloor Heating and select the relevant heater type and Warm Floor
+level. See the [configuration guide](../Configuration/configuration.md#underfloor-heating-warm-floor-mode).
+Secondary-device Boost is unavailable in official release `1.9.3.1.6`; the standard
+Boost temperature preset remains available.

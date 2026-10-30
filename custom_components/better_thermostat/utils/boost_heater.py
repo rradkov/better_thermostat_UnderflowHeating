@@ -68,7 +68,7 @@ DEFAULT_BOOST_PENDING_TIMEOUT_MINUTES: Final = 10.0
 
 # Sentinel meaning "leave fan_mode alone" in the config-flow selector, since
 # voluptuous/HA selectors need a real string option, not a bare None.
-_NO_FAN_MODE_OVERRIDE: Final = "__no_change__"
+_NO_FAN_MODE_OVERRIDE: Final = "no_change"
 
 # Slow EMA time constant used for the trend-confirmation guard against
 # stopping on a brief blip, matching the project's existing 1h EMA sensor.
@@ -345,7 +345,7 @@ def normalize_boost_heater_user_submission(
         out[CONF_BOOST_THRESHOLD_COOL] = DEFAULT_BOOST_THRESHOLD_COOL
 
     raw_fan_mode = data.get(CONF_BOOST_FAN_MODE)
-    if raw_fan_mode in (None, "", _NO_FAN_MODE_OVERRIDE):
+    if raw_fan_mode in (None, "", "__no_change__", _NO_FAN_MODE_OVERRIDE):
         out[CONF_BOOST_FAN_MODE] = None
     else:
         out[CONF_BOOST_FAN_MODE] = str(raw_fan_mode)
@@ -587,11 +587,9 @@ def _boost_should_stop(
         )
         return True
 
-    lag_minutes = (
-        getattr(bt, "boost_lag_minutes", None)
-        if getattr(bt, "boost_lag_minutes", None) is not None
-        else DEFAULT_BOOST_LAG_MINUTES
-    )
+    lag_minutes = getattr(bt, "boost_lag_minutes", None)
+    if lag_minutes is None:
+        lag_minutes = DEFAULT_BOOST_LAG_MINUTES
     ema_reference = getattr(bt, "cur_temp_filtered", None)
     if not isinstance(ema_reference, (int, float)):
         ema_reference = cur_temp

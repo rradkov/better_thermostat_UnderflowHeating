@@ -426,7 +426,7 @@
     },
     "boost_fan_mode": {
       "options": {
-        "__no_change__": "Don't change fan mode"
+        "no_change": "Don't change fan mode"
       }
     },
     "mpc_v2_plant_preset": {
