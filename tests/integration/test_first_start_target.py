@@ -1,7 +1,7 @@
 """The room target a thermostat comes up with when it has none of its own.
 
 A thermostat that starts without a saved target, on a fresh install or from
-a stored state that carries no target, takes over the setpoint its heads
+a usable stored state that carries no target, takes over the setpoint its heads
 already hold, bounded into the range it can publish. The fallback default is
 only for heads that report no setpoint at all. A head that is off holds its
 off or frost setpoint, not a room target, and a separate cooler is not a head
@@ -38,11 +38,12 @@ from .conftest import (
 BT_ENTITY = "climate.bt_test"
 COOLER_ID = "climate.fake_cooler"
 
-# Each start is run twice: from nothing, and from a stored state that
-# carries no target, as a thermostat saved while it was unavailable does.
+# Each start is run twice: from nothing, and from a usable stored state
+# that carries no target. Unavailable states follow the fork's separate
+# safety rule: a child may still carry a temporary Warm Floor pulse.
 START_KINDS = (
     pytest.param(None, id="fresh"),
-    pytest.param(State(BT_ENTITY, "unavailable", {}), id="stored-without-target"),
+    pytest.param(State(BT_ENTITY, "heat", {}), id="stored-without-target"),
 )
 
 
@@ -145,6 +146,12 @@ async def test_a_start_without_a_target_adopts_the_head_setpoint(
     bt = await _start(hass, stored, head())
 
     assert bt.bt_target_temp == pytest.approx(20.0, abs=0.01)
+
+
+async def test_an_unavailable_saved_room_does_not_adopt_a_maintenance_pulse(hass):
+    """A temporary child setpoint must not become the user's target on reload."""
+    bt = await _start(hass, State(BT_ENTITY, "unavailable", {}), _Head(target=26.0))
+    assert bt.bt_target_temp == DEFAULT_TARGET_TEMP
 
 
 @pytest.mark.parametrize("stored", START_KINDS)
