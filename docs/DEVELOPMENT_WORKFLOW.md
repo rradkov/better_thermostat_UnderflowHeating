@@ -1,49 +1,36 @@
 # Development workflow
 
-This repository is the public development copy of Better Thermostat Underflow Heating.
-It is used to implement, test, and validate changes before they are proposed to the
-production repository:
+Development and production share one repository:
+`rradkov/better_thermostat_UnderflowHeating`.
 
-- Development: `rradkov/better_thermostat_UnderflowHeating-dev`
-- Production: `rradkov/better_thermostat_UnderflowHeating`
+- `dev` contains development work and controlled Home Assistant validation.
+- `main` contains confirmed production changes and is the source for releases.
+- The former `better_thermostat_UnderflowHeating-dev` repository is consolidated
+  into `dev` and is no longer the development destination.
 
 ## Rules
 
-1. New work starts from the DEV repository and is developed on a feature branch.
-2. Every non-trivial change must include focused tests and a clear commit message
-   explaining what changed and why.
-3. Home Assistant validation may use this public DEV repository, but no DEV commit
-   is considered a production release. Test installations must be clearly identified
-   as development installations.
-4. Changes are merged into the DEV `main` only after code review and passing tests.
-5. A production change is created by opening a pull request from DEV `main` to the
-   production repository's `main`.
-6. Production `main` is the only source for releases. Do not create a release from
-   the DEV repository.
-7. Every production release must document additions, changes, fixes, removals,
-   compatibility or migration notes, and verification results.
-8. Before changing project behavior, read and update the private maintainer decision
-   log with the decision, reason, expected behavior, and verification result. Keep
-   that log outside the public repository.
-9. `climate.tatas` is an unrelated fan-coil entity in one installation and must not
-   be used as a special case or modified as part of Warm Floor work.
-
-## Suggested contribution sequence
-
-```text
-feature branch in DEV
-        -> tests and local validation
-        -> optional Home Assistant DEV validation
-        -> PR into DEV main
-        -> PR from DEV main into production main
-        -> production verification
-        -> documented release
-```
+1. Commit and publish every new change to `dev` first.
+2. Include focused tests for behavior changes and a clear commit message.
+3. Promote changes to `main` only after validation and user confirmation.
+4. Create official releases from the confirmed `main` commit. Keep the manifest
+   and project versions synchronized and document changes, compatibility,
+   migration notes, and verification results.
+5. Keep maintainer decision logs and installation-specific observations outside
+   the public repository. Never publish local test checkouts or credentials.
+6. Keep behavior neutral regarding heat sources and installations. Select devices
+   and capabilities through configuration rather than installation-specific IDs.
 
 ## Home Assistant testing
 
-Use the DEV repository only for controlled testing. Record the tested commit,
-configuration, relevant entity histories, observed behavior, and any known
-limitations in the private maintainer log or the corresponding PR. Never infer success
-from a calculated controller decision alone: compare the Better Thermostat state,
-downstream Generic Thermostat state, physical relay state, and floor-pump state.
+Record the tested commit, configuration, observed behavior, and limitations in
+the private maintainer log. Compare calculated decisions with actual downstream
+device behavior; a calculated demand alone does not prove successful heating.
+
+## Optional secondary-device Boost
+
+The post-window secondary-device Boost is experimental and must remain suspended
+in the official Warm Floor release. Its development implementation is retained
+for work on `dev`. Production suspension must cover configuration, saved enabled
+settings, the manual test service, status sensor, window events, and control-loop
+routing. The existing temperature preset named Boost is a separate feature.
