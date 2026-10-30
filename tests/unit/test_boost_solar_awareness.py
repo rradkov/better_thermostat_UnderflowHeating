@@ -11,6 +11,7 @@ used none of Heat Loss/Heating Power/MPC Gain/MPC Ka/MPC Loss/Sun Intensity).
 
 from __future__ import annotations
 
+from time import monotonic
 from unittest.mock import AsyncMock, MagicMock
 
 from homeassistant.components.climate.const import HVACAction, HVACMode
@@ -66,7 +67,7 @@ def _make_bt(
     bt.call_for_heat = True
     bt._boost_heater_tracker = BoostHeaterTracker()
     bt._boost_heater_tracker.boost_direction = boost_direction
-    bt._boost_heater_tracker.boost_started_ts = 0.0
+    bt._boost_heater_tracker.boost_started_ts = monotonic()
     bt._boost_heater_tracker.last_action = last_action
 
     if solar_gain_est is not None:

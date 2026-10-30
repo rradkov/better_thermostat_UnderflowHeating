@@ -78,7 +78,7 @@
           "heating_type": "Under: enables Warm Floor mode for this heater. Radiator/Fan-coil-Convector/AC-HVAC: normal TRV behavior for now - these labels exist so a mixed underfloor+secondary-device setup can identify each heater correctly.",
           "warm_floor_level": "How hard Warm Floor works while the room is at or above the Better Thermostat target. Below target, normal heating owns the heater and Warm Floor sends no maintenance command. At exact target, Warm Floor may maintain the slab while live diagnostics seek a near-zero slope. For Generic Thermostat/on-off heaters the selected level is a dynamic baseline; ON and pause durations are recalculated from heat loss, heating power, temperature slope, short/one-hour EMA, solar/residual warming, target margin, and learned MPC data. Controls both fields below together - pick 'Custom' to set them directly instead.\n***1 · Eco***: Gentle baseline.\n***2 · Balanced***: The default baseline.\n***3 · Keep it Hot***: The strongest baseline; all three levels still adapt to live diagnostics.",
           "warm_floor_max_backoff": "How far below target temperature Warm Floor is allowed to let this heater's setpoint drift during what would otherwise be an idle cycle. The actual backoff used is automatically scaled down from this maximum based on measured heat loss, heating power, and solar gain, so the floor is only ever backed off as far as the room can safely afford.",
-          "warm_floor_sustain_push": "For calibration modes that pin the setpoint at exactly target once idle (so the backoff above has nothing to raise), push the setpoint sent to the heater this much above target instead - while the room is at or above target and normal heating is idle. Never changes the target temperature you see on the card. 0 (default) disables this."
+          "warm_floor_sustain_push": "Optional extra amount above the mandatory Generic Thermostat Warm Floor pulse. During an allowed ON window, the downstream Generic Thermostat setpoint is always raised by at least one valid device step above the Better Thermostat target so its relay can turn on. This value can extend that pulse, never changes the target shown on the card, and 0 (default) means no extra amount."
         }
       },
       "confirm": {
@@ -193,7 +193,9 @@
       "no_off_mode": "Your device is special and has no off mode :(\nBetter Thermostat will use the minimal target temp instead.",
       "no_outside_temp": "You have no outside temperature sensor. Better Thermostat will use the weather entity instead.",
       "target_temp_min_above_max": "The target minimum temperature must not exceed the target maximum temperature.",
-      "no_data": "No data was received. Please try again."
+      "no_data": "No data was received. Please try again.",
+      "no_sensor": "Please select a room temperature sensor.",
+      "trv_in_use": "{trv} is already controlled by the Better Thermostat {entry}. A thermostat can belong to one Better Thermostat only."
     }
   },
   "issues": {
