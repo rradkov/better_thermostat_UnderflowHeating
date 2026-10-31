@@ -116,6 +116,10 @@ WARM_FLOOR_DUTY_MIN_ON_S: Final = WARM_FLOOR_ACTUATOR_TRAVEL_S
 WARM_FLOOR_DUTY_MAX_ON_S: Final = 12 * 60
 WARM_FLOOR_DUTY_MIN_INTENSITY: Final = 0.15
 WARM_FLOOR_DUTY_PAUSE_RESPONSE_S: Final = 15 * 60
+# Additional pause response per degree of measured target excess.  This is a
+# response coefficient, not a maximum pause: the target margin remains free to
+# extend the pause while the four-minute minimum maintenance pulse is kept.
+WARM_FLOOR_DUTY_MARGIN_PAUSE_RESPONSE_S: Final = 15 * 60
 # The desired room equilibrium is target + this small allowance.  It is a
 # control band, not a fixed ON/OFF schedule: the actual correction remains
 # continuous and is qualified by the live thermal diagnostics.
@@ -1394,6 +1398,52 @@ def _effective_duty_profile(
             + WARM_FLOOR_DUTY_PAUSE_RESPONSE_S * (1.0 - intensity) ** 2
         )
     )
+
+    # The minimum maintenance intensity above target used to make the base
+    # pause converge to one effective ceiling (14.8 minutes in the default
+    # profile).  That prevented a materially overheated room from being
+    # allowed to drift back toward target.  Keep the minimum four-minute pulse,
+    # but extend the pause from the measured target margin and live warming
+    # evidence.  No temperature ceiling or maximum pause is introduced: the
+    # response grows with the actual margin and is reduced again as the room
+    # approaches target or begins cooling.
+    current = getattr(bt, "cur_temp", None)
+    target = getattr(bt, "bt_target_temp", None)
+    if (
+        isinstance(current, (int, float))
+        and isinstance(target, (int, float))
+        and float(current) > float(target)
+    ):
+        excess_margin = max(
+            0.0,
+            float(current)
+            - float(target)
+            - WARM_FLOOR_TARGET_EQUILIBRIUM_BAND_C,
+        )
+        warming_signal = 0.0
+        slope = getattr(bt, "temp_slope", None)
+        if isinstance(slope, (int, float)) and float(slope) > 0.0:
+            warming_signal = max(
+                warming_signal, _clamp(float(slope) / 0.05, 0.0, 1.0)
+            )
+        short_ema = getattr(bt, "cur_temp_filtered", None)
+        if not isinstance(short_ema, (int, float)):
+            short_ema = getattr(bt, "external_temp_ema", None)
+        long_ema = getattr(bt, "external_temp_ema_1h", None)
+        if isinstance(short_ema, (int, float)) and isinstance(
+            long_ema, (int, float)
+        ):
+            warming_signal = max(
+                warming_signal,
+                _clamp((float(short_ema) - float(long_ema)) / 0.5, 0.0, 1.0),
+            )
+        pause_s += int(
+            round(
+                WARM_FLOOR_DUTY_MARGIN_PAUSE_RESPONSE_S
+                * excess_margin
+                * (1.0 + warming_signal)
+            )
+        )
     period_s = on_s + pause_s
     bt._warm_floor_effective_intensity = round(intensity, 4)
     return period_s, on_s, intensity

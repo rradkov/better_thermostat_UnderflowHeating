@@ -602,6 +602,55 @@ def test_far_above_target_uses_minimum_on_and_longer_pause():
     assert intensity == pytest.approx(underfloor.WARM_FLOOR_DUTY_MIN_INTENSITY)
 
 
+def test_target_margin_extends_pause_beyond_minimum_profile():
+    near = _make_bt(cur_temp=22.2, target_temp=22.0)
+    far = _make_bt(cur_temp=24.0, target_temp=22.0)
+    near.temp_slope = 0.0
+    far.temp_slope = 0.0
+    near.cur_temp_filtered = near.external_temp_ema = 22.2
+    far.cur_temp_filtered = far.external_temp_ema = 24.0
+    near.external_temp_ema_1h = 22.2
+    far.external_temp_ema_1h = 24.0
+
+    near_profile = underfloor._effective_duty_profile(
+        near, near.real_trvs["climate.trv"], demand_factor=0.0
+    )
+    far_profile = underfloor._effective_duty_profile(
+        far, far.real_trvs["climate.trv"], demand_factor=0.0
+    )
+
+    assert far_profile[1] == underfloor.WARM_FLOOR_ACTUATOR_TRAVEL_S
+    assert far_profile[0] - far_profile[1] > (
+        near_profile[0] - near_profile[1]
+    )
+    assert far_profile[0] - far_profile[1] > (
+        underfloor.WARM_FLOOR_DUTY_MIN_PAUSE_S
+        + underfloor.WARM_FLOOR_DUTY_PAUSE_RESPONSE_S
+        * (1.0 - underfloor.WARM_FLOOR_DUTY_MIN_INTENSITY) ** 2
+    )
+
+
+def test_warming_evidence_extends_pause_without_changing_minimum_pulse():
+    stable = _make_bt(cur_temp=23.0, target_temp=22.0)
+    warming = _make_bt(cur_temp=23.0, target_temp=22.0)
+    stable.temp_slope = 0.0
+    warming.temp_slope = 0.05
+    stable.cur_temp_filtered = stable.external_temp_ema = 23.0
+    warming.cur_temp_filtered = warming.external_temp_ema = 23.4
+    stable.external_temp_ema_1h = 23.0
+    warming.external_temp_ema_1h = 23.0
+
+    stable_profile = underfloor._effective_duty_profile(
+        stable, stable.real_trvs["climate.trv"], demand_factor=0.0
+    )
+    warming_profile = underfloor._effective_duty_profile(
+        warming, warming.real_trvs["climate.trv"], demand_factor=0.0
+    )
+
+    assert warming_profile[1] == stable_profile[1]
+    assert warming_profile[0] > stable_profile[0]
+
+
 def test_far_above_target_does_not_increase_heat_just_because_room_is_cooling():
     stable = _make_bt(cur_temp=24.0, target_temp=22.0)
     cooling = _make_bt(cur_temp=24.0, target_temp=22.0)
