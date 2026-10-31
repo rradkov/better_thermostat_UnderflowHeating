@@ -1655,7 +1655,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         """Show the user step prefilled from ``current`` and ``user_input``."""
         fields = _build_user_fields(
             mode="update",
-            current=self._config_entry.data,
+            current=current,
             user_input=user_input,
             hass=self.hass,
             system_unit=self.hass.config.units.temperature_unit,
