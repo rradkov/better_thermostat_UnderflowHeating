@@ -37,6 +37,14 @@ RETIRED = {
 
 SERVICE_REFERENCE = re.compile(r"better_thermostat\.([a-z0-9_]+)")
 
+# These pages identify a suspended service for migration/development, rather
+# than instructing production users to call it. Blueprints receive no exception.
+SUSPENDED_SERVICE_DOCS = {
+    "docs/development/secondary-boost.md",
+    "docs/releases/1.9.3.1.6.md",
+    "docs/setup/upgrading.md",
+}
+
 
 def _documentation_files() -> list[Path]:
     docs = REPO / "docs"
@@ -68,13 +76,25 @@ def _rel(path: Path) -> str:
 def test_docs_reference_only_declared_services():
     allowed = _declared_services() | RETIRED
     unknown = {
-        _rel(path): sorted(_referenced_services(path) - allowed)
+        _rel(path): sorted(
+            _referenced_services(path)
+            - allowed
+            - ({"test_boost"} if _rel(path) in SUSPENDED_SERVICE_DOCS else set())
+        )
         for path in _documentation_files()
-        if _referenced_services(path) - allowed
+        if _referenced_services(path)
+        - allowed
+        - ({"test_boost"} if _rel(path) in SUSPENDED_SERVICE_DOCS else set())
     }
     assert not unknown, (
         f"documentation refers to services that are not in services.yaml: {unknown}"
     )
+
+
+def test_suspended_service_docs_explain_its_production_unavailability():
+    for relative in SUSPENDED_SERVICE_DOCS:
+        text = (REPO / relative).read_text(encoding="utf-8").lower()
+        assert "suspended" in text or "unavailable" in text
 
 
 def test_retired_service_names_appear_only_in_the_migration_doc():

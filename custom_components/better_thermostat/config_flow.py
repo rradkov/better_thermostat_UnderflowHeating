@@ -1175,7 +1175,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for Better Thermostat."""
 
     VERSION = 18
-    MINOR_VERSION = 2
 
     def __init__(self):
         """Initialize the config flow."""

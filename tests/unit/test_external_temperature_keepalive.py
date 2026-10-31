@@ -54,6 +54,7 @@ def _startup_bt():
     mock.hass = MagicMock()
     mock.device_name = "Test BT"
     mock.is_removed = False
+    mock.control_queue_task = asyncio.Queue()
     mock.real_trvs = {TRV_ID: Trv(entity_id=TRV_ID, advanced={})}
     mock.all_trvs = None
     mock.all_entities = []

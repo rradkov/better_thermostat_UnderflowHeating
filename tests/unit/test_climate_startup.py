@@ -2282,6 +2282,7 @@ class TestRestoreState:
         bt.state_mgr.active_preset = "comfort"
         bt.state_mgr.preset_heat_temperatures = {"comfort": 22.0}
         bt.state_mgr.preset_cool_temperatures = {}
+        bt.state_mgr.clamped_thermal.return_value = (None, None)
 
         await BetterThermostat._restore_state(bt, [_make_trv_state()])
 
