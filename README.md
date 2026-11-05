@@ -1,7 +1,7 @@
 # Better Thermostat Underflow Heating
 
 [![GitHub issues](https://img.shields.io/github/issues/rradkov/better_thermostat_UnderflowHeating?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/issues)
-[![Version](https://img.shields.io/badge/Version-1.9.3.1.6-009688?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/releases)
+[![Version](https://img.shields.io/badge/Version-1.9.3.1.7-009688?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/releases)
 
 A Home Assistant custom integration based on [Better Thermostat](https://github.com/KartoffelToby/better_thermostat), with adaptive underfloor maintenance.
 
@@ -36,7 +36,7 @@ This integration brings some smartness to your connected radiator (and, in this 
 - **Advanced Control Algorithms**: Choose between MPC, PID, TPI, AI Time Based or simple target temperature matching for precise control.
 - **Selectable Presets**: Configure which preset modes are available for your thermostat during setup.
 - **Warm Floor mode** *(fork-only)*: Keeps underfloor heating from fully idling between heat calls, using the same heat-loss/heating-power/solar telemetry BT already tracks — with bounded maintenance that responds to the room.
-- **Secondary-device Boost** *(development only)*: Suspended in the official `1.9.3.1.6` release while it is redesigned on `dev`. Configuration, automatic activation, the test service, and its status sensor are disabled. Warm Floor and the standard Boost temperature preset remain available.
+- **Secondary-device Boost** *(development only)*: Suspended in the official `1.9.3.1.7` release while it is redesigned on `dev`. Configuration, automatic activation, the test service, and its status sensor are disabled. Warm Floor and the standard Boost temperature preset remain available.
 
 See [Underfloor heating (Warm Floor) & Boost](docs/Configuration/configuration.md#underfloor-heating-warm-floor-mode) in the configuration guide for details.
 
@@ -120,7 +120,7 @@ Add `https://github.com/rradkov/better_thermostat_UnderflowHeating` as a **custo
 
 For manual installation, copy `custom_components/better_thermostat` from the [latest release](https://github.com/rradkov/better_thermostat_UnderflowHeating/releases/latest) into your Home Assistant `custom_components` directory, then restart. This fork shares the `better_thermostat` integration domain with upstream; install one implementation at a time.
 
-See [Getting started](docs/setup/getting-started.md), [Upgrade and migration](docs/setup/upgrading.md), and [release notes](docs/releases/1.9.3.1.6.md).
+See [Getting started](docs/setup/getting-started.md), [Upgrade and migration](docs/setup/upgrading.md), and [release notes](docs/releases/1.9.3.1.7.md).
 
 Development uses `dev` in this repository. Confirmed releases come from `main`; see the [development workflow](docs/DEVELOPMENT_WORKFLOW.md).
 

@@ -620,9 +620,7 @@ def test_target_margin_extends_pause_beyond_minimum_profile():
     )
 
     assert far_profile[1] == underfloor.WARM_FLOOR_ACTUATOR_TRAVEL_S
-    assert far_profile[0] - far_profile[1] > (
-        near_profile[0] - near_profile[1]
-    )
+    assert far_profile[0] - far_profile[1] > (near_profile[0] - near_profile[1])
     assert far_profile[0] - far_profile[1] > (
         underfloor.WARM_FLOOR_DUTY_MIN_PAUSE_S
         + underfloor.WARM_FLOOR_DUTY_PAUSE_RESPONSE_S

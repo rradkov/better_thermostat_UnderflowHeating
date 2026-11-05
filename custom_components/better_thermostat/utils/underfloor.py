@@ -1415,24 +1415,17 @@ def _effective_duty_profile(
         and float(current) > float(target)
     ):
         excess_margin = max(
-            0.0,
-            float(current)
-            - float(target)
-            - WARM_FLOOR_TARGET_EQUILIBRIUM_BAND_C,
+            0.0, float(current) - float(target) - WARM_FLOOR_TARGET_EQUILIBRIUM_BAND_C
         )
         warming_signal = 0.0
         slope = getattr(bt, "temp_slope", None)
         if isinstance(slope, (int, float)) and float(slope) > 0.0:
-            warming_signal = max(
-                warming_signal, _clamp(float(slope) / 0.05, 0.0, 1.0)
-            )
+            warming_signal = max(warming_signal, _clamp(float(slope) / 0.05, 0.0, 1.0))
         short_ema = getattr(bt, "cur_temp_filtered", None)
         if not isinstance(short_ema, (int, float)):
             short_ema = getattr(bt, "external_temp_ema", None)
         long_ema = getattr(bt, "external_temp_ema_1h", None)
-        if isinstance(short_ema, (int, float)) and isinstance(
-            long_ema, (int, float)
-        ):
+        if isinstance(short_ema, (int, float)) and isinstance(long_ema, (int, float)):
             warming_signal = max(
                 warming_signal,
                 _clamp((float(short_ema) - float(long_ema)) / 0.5, 0.0, 1.0),

@@ -50,5 +50,5 @@ If you are unsure what to pick, start from [Recommended settings](/optimal-setti
 
 Enable Underfloor Heating and select the relevant heater type and Warm Floor
 level. See the [configuration guide](../Configuration/configuration.md#underfloor-heating-warm-floor-mode).
-Secondary-device Boost is unavailable in official release `1.9.3.1.6`; the standard
+Secondary-device Boost is unavailable in official release `1.9.3.1.7`; the standard
 Boost temperature preset remains available.

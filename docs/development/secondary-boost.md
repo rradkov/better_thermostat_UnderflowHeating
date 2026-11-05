@@ -4,7 +4,7 @@ description: Development reference, unavailable in the official Warm Floor relea
 ---
 
 This reference describes the retained implementation for work on `dev`. It is
-not a production setup guide. Release `1.9.3.1.6` disables this feature, including
+not a production setup guide. Release `1.9.3.1.7` disables this feature, including
 previously enabled configurations. Its service and status sensor are not registered.
 The standard Boost temperature preset remains available.
 

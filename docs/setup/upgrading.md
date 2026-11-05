@@ -12,7 +12,7 @@ ending in `-dev` is no longer the development destination.
 
 ## Requirements
 
-Release **1.9.3.1.6** requires **Home Assistant 2026.9.0 or later** and the Python
+Release **1.9.3.1.7** requires **Home Assistant 2026.9.0 or later** and the Python
 runtime supported by that release. Check compatibility before updating.
 
 This fork and upstream Better Thermostat use the same `better_thermostat`
@@ -65,6 +65,6 @@ If an update causes a regression, select the previously used release in HACS,
 download it, and restart Home Assistant. Preserve diagnostic information and
 report the affected version and device capabilities without publishing credentials.
 
-See the [release notes](../releases/1.9.3.1.6.md),
+See the [release notes](../releases/1.9.3.1.7.md),
 [configuration guide](../Configuration/configuration.md), and
 [development workflow](../DEVELOPMENT_WORKFLOW.md).

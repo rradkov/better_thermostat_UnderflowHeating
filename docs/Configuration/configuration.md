@@ -182,7 +182,7 @@ Verify downstream and physical behavior. See [Upgrade and migration](../setup/up
 
 ## Boost on window reopen
 
-**Unavailable in official release `1.9.3.1.6`.** Secondary-device recovery has no
+**Unavailable in official release `1.9.3.1.7`.** Secondary-device recovery has no
 setup fields, test service, status sensor, or automatic activation in production.
 Previously saved enabled settings cannot activate it. Normal secondary-device
 cooling and the standard **Boost temperature preset** remain available.

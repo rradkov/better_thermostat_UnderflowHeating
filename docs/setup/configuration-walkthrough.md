@@ -116,4 +116,4 @@ inform maintenance; they do not control the heating source.
 
 See the [full Warm Floor guide](../Configuration/configuration.md#underfloor-heating-warm-floor-mode)
 for modes, fallbacks, and diagnostics. Secondary-device Boost is suspended in
-release `1.9.3.1.6`, so its controls are intentionally absent.
+release `1.9.3.1.7`, so its controls are intentionally absent.

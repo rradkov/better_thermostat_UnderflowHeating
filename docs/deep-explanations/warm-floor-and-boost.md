@@ -44,7 +44,7 @@ Because the mechanism keys entirely off "is the computed setpoint already pinned
 
 ## Secondary-device Boost availability
 
-Secondary-device Boost is suspended in official release `1.9.3.1.6`. Its setup
+Secondary-device Boost is suspended in official release `1.9.3.1.7`. Its setup
 fields, diagnostic sensor, window hooks, manual service, and control routing are
 blocked, including for previously enabled configurations. The standard Boost
 preset and normal secondary-device cooling remain available.
