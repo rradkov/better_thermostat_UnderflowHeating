@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Anchor each Generic Thermostat Warm Floor phase to its own start time.
+  Recalculating the duty profile no longer shifts the entire cycle; a stronger
+  maintenance profile can shorten a running pause while preserving actuator
+  travel time.
+- Release the downstream setpoint below the room target during OFF phases,
+  including exact-target conditions and configured sustaining pushes, so an
+  already-heating Generic Thermostat can actually stop.
+- Report the remaining time for the full Warm Floor phase instead of only
+  its minimum actuator travel interval.
+
 ## 1.9.3.1.7 — 2026-11-05
 
 ### Fixed

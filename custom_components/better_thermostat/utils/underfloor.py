@@ -637,6 +637,23 @@ def _record_status(
         duty_elapsed_s = max(0, int(now - float(phase_started_at)))
     if isinstance(phase_minimum_until, (int, float)):
         duty_remaining_s = max(0, int(float(phase_minimum_until) - now))
+    if (
+        duty_phase is not None
+        and effective_period_s
+        and effective_on_s
+        and isinstance(phase_started_at, (int, float))
+    ):
+        phase_duration_s = (
+            effective_on_s
+            if duty_phase == "on"
+            else effective_period_s - effective_on_s
+        )
+        phase_until = float(phase_started_at) + max(
+            phase_duration_s, WARM_FLOOR_ACTUATOR_TRAVEL_S
+        )
+        if isinstance(phase_minimum_until, (int, float)):
+            phase_until = max(phase_until, float(phase_minimum_until))
+        duty_remaining_s = max(0, int(phase_until - now))
     hvac_action = getattr(bt, "hvac_action", None)
     if isinstance(hvac_action, HVACAction):
         hvac_action = hvac_action.value
@@ -1550,10 +1567,22 @@ def _interrupt_generic_actuator_phase(trv_state, reason: str) -> None:
     trv_state.warm_floor_force_setpoint_write = True
 
 
-def _generic_duty_cycle_is_on(period_s: int, on_s: int) -> bool:
-    """Return the current deterministic Warm Floor ON/OFF window."""
-    phase = dt_util.utcnow().timestamp() % period_s
-    return phase < on_s
+def _generic_duty_cycle_is_on(period_s: int, on_s: int, trv_state) -> bool:
+    """Choose the next phase from time elapsed in this heater's current phase.
+
+    Recalculated durations may advance or delay the next transition, but must
+    never rebase a running cycle against the Unix epoch. A one-second change
+    to a profile then changes its deadline by one second, not an entire phase.
+    The actuator latch handles startup recovery and the minimum travel time.
+    """
+    phase = getattr(trv_state, "warm_floor_actuator_phase", None)
+    started_at = getattr(trv_state, "warm_floor_phase_started_at", None)
+    if phase not in {"on", "off"} or not isinstance(started_at, (int, float)):
+        return True
+    elapsed_s = max(0.0, dt_util.utcnow().timestamp() - float(started_at))
+    duration_s = on_s if phase == "on" else period_s - on_s
+    hold_phase = elapsed_s < max(duration_s, WARM_FLOOR_ACTUATOR_TRAVEL_S)
+    return (phase == "on") == hold_phase
 
 
 def _apply_generic_duty_cycle(
@@ -1620,7 +1649,7 @@ def _apply_generic_duty_cycle(
         _interrupt_generic_actuator_phase(trv_state, "safety_ceiling")
         return result, "outside_duty_window", period_s, on_s
 
-    requested_on = _generic_duty_cycle_is_on(period_s, on_s)
+    requested_on = _generic_duty_cycle_is_on(period_s, on_s, trv_state)
     phase_on, _phase_guard = _latch_generic_actuator_phase(trv_state, requested_on)
     if not phase_on:
         return result, "outside_duty_window", period_s, on_s
@@ -1873,48 +1902,41 @@ def apply_warm_floor_floor(
         # setpoint alone. If the room is strictly above the user target, an
         # old setpoint above the room temperature is therefore a real heating
         # command even when Warm Floor is outside its ON window. Release that
-        # stale command unless the explicitly configured sustain push is the
-        # reason to keep it above target. At exact equality, leave the result
-        # at the target: the OFF window is already unambiguously off, while
-        # the next ON window remains eligible to raise the setpoint and start
-        # a maintenance pulse. This is deliberately limited to Generic
+        # stale command, including any sustaining push applied before the duty
+        # decision. At exact equality, the downstream target must also fall
+        # below the room target: Generic Thermostat preserves its relay state
+        # at equality instead of treating it as an OFF command. The next ON
+        # phase remains eligible for a pulse. This is limited to Generic
         # Thermostat heaters; valve/setpoint devices have their own idle
         # semantics and must not be clamped here.
         if (
             _is_generic_thermostat(trv_state)
             and duty_reason in {"outside_duty_window", "rising"}
-            and sustain_push_c is None
             and bt.hvac_action == HVACAction.IDLE
             and isinstance(cur_temp, (int, float))
             and cur_temp >= target_temp
             and result >= target_temp
         ):
-            if cur_temp > target_temp:
-                # Release one valid device step below the room target so a
-                # stale downstream heating command has an unambiguous OFF
-                # condition. This changes only the downstream actuator
-                # command; the Better Thermostat user target and preset remain
-                # unchanged.
-                release_step = getattr(trv_state, "target_temp_step", None)
-                if not isinstance(release_step, (int, float)) or release_step <= 0:
-                    release_step = getattr(bt, "bt_target_temp_step", None)
-                if not isinstance(release_step, (int, float)) or release_step <= 0:
-                    release_step = 0.5
-                min_temp = convert_to_float(
-                    trv_state.min_temp,
-                    getattr(bt, "device_name", None),
-                    "warm_floor release",
-                )
-                result = target_temp - float(release_step)
-                if isinstance(min_temp, (int, float)):
-                    result = max(result, float(min_temp))
-                duty_reason = "idle_release"
-            else:
-                # At exact equality, do not release below target and do not
-                # leave a stale ON setpoint above it. The OFF window is already
-                # safe, and the next ON window remains eligible to raise the
-                # setpoint for a maintenance pulse.
-                result = target_temp
+            # Release one valid device step below the room target so a
+            # stale downstream heating command has an unambiguous OFF
+            # condition. This changes only the downstream actuator
+            # command; the Better Thermostat user target and preset remain
+            # unchanged.
+            release_step = getattr(trv_state, "target_temp_step", None)
+            if not isinstance(release_step, (int, float)) or release_step <= 0:
+                release_step = getattr(bt, "bt_target_temp_step", None)
+            if not isinstance(release_step, (int, float)) or release_step <= 0:
+                release_step = 0.5
+            min_temp = convert_to_float(
+                trv_state.min_temp,
+                getattr(bt, "device_name", None),
+                "warm_floor release",
+            )
+            result = target_temp - float(release_step)
+            if isinstance(min_temp, (int, float)):
+                result = max(result, float(min_temp))
+            duty_reason = "idle_release"
+            sustain_push_c = None
         if duty_reason == "duty_cycle_on":
             sustain_push_c = round(result - float(bt.bt_target_temp), 3)
     else:

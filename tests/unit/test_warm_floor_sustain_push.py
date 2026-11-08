@@ -9,9 +9,11 @@ touched.
 from __future__ import annotations
 
 from datetime import timedelta
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 from homeassistant.components.climate.const import HVACAction, HVACMode
+from homeassistant.components.generic_thermostat.climate import GenericThermostat
+from homeassistant.const import UnitOfTemperature
 from homeassistant.util import dt as dt_util
 import pytest
 
@@ -158,8 +160,198 @@ def test_generic_idle_releases_stale_setpoint_at_exact_target(monkeypatch):
 
     result = apply_warm_floor_floor(bt, "climate.trv", 26.0, is_offset=False)
 
-    assert result == 22.0
-    assert bt._warm_floor_status["reason"] == "outside_duty_window"
+    assert result == 21.5
+    assert bt._warm_floor_status["reason"] == "idle_release"
+
+
+@pytest.mark.parametrize("target, step", [(18.0, 0.1), (22.0, 0.5), (27.0, 1.0)])
+@pytest.mark.parametrize("sustain_push", [0.0, 0.3, 0.8])
+def test_generic_off_at_target_releases_even_a_sustaining_push(
+    monkeypatch, target, step, sustain_push
+):
+    bt = _make_bt(cur_temp=target, target_temp=target, sustain_push=sustain_push)
+    trv = bt.real_trvs["climate.trv"]
+    trv.integration = "generic_thermostat"
+    trv.target_temp_step = step
+    monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: False)
+
+    result = apply_warm_floor_floor(bt, "climate.trv", target + 1.0, is_offset=False)
+
+    # Generic Thermostat's strict comparison cannot stop an already-ON relay
+    # at equality. The release must cross that boundary on the device grid.
+    assert result == pytest.approx(target - step)
+    assert result < trv.current_temperature
+    assert bt.bt_target_temp == target
+    assert bt._warm_floor_status["active"] is False
+    assert bt._warm_floor_status["sustain_push_c"] is None
+
+
+@pytest.mark.parametrize("epoch_shift", [0, 123456789])
+def test_generic_phase_deadline_survives_one_second_profile_changes(
+    monkeypatch, epoch_shift
+):
+    start = dt_util.utcnow() + timedelta(seconds=epoch_shift)
+    elapsed = [0]
+    monkeypatch.setattr(
+        underfloor.dt_util, "utcnow", lambda: start + timedelta(seconds=elapsed[0])
+    )
+    bt = _make_bt(cur_temp=22.0, target_temp=22.0, sustain_push=0.0)
+    trv = bt.real_trvs["climate.trv"]
+    trv.integration = "generic_thermostat"
+    profile = [960, 600, 0.8]
+    monkeypatch.setattr(
+        underfloor, "_effective_duty_profile", lambda *_: tuple(profile)
+    )
+
+    def decide():
+        return underfloor._apply_generic_duty_cycle(bt, "climate.trv", 22.0, 1.0, 0.4)
+
+    assert decide()[1] == "duty_cycle_on"
+    for second in (60, 240, 539, 599):
+        elapsed[0] = second
+        profile[0] = 960 + second % 2
+        assert decide()[1] == "duty_cycle_on"
+        assert trv.warm_floor_phase_started_at == start.timestamp()
+
+    elapsed[0] = 600
+    assert decide()[1] == "outside_duty_window"
+    off_start = trv.warm_floor_phase_started_at
+    for second in (601, 660, 840, 959):
+        elapsed[0] = second
+        profile[0] = 960 + second % 2
+        assert decide()[1] == "outside_duty_window"
+        assert trv.warm_floor_phase_started_at == off_start
+
+    elapsed[0] = 961
+    assert decide()[1] == "duty_cycle_on"
+    assert (
+        trv.warm_floor_phase_started_at == (start + timedelta(seconds=961)).timestamp()
+    )
+
+
+def test_stronger_profile_shortens_running_pause_without_skipping_travel(monkeypatch):
+    start = dt_util.utcnow()
+    elapsed = [0]
+    monkeypatch.setattr(
+        underfloor.dt_util, "utcnow", lambda: start + timedelta(seconds=elapsed[0])
+    )
+    bt = _make_bt(cur_temp=22.0, target_temp=22.0)
+    trv = bt.real_trvs["climate.trv"]
+    trv.integration = "generic_thermostat"
+    trv.warm_floor_actuator_phase = "off"
+    trv.warm_floor_phase_started_at = start.timestamp()
+    trv.warm_floor_phase_minimum_until = start.timestamp() + 240
+    profile = [900, 540, 0.65]
+    monkeypatch.setattr(
+        underfloor, "_effective_duty_profile", lambda *_: tuple(profile)
+    )
+
+    def decide():
+        return underfloor._apply_generic_duty_cycle(bt, "climate.trv", 22.0, 1.0, 0.4)
+
+    elapsed[0] = 239
+    profile[:] = [900, 700, 0.95]
+    assert decide()[1] == "outside_duty_window"
+    elapsed[0] = 300
+    profile[:] = [900, 540, 0.65]
+    assert decide()[1] == "outside_duty_window"
+    profile[:] = [900, 630, 0.85]
+    assert decide()[1] == "duty_cycle_on"
+
+
+@pytest.mark.parametrize("phase, expected_remaining", [("on", 540), ("off", 300)])
+def test_status_remaining_covers_the_whole_phase(
+    monkeypatch, phase, expected_remaining
+):
+    bt = _make_bt(cur_temp=22.0, target_temp=22.0, sustain_push=0.0)
+    trv = bt.real_trvs["climate.trv"]
+    trv.integration = "generic_thermostat"
+    start = dt_util.utcnow()
+    trv.warm_floor_actuator_phase = phase
+    trv.warm_floor_phase_started_at = start.timestamp() - 60
+    trv.warm_floor_phase_minimum_until = start.timestamp() + 180
+    monkeypatch.setattr(underfloor.dt_util, "utcnow", lambda: start)
+    monkeypatch.setattr(
+        underfloor, "_effective_duty_profile", lambda *_: (960, 600, 0.8)
+    )
+
+    apply_warm_floor_floor(bt, "climate.trv", 22.0, is_offset=False)
+
+    assert bt._warm_floor_status["duty_phase"] == phase
+    assert bt._warm_floor_status["duty_remaining_s"] == expected_remaining
+
+
+async def test_generic_thermostat_relay_stops_at_target_and_restarts_next_pulse(
+    monkeypatch,
+):
+    """Exercise the real Generic Thermostat comparison, including equality."""
+    bt = _make_bt(cur_temp=22.0, target_temp=22.0, sustain_push=0.3)
+    trv = bt.real_trvs["climate.trv"]
+    trv.integration = "generic_thermostat"
+    trv.target_temp_step = 0.1
+    thermostat = GenericThermostat(
+        name="Floor",
+        heater_entity_id="switch.floor",
+        sensor_entity_id="sensor.room",
+        min_temp=5.0,
+        max_temp=30.0,
+        target_temp=22.0,
+        ac_mode=False,
+        min_cycle_duration=None,
+        max_cycle_duration=None,
+        cycle_cooldown=None,
+        cold_tolerance=0.0,
+        hot_tolerance=0.0,
+        keep_alive=None,
+        initial_hvac_mode=HVACMode.HEAT,
+        presets={},
+        precision=0.1,
+        target_temperature_step=0.1,
+        unit=UnitOfTemperature.CELSIUS,
+        unique_id=None,
+    )
+    thermostat.hass = MagicMock()
+    thermostat._cur_temp = 22.0
+    relay = [True]
+    thermostat.hass.states.is_state.side_effect = lambda *_: relay[0]
+    thermostat._async_heater_turn_off = AsyncMock(
+        side_effect=lambda: relay.__setitem__(0, False)
+    )
+    thermostat._async_heater_turn_on = AsyncMock(
+        side_effect=lambda: relay.__setitem__(0, True)
+    )
+
+    # The old OFF command left the relay heating at exact equality.
+    await thermostat._async_control_heating()
+    assert relay[0] is True
+
+    monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: False)
+    thermostat._target_temp = apply_warm_floor_floor(
+        bt, "climate.trv", 23.0, is_offset=False
+    )
+    await thermostat._async_control_heating()
+    assert relay[0] is False
+
+    trv.warm_floor_phase_minimum_until = dt_util.utcnow().timestamp() - 1
+    monkeypatch.setattr(underfloor, "_generic_duty_cycle_is_on", lambda *_: True)
+    thermostat._target_temp = apply_warm_floor_floor(
+        bt, "climate.trv", 22.0, is_offset=False
+    )
+    await thermostat._async_control_heating()
+    assert relay[0] is True
+    assert bt.bt_target_temp == 22.0
+
+
+def test_generic_heaters_keep_independent_phase_clocks(monkeypatch):
+    start = dt_util.utcnow()
+    monkeypatch.setattr(underfloor.dt_util, "utcnow", lambda: start)
+    first = _make_bt().real_trvs["climate.trv"]
+    second = _make_bt().real_trvs["climate.trv"]
+    for heater, elapsed in ((first, 300), (second, 100)):
+        heater.warm_floor_actuator_phase = "off"
+        heater.warm_floor_phase_started_at = start.timestamp() - elapsed
+    assert underfloor._generic_duty_cycle_is_on(900, 630, first) is True
+    assert underfloor._generic_duty_cycle_is_on(900, 630, second) is False
 
 
 def test_does_not_fire_while_still_heating():
