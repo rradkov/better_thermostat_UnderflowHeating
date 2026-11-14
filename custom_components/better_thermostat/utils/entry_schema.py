@@ -79,6 +79,7 @@ from .const import (
     CONF_WINDOW_SENSORS,
     TARGET_TEMP_BOUND_AUTO,
 )
+from .underfloor import normalize_warm_floor, optional_flow_temperature
 
 # A choice as stored: a string, a number from an older version, or ``None``.
 type StoredChoice = str | int | float | None
@@ -106,6 +107,10 @@ TrvAdvanced = TypedDict(  # noqa: UP013
         "homematicip": bool,
         "keep_sensor_selection": bool,
         "balance_mode": StoredChoice,
+        "heating_type": str,
+        "warm_floor_level": str,
+        "warm_floor_max_backoff": float,
+        "warm_floor_sustain_push": float,
     },
     total=False,
 )
@@ -153,6 +158,9 @@ BtSettings = TypedDict(  # noqa: UP013
         "target_temp_step": NotRequired[str | float | None],
         "presets": NotRequired[list[str] | None],
         "distribute_valve_by_trv_temperature": NotRequired[bool],
+        "underfloor_heating_enabled": NotRequired[bool],
+        "flow_temp_sensor": NotRequired[str | None],
+        "flow_temp_static_c": NotRequired[float | None],
     },
 )
 
@@ -305,6 +313,12 @@ def _parse_advanced(value: object, where: str) -> TrvAdvanced:
     where = f"{where}advanced"
     raw = _mapping(value, where)
     advanced: TrvAdvanced = {}
+    if "heating_type" in raw or "warm_floor_level" in raw:
+        warm_floor = normalize_warm_floor(raw)
+        advanced["heating_type"] = warm_floor["heating_type"]
+        advanced["warm_floor_level"] = warm_floor["warm_floor_level"]
+        advanced["warm_floor_max_backoff"] = warm_floor["warm_floor_max_backoff"]
+        advanced["warm_floor_sustain_push"] = warm_floor["warm_floor_sustain_push"]
     for choice_key in _CHOICE_KEYS:
         if choice_key in raw:
             advanced[choice_key] = _choice(raw[choice_key], f"{where}.{choice_key}")
@@ -385,6 +399,17 @@ def parse_settings(raw: Mapping[str, object]) -> BtSettings:
         "thermostat": _parse_thermostats(raw),
         "temperature_sensor": _parse_room_sensor(raw),
     }
+    if "underfloor_heating_enabled" in raw:
+        settings["underfloor_heating_enabled"] = as_bool(
+            raw["underfloor_heating_enabled"]
+        )
+    if "flow_temp_sensor" in raw:
+        settings["flow_temp_sensor"] = _text_or_none(
+            raw["flow_temp_sensor"], "flow_temp_sensor"
+        )
+    if "flow_temp_static_c" in raw:
+        value = raw["flow_temp_static_c"]
+        settings["flow_temp_static_c"] = optional_flow_temperature(value)
     for text_key in _TEXT_KEYS:
         if text_key in raw:
             settings[text_key] = _text_or_none(raw[text_key], text_key)

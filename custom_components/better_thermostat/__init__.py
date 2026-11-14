@@ -58,6 +58,7 @@ from .utils.renamed_entities import (
     stored_state_lock,
 )
 from .utils.stored_values import stored_float
+from .utils.underfloor import migrate_fork_settings
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
@@ -271,10 +272,9 @@ def _keep_settings_in_options(
     the data and empties the options without changing the version, so the
     move is repeated whenever the data holds anything.
     """
-    if entry.data:
-        hass.config_entries.async_update_entry(
-            entry, data={}, options=entry_settings(entry)
-        )
+    settings = migrate_fork_settings(entry_settings(entry))
+    if entry.data or settings != dict(entry.options):
+        hass.config_entries.async_update_entry(entry, data={}, options=settings)
 
 
 async def async_setup_entry(

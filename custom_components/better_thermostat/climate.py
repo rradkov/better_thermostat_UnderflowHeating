@@ -404,6 +404,9 @@ async def async_setup_entry(
         state_class="better_thermostat_state",
     )
     entry.runtime_data.climate = bt_entity
+    bt_entity.warm_floor_enabled = settings.get("underfloor_heating_enabled", False)
+    bt_entity.warm_floor_water_sensor = settings.get("flow_temp_sensor")
+    bt_entity.warm_floor_water_temperature = settings.get("flow_temp_static_c")
     async_normalize_bt_entity_ids(hass, entry, Platform.CLIMATE)
     async_add_entities([bt_entity])
     _LOGGER.debug(
@@ -960,6 +963,7 @@ class BetterThermostat(ClimateEntity, RestoresLastAvailableState):
     # the recorder under its deprecated name too.
     _unrecorded_attributes = (
         TELEMETRY_ATTRIBUTES
+        | {"warm_floor"}
         | {ATTR_STATE_DEGRADED_FOR_SECONDS, ATTR_STATE_ROOM_TEMPERATURE_FILTERED}
         | {
             DEPRECATED_STATE_ATTRIBUTES[name]
@@ -1371,6 +1375,9 @@ class BetterThermostat(ClimateEntity, RestoresLastAvailableState):
         self.real_trvs: dict[str, Trv] = {}
         self.entity_ids: list[str] = []
         self.all_trvs: list[TrvSettings] = trv_configs
+        self.warm_floor_enabled = False
+        self.warm_floor_water_sensor: str | None = None
+        self.warm_floor_water_temperature: float | None = None
         # Static configuration and live runtime values each get a container;
         # the flat attribute names delegate into them via properties.
         # apply_live_settings replaces the configuration as a whole.
@@ -2686,6 +2693,11 @@ class BetterThermostat(ClimateEntity, RestoresLastAvailableState):
             state
             for state in states
             if state.entity_id in self.real_trvs
+            and not (
+                self.warm_floor_enabled
+                and self.real_trvs[state.entity_id].advanced.get("heating_type")
+                == "underfloor"
+            )
             and state.state not in _MODES_WITHOUT_A_HEATING_SETPOINT
             and not member_counts_as_off(self, state.entity_id, state)
         ]
@@ -3895,6 +3907,20 @@ class BetterThermostat(ClimateEntity, RestoresLastAvailableState):
             )
         )
         _LOGGER.info("better_thermostat %s: startup completed.", self.device_name)
+        if self.warm_floor_enabled:
+            self.async_on_remove(
+                async_track_time_interval(
+                    self.hass, self._warm_floor_tick, timedelta(seconds=30)
+                )
+            )
+            if self.warm_floor_water_sensor:
+                self.async_on_remove(
+                    async_track_state_change_event(
+                        self.hass,
+                        [self.warm_floor_water_sensor],
+                        self._warm_floor_source_changed,
+                    )
+                )
         self.async_write_ha_state()
         await self.async_update_ha_state(force_refresh=True)
 
@@ -3999,6 +4025,17 @@ class BetterThermostat(ClimateEntity, RestoresLastAvailableState):
     async def _reconcile_tick(self, now: datetime | None = None) -> None:
         """Periodic reconciliation tick (see controlling.reconcile_tick)."""
         await reconcile_tick(self, now)
+
+    async def _warm_floor_tick(self, now: datetime) -> None:
+        """Request maintenance progression even without a new sensor report."""
+        if not self.startup_running and not self.devices_released:
+            request_control_cycle(self)
+
+    async def _warm_floor_source_changed(
+        self, event: Event[EventStateChangedData]
+    ) -> None:
+        """Recalculate maintenance when its optional flow input changes."""
+        request_control_cycle(self)
 
     async def _maintenance_tick(self, event: datetime | None = None) -> None:
         """Periodic maintenance tick: runs valve exercise when due and enabled."""
@@ -4503,6 +4540,15 @@ class BetterThermostat(ClimateEntity, RestoresLastAvailableState):
                 self.preset_mgr.temperatures
             ),
         }
+        if self.warm_floor_enabled:
+            dev_specific["warm_floor"] = {
+                entity_id: {
+                    key: trv.warm_floor_status.get(key)
+                    for key in ("phase", "reason", "remaining_seconds", "write_result")
+                }
+                for entity_id, trv in self.real_trvs.items()
+                if trv.advanced.get("heating_type") == "underfloor"
+            }
         # The schedule is published only while a TRV has valve maintenance
         # enabled: without one, no run happens on the date it names.
         if collect_maintenance_trvs(self.real_trvs):

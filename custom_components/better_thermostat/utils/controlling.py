@@ -150,6 +150,8 @@ from custom_components.better_thermostat.utils.watcher import (
     report_unapplied_setpoint,
 )
 
+from .warm_floor_control import apply_warm_floor, record_warm_floor_write
+
 if TYPE_CHECKING:
     from custom_components.better_thermostat.climate import BetterThermostat
     from custom_components.better_thermostat.trv import Trv, WriteChannel
@@ -2734,6 +2736,9 @@ async def control_trv(
 
             _temperature = _remapped_states.get("temperature", None)
             _calibration = _remapped_states.get("local_temperature_calibration", None)
+            _temperature, _calibration = apply_warm_floor(
+                self, entity_id, snapshot, trv_desired, _temperature, _calibration
+            )
 
             _advanced = self.real_trvs[entity_id].advanced
             _calibration_mode = configured_calibration_mode(_advanced)
@@ -2843,6 +2848,12 @@ async def control_trv(
                             ", keepalive" if _keepalive else "",
                         )
                         ok = await set_valve(self, entity_id, target_percent)
+                        record_warm_floor_write(
+                            self.real_trvs[entity_id],
+                            "valve",
+                            "sent" if ok else "failed",
+                            float(target_percent),
+                        )
                         if ok:
                             _written = self.real_trvs[entity_id]
                             _written.last_valve_written_monotonic = (
@@ -3128,9 +3139,16 @@ async def control_trv(
                                 _calibration,
                                 _current_calibration,
                             )
-                            if await set_calibration_offset(
+                            _offset_sent = await set_calibration_offset(
                                 self, entity_id, _calibration
-                            ):
+                            )
+                            record_warm_floor_write(
+                                trv,
+                                "offset",
+                                "sent" if _offset_sent else "failed",
+                                _calibration,
+                            )
+                            if _offset_sent:
                                 trv.calibration_received = False
                                 trv.calibration_write_generation += 1
                                 self.task_manager.create_task(
@@ -3242,7 +3260,29 @@ async def control_trv(
                                 self, entity_id, _temperature
                             )
                             if _tvr_has_quirk is False:
-                                await set_temperature(self, entity_id, _temperature)
+                                _accepted = await set_temperature(
+                                    self, entity_id, _temperature
+                                )
+                                record_warm_floor_write(
+                                    trv,
+                                    "setpoint",
+                                    "failed" if _accepted is False else "sent",
+                                    trv.commanded_setpoint,
+                                    self.clock.monotonic(),
+                                )
+                            else:
+                                record_warm_floor_write(
+                                    trv,
+                                    "setpoint",
+                                    "sent",
+                                    trv.commanded_setpoint,
+                                    self.clock.monotonic(),
+                                )
+                        except Exception:
+                            record_warm_floor_write(
+                                trv, "setpoint", "failed", _temperature
+                            )
+                            raise
                         finally:
                             # The delegate records the value it sent after its
                             # own rounding and clamping, which is the one the
@@ -3284,6 +3324,13 @@ async def control_trv(
                     # land on the setpoint the room asks for once it heats
                     # again. That value is BT's own from here on.
                     self.real_trvs[entity_id].remember_setpoint_held(_temperature)
+                    record_warm_floor_write(
+                        self.real_trvs[entity_id],
+                        "setpoint",
+                        "held",
+                        _temperature,
+                        self.clock.monotonic(),
+                    )
                     clear_unapplied_setpoint(self, entity_id)
 
         # Watchdog heartbeat: the control loop demonstrably ran.
@@ -3295,6 +3342,8 @@ async def control_trv(
     finally:
         if _suppression_owned:
             self.real_trvs[entity_id].ignore_trv_states = False
+            if getattr(self, "warm_floor_enabled", False):
+                self.async_write_ha_state()
 
 
 def _setpoint_held_within_step(

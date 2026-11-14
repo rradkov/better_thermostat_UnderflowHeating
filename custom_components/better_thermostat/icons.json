@@ -1,6 +1,9 @@
 {
   "entity": {
     "sensor": {
+      "warm_floor_status": {
+        "default": "mdi:heating-coil"
+      },
       "temp_slope": {
         "default": "mdi:chart-line"
       },

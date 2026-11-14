@@ -104,6 +104,11 @@ from .utils.helpers import (
 )
 from .utils.preset_manager import DEFAULT_ENABLED_PRESETS
 from .utils.stored_values import is_json_object
+from .utils.underfloor import (
+    build_warm_floor_fields,
+    normalize_warm_floor,
+    optional_flow_temperature,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -275,6 +280,9 @@ _UserDraft = TypedDict(  # noqa: UP013
     {
         "name": str,
         "thermostat": list[str],
+        "underfloor_heating_enabled": NotRequired[bool],
+        "flow_temp_sensor": NotRequired[str | None],
+        "flow_temp_static_c": NotRequired[float | None],
         "cooler": str | None,
         "temperature_sensor": str | None,
         "window_sensors": str | None,
@@ -308,6 +316,10 @@ _AdvancedDraft = TypedDict(  # noqa: UP013
         "calibration": StoredChoice,
         "calibration_mode": StoredChoice,
         "mpc_v2_plant_preset": NotRequired[StoredChoice],
+        "heating_type": NotRequired[str],
+        "warm_floor_level": NotRequired[str],
+        "warm_floor_max_backoff": NotRequired[float],
+        "warm_floor_sustain_push": NotRequired[float],
         "protect_overheating": bool,
         "no_off_system_mode": bool,
         "heat_auto_swapped": bool,
@@ -437,6 +449,9 @@ def _merged_settings(
     stored value.
     """
     merged = copy.deepcopy(dict(base))
+    for key in ("underfloor_heating_enabled", "flow_temp_sensor", "flow_temp_static_c"):
+        if key in draft:
+            merged[key] = draft[key]
     merged[CONF_NAME] = draft[CONF_NAME]
     merged[CONF_THERMOSTAT] = list(draft[CONF_THERMOSTAT])
     merged[CONF_COOLER] = draft[CONF_COOLER]
@@ -478,6 +493,12 @@ def _stored_advanced(draft: _AdvancedDraft) -> TrvAdvanced:
         CONF_CALIBRATION: draft[CONF_CALIBRATION],
         CONF_CALIBRATION_MODE: draft[CONF_CALIBRATION_MODE],
     }
+    if "heating_type" in draft:
+        warm_floor = normalize_warm_floor(draft)
+        stored["heating_type"] = warm_floor["heating_type"]
+        stored["warm_floor_level"] = warm_floor["warm_floor_level"]
+        stored["warm_floor_max_backoff"] = warm_floor["warm_floor_max_backoff"]
+        stored["warm_floor_sustain_push"] = warm_floor["warm_floor_sustain_push"]
     if CONF_MPC_V2_PLANT_PRESET in draft:
         stored[CONF_MPC_V2_PLANT_PRESET] = draft[CONF_MPC_V2_PLANT_PRESET]
     stored[CONF_PROTECT_OVERHEATING] = draft[CONF_PROTECT_OVERHEATING]
@@ -684,6 +705,7 @@ def _build_advanced_fields(
     channels: DeviceChannels | None = None,
     system_unit: str,
     bound_sensor: bool = False,
+    underfloor_enabled: bool = False,
 ) -> OrderedDict[vol.Marker, object]:
     views = [_without_balance_mode(source) for source in sources if source is not None]
 
@@ -787,6 +809,8 @@ def _build_advanced_fields(
         )
     ] = bool
 
+    if underfloor_enabled:
+        ordered.update(build_warm_floor_fields(get_value))
     return ordered
 
 
@@ -819,6 +843,12 @@ def _normalize_advanced_submission(
         normalized[CONF_MPC_V2_PLANT_PRESET] = _submitted_choice(
             data[CONF_MPC_V2_PLANT_PRESET], MpcV2PlantPreset.AUTO
         )
+    if "heating_type" in data:
+        warm_floor = normalize_warm_floor(data)
+        normalized["heating_type"] = warm_floor["heating_type"]
+        normalized["warm_floor_level"] = warm_floor["warm_floor_level"]
+        normalized["warm_floor_max_backoff"] = warm_floor["warm_floor_max_backoff"]
+        normalized["warm_floor_sustain_push"] = warm_floor["warm_floor_sustain_push"]
 
     _LOGGER.debug("Normalized advanced submission: %s", normalized)
 
@@ -1065,6 +1095,20 @@ def _build_user_fields(
         default=_as_bool(resolve(CONF_DISTRIBUTE_VALVE_BY_TRV_TEMPERATURE), False),
     )
 
+    add_field(
+        "underfloor_heating_enabled",
+        bool,
+        default=_as_bool(resolve("underfloor_heating_enabled", False), False),
+    )
+    if _as_bool(resolve("underfloor_heating_enabled", False), False):
+        add_entity_selector(
+            "flow_temp_sensor", domain="sensor", device_class="temperature"
+        )
+        add_field(
+            "flow_temp_static_c",
+            vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0, max=100))),
+            default=optional_flow_temperature(resolve("flow_temp_static_c", None)),
+        )
     return fields
 
 
@@ -1235,6 +1279,17 @@ def _normalize_user_submission(
             ):
                 errors[CONF_TARGET_TEMP_MIN] = "target_temp_min_above_max"
 
+    if "underfloor_heating_enabled" in user_input:
+        normalized["underfloor_heating_enabled"] = _as_bool(
+            user_input["underfloor_heating_enabled"], False
+        )
+    for key in ("flow_temp_sensor", "flow_temp_static_c"):
+        if key in user_input or normalized.get("underfloor_heating_enabled") is True:
+            if key == "flow_temp_sensor":
+                normalized["flow_temp_sensor"] = _entity_or_none(user_input.get(key))
+            else:
+                value = user_input.get(key)
+                normalized["flow_temp_static_c"] = optional_flow_temperature(value)
     return normalized
 
 
@@ -1584,6 +1639,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             channels=ctx.channels,
             system_unit=self.hass.config.units.temperature_unit,
             bound_sensor=ctx.bound_sensor,
+            underfloor_enabled=bool(
+                (self.data or {}).get("underfloor_heating_enabled", False)
+            ),
         )
         _LOGGER.debug(
             "ConfigFlow advanced step showing form for trv=%s with defaults=%s",
@@ -1816,6 +1874,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             channels=ctx.channels,
             system_unit=self.hass.config.units.temperature_unit,
             bound_sensor=ctx.bound_sensor,
+            underfloor_enabled=bool(
+                self.updated_config.get("underfloor_heating_enabled", False)
+            ),
         )
         _LOGGER.debug(
             "OptionsFlow advanced step showing form for trv=%s with defaults=%s",

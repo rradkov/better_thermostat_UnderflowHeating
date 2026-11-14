@@ -26,7 +26,10 @@
           "target_temp_max": "Température cible maximale",
           "target_temp_step": "Pas de la température cible",
           "presets": "Préréglages activés",
-          "distribute_valve_by_trv_temperature": "Répartir l'ouverture de vanne selon la température propre de chaque TRV"
+          "distribute_valve_by_trv_temperature": "Répartir l'ouverture de vanne selon la température propre de chaque TRV",
+          "underfloor_heating_enabled": "Activer le chauffage au sol",
+          "flow_temp_sensor": "Capteur de température de départ (facultatif)",
+          "flow_temp_static_c": "Température de départ, valeur de repli statique (°C)"
         },
         "data_description": {
           "name": "Le nom de ce thermostat et de son appareil dans Home Assistant.",
@@ -50,7 +53,10 @@
           "target_temp_max": "La consigne la plus haute que vous pouvez régler. Auto reprend la plage indiquée par vos appareils.",
           "target_temp_step": "De combien la consigne change à chaque pas. Auto reprend le pas le plus grossier de vos thermostats.",
           "presets": "Sélectionnez les préréglages qui doivent être disponibles pour ce thermostat.",
-          "distribute_valve_by_trv_temperature": "Uniquement pour deux TRV ou plus avec le mode de calibration MPC ou MPC v2. Désactivé : chaque TRV reçoit la même ouverture de vanne. Activé : un TRV qui mesure plus froid que le TRV le plus chaud de la pièce s'ouvre davantage, de 8 % par °C (4,4 % par °F) d'écart. Les mesures propres des TRV sont comparées ; un Sonoff TRVZB ou TRV-ZBT doit donc avoir son propre capteur sélectionné et l'option « Conserver la sélection du capteur du TRV » activée. Un TRV calibré par son décalage reçoit l'ouverture de vanne de la pièce."
+          "distribute_valve_by_trv_temperature": "Uniquement pour deux TRV ou plus avec le mode de calibration MPC ou MPC v2. Désactivé : chaque TRV reçoit la même ouverture de vanne. Activé : un TRV qui mesure plus froid que le TRV le plus chaud de la pièce s'ouvre davantage, de 8 % par °C (4,4 % par °F) d'écart. Les mesures propres des TRV sont comparées ; un Sonoff TRVZB ou TRV-ZBT doit donc avoir son propre capteur sélectionné et l'option « Conserver la sélection du capteur du TRV » activée. Un TRV calibré par son décalage reçoit l'ouverture de vanne de la pièce.",
+          "underfloor_heating_enabled": "Activez cette option si l'un de vos radiateurs est une boucle de chauffage au sol. Cela déverrouille une option 'Type de chauffage' par appareil ainsi que le mode Plancher Chaud, qui maintient un faible niveau de chaleur de fond dans le sol au lieu de le laisser refroidir complètement entre les cycles de chauffe.",
+          "flow_temp_sensor": "Température d’eau facultative pour estimer la demande Warm Floor. Ne commande pas la source de chaleur et ne modifie pas le modèle MPC v2.",
+          "flow_temp_static_c": "Valeur de secours facultative en °C si le capteur d’eau est absent. Laisser vide pour ignorer cette entrée."
         }
       },
       "advanced": {
@@ -65,7 +71,11 @@
           "calibration_mode": "Mode de calibrage",
           "no_off_system_mode": "Utiliser la température minimale au lieu de « arrêt »",
           "mpc_v2_plant_preset": "MPC v2 taille de la pièce",
-          "keep_sensor_selection": "Conserver la sélection du capteur du TRV"
+          "keep_sensor_selection": "Conserver la sélection du capteur du TRV",
+          "heating_type": "Type de chauffage",
+          "warm_floor_level": "Niveau Plancher Chaud",
+          "warm_floor_max_backoff": "Recul maximal du Plancher Chaud (°C)",
+          "warm_floor_sustain_push": "Plancher Chaud - poussée de maintien (°C)"
         },
         "data_description": {
           "protect_overheating": "Certains TRVs ne ferment pas complètement la vanne lorsque la température est atteinte. Ou le radiateur a beaucoup de chaleur résiduelle. Cela peut provoquer une surchauffe. Cette option peut prévenir cela.",
@@ -77,7 +87,11 @@
           "calibration_mode": "Comment le calibrage est calculé\n***IA basée sur le temps (par défaut)*** : Apprend au fil du temps la puissance de chauffe de la pièce et en déduit le calibrage.\n***Décalage du capteur externe uniquement*** : Corrige le capteur interne du TRV avec votre capteur de température externe. Aucun régulateur ne s'ajoute par-dessus.\n***MPC prédictif (bêta)*** : Prédit la température de la pièce et en déduit une ouverture de vanne. Apprend le comportement thermique de la pièce.\n***(IA) MPC v2 (QP + Kalman, expérimental)*** : Estime l'état de la pièce avec un filtre de Kalman et calcule une ouverture de vanne avec un régulateur à modèle prédictif. Le réglage MPC v2 taille de la pièce choisit le modèle de la pièce : appris dans la pièce (Auto) ou fixe pour une taille de pièce (petite, moyenne, grande).\n***Agressif*** : Ajoute un supplément au calibrage tant que la pièce chauffe et saute le délai de tolérance, pour que le TRV commence à chauffer plus tôt. Utile si votre pièce chauffe lentement.\n***Contrôleur TPI*** : Calcule la durée d'enclenchement des cycles de chauffe à partir de l'écart de température.\n***Contrôleur PID*** : Calcule une ouverture de vanne à partir de l'écart de température avec un terme proportionnel, intégral et dérivé.\n***Sans étalonnage*** : Envoie la température cible au TRV sans la modifier et n'applique aucune correction.",
           "no_off_system_mode": "Avec cette option, Better Thermostat envoie au TRV sa température minimale au lieu de « arrêt ». Un TRV qui indique sa température minimale est considéré comme éteint : dès que tous les TRV de la pièce sont éteints, la pièce s'éteint, et tourner une molette vers le haut la rallume. Un tour de molette pendant qu'une fenêtre ou une porte est ouverte compte aussi ; le chauffage attend alors que toutes les fenêtres et portes soient fermées. Un TRV sans mode « arrêt » reçoit sa température minimale même sans cette option. Activez-la pour un TRV dont le mode « arrêt » ne fonctionne pas, ou pour un TRV sans mode « arrêt » dont la molette doit allumer et éteindre Better Thermostat.",
           "mpc_v2_plant_preset": "Utilisé uniquement par le mode de calibrage MPC v2.\n***Auto*** : Déduit le modèle de la pièce de ce que Better Thermostat a appris sur elle, par exemple son taux de déperdition thermique.\n***Petite, moyenne ou grande pièce*** : Part d'un modèle de pièce fixe pour cette taille de pièce.",
-          "keep_sensor_selection": "Pour les TRV pouvant réguler sur une température externe (Sonoff TRVZB et TRV-ZBT, Aqara SRTS-A01). Désactivé : Better Thermostat bascule le TRV sur la température externe qu'il écrit, y compris après une réinitialisation ou un nouvel appairage. Activé : le capteur sélectionné sur le TRV reste sélectionné, et la température de la pièce continue d'être écrite dans l'entrée externe. Un TRV qui revient à son propre capteur n'est alors pas rebasculé."
+          "keep_sensor_selection": "Pour les TRV pouvant réguler sur une température externe (Sonoff TRVZB et TRV-ZBT, Aqara SRTS-A01). Désactivé : Better Thermostat bascule le TRV sur la température externe qu'il écrit, y compris après une réinitialisation ou un nouvel appairage. Activé : le capteur sélectionné sur le TRV reste sélectionné, et la température de la pièce continue d'être écrite dans l'entrée externe. Un TRV qui revient à son propre capteur n'est alors pas rebasculé.",
+          "heating_type": "Plancher : active le mode Plancher Chaud pour ce radiateur. Radiateur/Ventilo-convecteur/Climatiseur-HVAC : comportement TRV normal pour l'instant - ces libellés existent pour qu'une installation mixte plancher chauffant + appareil secondaire puisse identifier correctement chaque radiateur.",
+          "warm_floor_level": "À quel point Plancher Chaud travaille pour empêcher ce radiateur de rester totalement inactif. Contrôle les deux champs ci-dessous ensemble - choisissez « Personnalisé » pour les régler directement à la place.\n***1 · Éco***: Doux, consommation d'énergie supplémentaire minimale.\n***2 · Équilibré***: La valeur par défaut - une marge de recul raisonnable, sans poussée de maintien.\n***3 · Garder au chaud***: Recul le plus serré plus une petite poussée de maintien, pour les sols qui ne doivent jamais paraître froids.",
+          "warm_floor_max_backoff": "De combien de degrés sous la température cible le mode Plancher Chaud est autorisé à laisser dériver la consigne de cet appareil pendant ce qui serait autrement un cycle inactif. Le recul réellement utilisé est automatiquement réduit par rapport à ce maximum en fonction des pertes de chaleur, de la puissance de chauffe et du gain solaire mesurés, afin que le sol ne recule que dans la limite de ce que la pièce peut supporter sans risque.",
+          "warm_floor_sustain_push": "Pour les modes de calibration qui figent la consigne exactement à la cible une fois inactifs (le recul ci-dessus n'a alors rien à relever), pousse plutôt la consigne envoyée au radiateur de cette valeur au-dessus de la cible - uniquement lorsque la pièce a déjà atteint la cible et y est restée. Ne modifie jamais la température cible affichée sur la carte. 0 (par défaut) désactive ceci."
         }
       },
       "confirm": {
@@ -132,7 +146,10 @@
           "target_temp_step": "Pas de la température cible",
           "presets": "Préréglages activés",
           "cooler": "Le dispositif de refroidissement (optionnel)",
-          "distribute_valve_by_trv_temperature": "Répartir l'ouverture de vanne selon la température propre de chaque TRV"
+          "distribute_valve_by_trv_temperature": "Répartir l'ouverture de vanne selon la température propre de chaque TRV",
+          "underfloor_heating_enabled": "Activer le chauffage au sol",
+          "flow_temp_sensor": "Capteur de température de départ (facultatif)",
+          "flow_temp_static_c": "Température de départ, valeur de repli statique (°C)"
         },
         "data_description": {
           "name": "Le nom de ce thermostat et de son appareil dans Home Assistant.",
@@ -156,7 +173,10 @@
           "target_temp_step": "De combien la consigne change à chaque pas. Auto reprend le pas le plus grossier de vos thermostats.",
           "presets": "Sélectionnez les préréglages qui doivent être disponibles pour ce thermostat.",
           "cooler": "Facultatif. Un climatiseur ou une autre entité climatique qui refroidit cette pièce en plus des thermostats.",
-          "distribute_valve_by_trv_temperature": "Uniquement pour deux TRV ou plus avec le mode de calibration MPC ou MPC v2. Désactivé : chaque TRV reçoit la même ouverture de vanne. Activé : un TRV qui mesure plus froid que le TRV le plus chaud de la pièce s'ouvre davantage, de 8 % par °C (4,4 % par °F) d'écart. Les mesures propres des TRV sont comparées ; un Sonoff TRVZB ou TRV-ZBT doit donc avoir son propre capteur sélectionné et l'option « Conserver la sélection du capteur du TRV » activée. Un TRV calibré par son décalage reçoit l'ouverture de vanne de la pièce."
+          "distribute_valve_by_trv_temperature": "Uniquement pour deux TRV ou plus avec le mode de calibration MPC ou MPC v2. Désactivé : chaque TRV reçoit la même ouverture de vanne. Activé : un TRV qui mesure plus froid que le TRV le plus chaud de la pièce s'ouvre davantage, de 8 % par °C (4,4 % par °F) d'écart. Les mesures propres des TRV sont comparées ; un Sonoff TRVZB ou TRV-ZBT doit donc avoir son propre capteur sélectionné et l'option « Conserver la sélection du capteur du TRV » activée. Un TRV calibré par son décalage reçoit l'ouverture de vanne de la pièce.",
+          "underfloor_heating_enabled": "Activez cette option si l'un de vos radiateurs est une boucle de chauffage au sol. Cela déverrouille une option 'Type de chauffage' par appareil ainsi que le mode Plancher Chaud, qui maintient un faible niveau de chaleur de fond dans le sol au lieu de le laisser refroidir complètement entre les cycles de chauffe.",
+          "flow_temp_sensor": "Température d’eau facultative pour estimer la demande Warm Floor. Ne commande pas la source de chaleur et ne modifie pas le modèle MPC v2.",
+          "flow_temp_static_c": "Valeur de secours facultative en °C si le capteur d’eau est absent. Laisser vide pour ignorer cette entrée."
         }
       },
       "advanced": {
@@ -171,7 +191,11 @@
           "calibration_mode": "Mode de calibrage",
           "no_off_system_mode": "Utiliser la température minimale au lieu de « arrêt »",
           "mpc_v2_plant_preset": "MPC v2 taille de la pièce",
-          "keep_sensor_selection": "Conserver la sélection du capteur du TRV"
+          "keep_sensor_selection": "Conserver la sélection du capteur du TRV",
+          "heating_type": "Type de chauffage",
+          "warm_floor_level": "Niveau Plancher Chaud",
+          "warm_floor_max_backoff": "Recul maximal du Plancher Chaud (°C)",
+          "warm_floor_sustain_push": "Plancher Chaud - poussée de maintien (°C)"
         },
         "data_description": {
           "protect_overheating": "Certains TRVs ne ferment pas complètement la vanne lorsque la température est atteinte. Ou le radiateur a beaucoup de chaleur résiduelle. Cela peut provoquer une surchauffe. Cette option peut prévenir cela.",
@@ -183,7 +207,11 @@
           "calibration_mode": "Comment le calibrage est calculé\n***IA basée sur le temps (par défaut)*** : Apprend au fil du temps la puissance de chauffe de la pièce et en déduit le calibrage.\n***Décalage du capteur externe uniquement*** : Corrige le capteur interne du TRV avec votre capteur de température externe. Aucun régulateur ne s'ajoute par-dessus.\n***MPC prédictif (bêta)*** : Prédit la température de la pièce et en déduit une ouverture de vanne. Apprend le comportement thermique de la pièce.\n***(IA) MPC v2 (QP + Kalman, expérimental)*** : Estime l'état de la pièce avec un filtre de Kalman et calcule une ouverture de vanne avec un régulateur à modèle prédictif. Le réglage MPC v2 taille de la pièce choisit le modèle de la pièce : appris dans la pièce (Auto) ou fixe pour une taille de pièce (petite, moyenne, grande).\n***Agressif*** : Ajoute un supplément au calibrage tant que la pièce chauffe et saute le délai de tolérance, pour que le TRV commence à chauffer plus tôt. Utile si votre pièce chauffe lentement.\n***Contrôleur TPI*** : Calcule la durée d'enclenchement des cycles de chauffe à partir de l'écart de température.\n***Contrôleur PID*** : Calcule une ouverture de vanne à partir de l'écart de température avec un terme proportionnel, intégral et dérivé.\n***Sans étalonnage*** : Envoie la température cible au TRV sans la modifier et n'applique aucune correction.",
           "no_off_system_mode": "Avec cette option, Better Thermostat envoie au TRV sa température minimale au lieu de « arrêt ». Un TRV qui indique sa température minimale est considéré comme éteint : dès que tous les TRV de la pièce sont éteints, la pièce s'éteint, et tourner une molette vers le haut la rallume. Un tour de molette pendant qu'une fenêtre ou une porte est ouverte compte aussi ; le chauffage attend alors que toutes les fenêtres et portes soient fermées. Un TRV sans mode « arrêt » reçoit sa température minimale même sans cette option. Activez-la pour un TRV dont le mode « arrêt » ne fonctionne pas, ou pour un TRV sans mode « arrêt » dont la molette doit allumer et éteindre Better Thermostat.",
           "mpc_v2_plant_preset": "Utilisé uniquement par le mode de calibrage MPC v2.\n***Auto*** : Déduit le modèle de la pièce de ce que Better Thermostat a appris sur elle, par exemple son taux de déperdition thermique.\n***Petite, moyenne ou grande pièce*** : Part d'un modèle de pièce fixe pour cette taille de pièce.",
-          "keep_sensor_selection": "Pour les TRV pouvant réguler sur une température externe (Sonoff TRVZB et TRV-ZBT, Aqara SRTS-A01). Désactivé : Better Thermostat bascule le TRV sur la température externe qu'il écrit, y compris après une réinitialisation ou un nouvel appairage. Activé : le capteur sélectionné sur le TRV reste sélectionné, et la température de la pièce continue d'être écrite dans l'entrée externe. Un TRV qui revient à son propre capteur n'est alors pas rebasculé."
+          "keep_sensor_selection": "Pour les TRV pouvant réguler sur une température externe (Sonoff TRVZB et TRV-ZBT, Aqara SRTS-A01). Désactivé : Better Thermostat bascule le TRV sur la température externe qu'il écrit, y compris après une réinitialisation ou un nouvel appairage. Activé : le capteur sélectionné sur le TRV reste sélectionné, et la température de la pièce continue d'être écrite dans l'entrée externe. Un TRV qui revient à son propre capteur n'est alors pas rebasculé.",
+          "heating_type": "Plancher : active le mode Plancher Chaud pour ce radiateur. Radiateur/Ventilo-convecteur/Climatiseur-HVAC : comportement TRV normal pour l'instant - ces libellés existent pour qu'une installation mixte plancher chauffant + appareil secondaire puisse identifier correctement chaque radiateur.",
+          "warm_floor_level": "À quel point Plancher Chaud travaille pour empêcher ce radiateur de rester totalement inactif. Contrôle les deux champs ci-dessous ensemble - choisissez « Personnalisé » pour les régler directement à la place.\n***1 · Éco***: Doux, consommation d'énergie supplémentaire minimale.\n***2 · Équilibré***: La valeur par défaut - une marge de recul raisonnable, sans poussée de maintien.\n***3 · Garder au chaud***: Recul le plus serré plus une petite poussée de maintien, pour les sols qui ne doivent jamais paraître froids.",
+          "warm_floor_max_backoff": "De combien de degrés sous la température cible le mode Plancher Chaud est autorisé à laisser dériver la consigne de cet appareil pendant ce qui serait autrement un cycle inactif. Le recul réellement utilisé est automatiquement réduit par rapport à ce maximum en fonction des pertes de chaleur, de la puissance de chauffe et du gain solaire mesurés, afin que le sol ne recule que dans la limite de ce que la pièce peut supporter sans risque.",
+          "warm_floor_sustain_push": "Pour les modes de calibration qui figent la consigne exactement à la cible une fois inactifs (le recul ci-dessus n'a alors rien à relever), pousse plutôt la consigne envoyée au radiateur de cette valeur au-dessus de la cible - uniquement lorsque la pièce a déjà atteint la cible et y est restée. Ne modifie jamais la température cible affichée sur la carte. 0 (par défaut) désactive ceci."
         }
       }
     },
@@ -407,6 +435,23 @@
         "medium_room": "Pièce moyenne (~20 m², standard)",
         "large_room": "Grande pièce (~40 m², enveloppe lente)"
       }
+    },
+    "heating_type": {
+      "options": {
+        "radiator": "Radiateur",
+        "underfloor": "Chauffage au sol",
+        "convector": "Ventilo-convecteur",
+        "ac_hvac": "Climatiseur / HVAC"
+      }
+    },
+    "warm_floor_level": {
+      "options": {
+        "level_1": "1 · Éco",
+        "level_2": "2 · Équilibré",
+        "level_3": "3 · Garder au chaud",
+        "custom": "Personnalisé",
+        "auto": "Auto"
+      }
     }
   },
   "entity": {
@@ -619,6 +664,9 @@
       },
       "pid_error": {
         "name": "Écart PID"
+      },
+      "warm_floor_status": {
+        "name": "État du plancher chauffant"
       }
     }
   },

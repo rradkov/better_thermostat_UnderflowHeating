@@ -1,5 +1,13 @@
 # Better Thermostat
 
+This repository is a fork of [KartoffelToby/better_thermostat](https://github.com/KartoffelToby/better_thermostat), based on upstream **2.0.0**. It extends Better Thermostat with **Warm Floor** maintenance for underfloor heating, including Generic Thermostat ON/OFF loops and supported setpoint, offset and valve channels.
+
+The fork serves varied installations combining underfloor heating with radiators, fan-coils, HVAC or air conditioning. It is independent of the heat source; a compatible Home Assistant climate entity remains responsible for the equipment. Automatic coordination of additional heating/cooling sources is a future development direction.
+
+Our experimental secondary-device Boost Heat/Cool feature is removed in this development version. The upstream temperature preset named **Boost** and ordinary cooler support remain available. See [Warm Floor configuration](docs/deep-explanations/warm-floor.md) and [fork migration notes](docs/setup/upgrading-warm-floor-to-2-0.md).
+
+Development changes are published to `dev`. `main` and releases receive confirmed changes only. The upstream documentation and features below still apply unless the fork notes state otherwise.
+
 [![Active installations](https://badge.t-haber.de/badge/better_thermostat?kill_cache=1)](https://github.com/KartoffelToby/better_thermostat/)
 [![GitHub issues](https://img.shields.io/github/issues/KartoffelToby/better_thermostat?style=for-the-badge)](https://github.com/KartoffelToby/better_thermostat/issues)
 [![Version](https://img.shields.io/github/v/release/KartoffelToby/better_thermostat?style=for-the-badge&label=Version&color=009688)](https://github.com/KartoffelToby/better_thermostat/releases)

@@ -14,6 +14,103 @@ import math
 MIN_PHASE_SECONDS = 240.0
 
 
+@dataclass(frozen=True)
+class WarmFloorThermalInput:
+    """Available physical estimates; missing estimates remain absent."""
+
+    room_temperature: float
+    target_temperature: float
+    slope_kelvin_per_min: float | None = None
+    short_average: float | None = None
+    long_average: float | None = None
+    heat_loss: float | None = None
+    heating_power: float | None = None
+    insulation: float | None = None
+    outdoor_temperature: float | None = None
+    flow_temperature: float | None = None
+    solar_gain: float | None = None
+    disturbance: float | None = None
+    level: str = "level_2"
+    max_backoff: float = 1.5
+
+
+@dataclass(frozen=True)
+class WarmFloorProfile:
+    """Calculated maintenance durations and bounded backoff allowance."""
+
+    on_seconds: float
+    off_seconds: float
+    structural_scale: float
+    intensity: float
+
+
+def _clamp(value: float, lower: float, upper: float) -> float:
+    return max(lower, min(value, upper))
+
+
+def compute_warm_floor_profile(inputs: WarmFloorThermalInput) -> WarmFloorProfile:
+    """Compute source-neutral maintenance from the last valid observations.
+
+    Missing plant estimates contribute no load signal. The selected level is
+    still a usable baseline, rather than an invented learned measurement.
+    Above target, room margin dominates feed-forward plant demand.
+    """
+    loss = inputs.heat_loss
+    if inputs.insulation is not None and inputs.outdoor_temperature is not None:
+        envelope_loss = max(0.0, inputs.insulation) * max(
+            5.0, inputs.room_temperature - inputs.outdoor_temperature
+        )
+        loss = max(loss or 0.0, envelope_loss)
+    severity = _clamp((loss or 0.0) / 0.05, 0.0, 1.0)
+    power = (
+        _clamp(inputs.heating_power / 0.2, 0.0, 1.0)
+        if inputs.heating_power is not None
+        else 1.0
+    )
+    structural = _clamp((1.0 - severity) * power, 0.1, 1.0)
+    demand = severity * (1.0 - 0.5 * power)
+    if inputs.flow_temperature is not None:
+        demand = max(
+            demand,
+            0.6 * (1.0 - _clamp((inputs.flow_temperature - 20.0) / 30.0, 0.0, 1.0)),
+        )
+    if inputs.outdoor_temperature is not None:
+        demand = max(
+            demand, 0.5 * _clamp((20.0 - inputs.outdoor_temperature) / 25.0, 0.0, 1.0)
+        )
+    slope = inputs.slope_kelvin_per_min or 0.0
+    average_difference = (
+        inputs.short_average - inputs.long_average
+        if inputs.short_average is not None and inputs.long_average is not None
+        else 0.0
+    )
+    cooling = max(
+        _clamp(-slope / 0.02, 0.0, 1.0), _clamp(-average_difference / 0.5, 0.0, 1.0)
+    )
+    warming = max(
+        _clamp(slope / 0.05, 0.0, 1.0), _clamp(average_difference / 0.5, 0.0, 1.0)
+    )
+    demand = max(demand, cooling)
+    extra_heat = max(0.0, inputs.solar_gain or 0.0, inputs.disturbance or 0.0)
+    if loss is not None and loss > 0:
+        demand *= 1.0 - _clamp(extra_heat / loss, 0.0, 1.0)
+    baseline = {"level_1": 0.2, "level_2": 0.45, "level_3": 0.7}.get(inputs.level, 0.45)
+    if inputs.level == "auto":
+        baseline = 0.2 + 0.5 * _clamp(demand, 0.0, 1.0)
+    elif inputs.level == "custom":
+        baseline = _clamp(0.7 - inputs.max_backoff / 10.0, 0.2, 0.7)
+    intensity = baseline + (1.0 - baseline) * demand
+    excess = max(0.0, inputs.room_temperature - inputs.target_temperature)
+    if excess > 0.1:
+        proximity = 0.1 / excess
+        intensity *= _clamp(proximity * (1.0 + cooling + 0.1 * demand), 0.15, 1.0)
+    intensity = _clamp(intensity * (1.0 - 0.85 * warming), 0.15, 1.0)
+    on_seconds = MIN_PHASE_SECONDS + 480.0 * (intensity - 0.15) / 0.85
+    off_seconds = MIN_PHASE_SECONDS + 900.0 * (1.0 - intensity) ** 2
+    off_seconds += 900.0 * max(0.0, excess - 0.1) * (1.0 + warming)
+    return WarmFloorProfile(on_seconds, off_seconds, structural, intensity)
+
+
 class WarmFloorPhase(StrEnum):
     """Planned actuator phase."""
 

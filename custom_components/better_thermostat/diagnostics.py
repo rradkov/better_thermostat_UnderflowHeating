@@ -154,5 +154,11 @@ async def async_get_config_entry_diagnostics(
         # the threshold it was held against.
         if settings.get(CONF_OUTDOOR_SENSOR) or settings.get(CONF_WEATHER):
             diagnostics_data["summer_mode"] = summer_mode_facts(bt)
+        if bt.warm_floor_enabled:
+            diagnostics_data["warm_floor"] = {
+                entity_id: dict(trv.warm_floor_status)
+                for entity_id, trv in bt.real_trvs.items()
+                if trv.advanced.get("heating_type") == "underfloor"
+            }
 
     return async_redact_data(diagnostics_data, TO_REDACT)

@@ -90,6 +90,8 @@ async def async_setup_entry(
         BetterThermostatHeatingPowerSensor(bt_climate),
         BetterThermostatHeatLossSensor(bt_climate),
     ]
+    if bt_climate.warm_floor_enabled:
+        sensors.append(BetterThermostatWarmFloorStatusSensor(bt_climate))
 
     algorithm_sensors = await _setup_algorithm_sensors(hass, entry, bt_climate)
     sensors.extend(algorithm_sensors)
@@ -728,6 +730,55 @@ type MpcV2SensorKey = Literal[
     "T_room_hat", "coupling_rad_room", "D_hat_K_per_min", "tau_room_min"
 ]
 type PidSensorKey = Literal["u", "e_K"]
+
+
+class BetterThermostatWarmFloorStatusSensor(_BtSensorBase):
+    """Maintenance intent and feedback for every configured circuit.
+
+    Device heating feedback does not prove water flow or floor temperature.
+    The legacy aggregate unique id is retained for dashboard compatibility.
+    """
+
+    _unique_id_suffix = "warm_floor_status"
+    _attr_translation_key = "warm_floor_status"
+    _attr_state_class = None
+
+    @override
+    def _update_state(self) -> None:
+        """Publish per-circuit decisions and current, independently read feedback."""
+        host = self._bt_climate
+        circuits: dict[str, object] = {}
+        active = False
+        for entity_id, trv in host.real_trvs.items():
+            if trv.advanced.get("heating_type") != "underfloor":
+                continue
+            status = dict(trv.warm_floor_status)
+            state = host.hass.states.get(entity_id)
+            reported_action = state.attributes.get("hvac_action") if state else None
+            status["reported_heating"] = (
+                True
+                if reported_action == "heating"
+                else False
+                if reported_action in ("idle", "off")
+                else None
+            )
+            if state is None or state.state in ("unavailable", "unknown"):
+                status["reason"] = "device_unavailable"
+                status["phase"] = None
+                status["reported_heating"] = None
+            elif host.devices_released or entity_id in host.released_trvs:
+                status["reason"] = "released"
+                status["phase"] = None
+            elif host.heating_blocked_by is not None:
+                status["reason"] = str(host.heating_blocked_by)
+                status["phase"] = None
+            elif host.kernel_state.control_mode.mode.value == "hold":
+                status["reason"] = "hold"
+                status["phase"] = None
+            active = active or status.get("phase") in ("on", "sustaining")
+            circuits[entity_id] = status
+        self._attr_native_value = "active" if active else "inactive"
+        self._attr_extra_state_attributes = {"circuits": circuits}
 
 
 class _BtMpcSensorBase(_BtSensorBase):

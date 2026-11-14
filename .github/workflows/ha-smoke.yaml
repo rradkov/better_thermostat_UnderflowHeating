@@ -30,8 +30,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 1.9 is the line users run until 2.0 is released.
-        line: [develop, "1.9"]
+        # The fork validates development and confirmed production separately.
+        line: [dev, main]
         tag: [stable, beta, dev]
 
     steps:
@@ -44,9 +44,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-          # A pull request tests its own integration on the develop row.
+          # A pull request tests its own integration on the dev row.
           ref: >-
-            ${{ (github.event_name == 'pull_request' && matrix.line == 'develop')
+            ${{ (github.event_name == 'pull_request' && matrix.line == 'dev')
             && github.sha || matrix.line }}
           path: under-test
 

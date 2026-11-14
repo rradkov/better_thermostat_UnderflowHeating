@@ -39,6 +39,8 @@ from custom_components.better_thermostat.utils.helpers import (
     device_offers_mode,
 )
 
+from .core.warm_floor import WarmFloorState
+
 if TYPE_CHECKING:
     from custom_components.better_thermostat.adapters.delegate import (
         ValveMethod,
@@ -155,6 +157,11 @@ class Trv:
     # selects no calibration type.
     calibration: CalibrationOutput | None = None
     advanced: TrvAdvanced = field(default_factory=TrvAdvanced)
+    warm_floor_state: WarmFloorState = field(default_factory=WarmFloorState)
+    warm_floor_status: dict[str, object] = field(default_factory=dict)
+    warm_floor_long_average: float | None = None
+    warm_floor_average_monotonic: float | None = None
+    warm_floor_commanded_phase: str | None = None
 
     # -- Reported device state -------------------------------------------
     valve_position: float | None = None

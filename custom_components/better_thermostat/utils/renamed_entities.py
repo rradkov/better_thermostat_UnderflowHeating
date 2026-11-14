@@ -43,6 +43,7 @@ RECORDED_MOVES: Final = f"{DOMAIN}_recorded_thermostat_moves"
 
 # The settings that each hold one entity id, beside the thermostat list.
 ENTITY_SETTINGS: Final = (
+    "flow_temp_sensor",
     CONF_TEMPERATURE_SENSOR,
     CONF_HUMIDITY_SENSOR,
     CONF_COOLER,

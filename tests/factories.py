@@ -269,6 +269,9 @@ def _constructor_literals() -> dict[str, object]:
 # assigns. Leaving one out exercises the same branch a fresh thermostat
 # takes, so it hides no state the test forgot.
 _CONSTRUCTOR_DEFAULTED = (
+    "warm_floor_enabled",
+    "warm_floor_water_sensor",
+    "warm_floor_water_temperature",
     "unavailable_sensors",
     "_outdoor_check_lock",
     "_temperature_filter_lock",

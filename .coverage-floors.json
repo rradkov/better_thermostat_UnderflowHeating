@@ -35,6 +35,7 @@
   "custom_components/better_thermostat/core/safety.py": 100.0,
   "custom_components/better_thermostat/core/snapshot.py": 100.0,
   "custom_components/better_thermostat/core/watchdog.py": 100.0,
+  "custom_components/better_thermostat/core/warm_floor.py": 100.0,
   "custom_components/better_thermostat/device_action.py": 100.0,
   "custom_components/better_thermostat/device_binding.py": 100.0,
   "custom_components/better_thermostat/device_condition.py": 100.0,
@@ -121,7 +122,9 @@
   "custom_components/better_thermostat/utils/stored_values.py": 100.0,
   "custom_components/better_thermostat/utils/telemetry.py": 97.1,
   "custom_components/better_thermostat/utils/thermal_learning.py": 98.4,
+  "custom_components/better_thermostat/utils/underfloor.py": 100.0,
   "custom_components/better_thermostat/utils/valve_maintenance.py": 98.6,
+  "custom_components/better_thermostat/utils/warm_floor_control.py": 98.8,
   "custom_components/better_thermostat/utils/watcher.py": 99.0,
   "custom_components/better_thermostat/utils/weather.py": 100.0
 }

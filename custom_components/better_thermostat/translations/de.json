@@ -26,7 +26,10 @@
           "target_temp_max": "Sollmaximumtemperatur",
           "target_temp_step": "Solltemperatur-Schritt",
           "presets": "Aktivierte Presets",
-          "distribute_valve_by_trv_temperature": "Ventilöffnung nach der eigenen Temperatur jedes TRV aufteilen"
+          "distribute_valve_by_trv_temperature": "Ventilöffnung nach der eigenen Temperatur jedes TRV aufteilen",
+          "underfloor_heating_enabled": "Fußbodenheizung aktivieren",
+          "flow_temp_sensor": "Vorlauftemperatur-Sensor (optional)",
+          "flow_temp_static_c": "Vorlauftemperatur, statischer Ersatzwert (°C)"
         },
         "data_description": {
           "name": "Der Name dieses Thermostats und seines Geräts in Home Assistant.",
@@ -50,7 +53,10 @@
           "target_temp_max": "Das höchste Ziel, das du einstellen kannst. Auto übernimmt den Bereich, den deine Geräte melden.",
           "target_temp_step": "Um wie viel sich das Ziel pro Schritt ändert. Auto übernimmt den gröbsten Schritt, den deine Thermostate melden.",
           "presets": "Wähle die Presets aus, die für dieses Thermostat verfügbar sein sollen.",
-          "distribute_valve_by_trv_temperature": "Nur für zwei oder mehr TRVs im Kalibriermodus MPC oder MPC v2. Aus: Jeder TRV erhält dieselbe Ventilöffnung. Ein: Ein TRV, der kälter misst als der wärmste TRV des Raums, öffnet weiter, um 8 % je °C (4,4 % je °F) Unterschied. Verglichen werden die eigenen Messwerte der TRVs, daher braucht ein Sonoff TRVZB oder TRV-ZBT seinen eigenen Sensor als Auswahl und die Option „Sensorauswahl des TRV beibehalten“. Ein über den Offset kalibrierter TRV erhält die Ventilöffnung des Raums."
+          "distribute_valve_by_trv_temperature": "Nur für zwei oder mehr TRVs im Kalibriermodus MPC oder MPC v2. Aus: Jeder TRV erhält dieselbe Ventilöffnung. Ein: Ein TRV, der kälter misst als der wärmste TRV des Raums, öffnet weiter, um 8 % je °C (4,4 % je °F) Unterschied. Verglichen werden die eigenen Messwerte der TRVs, daher braucht ein Sonoff TRVZB oder TRV-ZBT seinen eigenen Sensor als Auswahl und die Option „Sensorauswahl des TRV beibehalten“. Ein über den Offset kalibrierter TRV erhält die Ventilöffnung des Raums.",
+          "underfloor_heating_enabled": "Aktivieren Sie dies, wenn eines Ihrer Heizgeräte eine Fußbodenheizungsschleife ist. Dies schaltet eine Option 'Heizungstyp' pro Heizgerät sowie den Warmer-Boden-Modus frei, der ein niedriges Grundwärmeniveau im Boden hält, anstatt ihn zwischen Heizzyklen vollständig abkühlen zu lassen.",
+          "flow_temp_sensor": "Optionale Vorlauf-/Wassertemperatur für die Warm-Floor-Bedarfsberechnung. Steuert weder die Wärmequelle noch das MPC-v2-Modell.",
+          "flow_temp_static_c": "Optionaler Ersatzwert in °C bei fehlendem Wassersensor. Leer lassen, um diesen Eingang wegzulassen."
         }
       },
       "advanced": {
@@ -65,7 +71,11 @@
           "calibration_mode": "Kalibrierungsmodus",
           "no_off_system_mode": "Mindesttemperatur statt „Aus“ verwenden",
           "mpc_v2_plant_preset": "MPC v2 Raumgröße",
-          "keep_sensor_selection": "Sensorauswahl des TRV beibehalten"
+          "keep_sensor_selection": "Sensorauswahl des TRV beibehalten",
+          "heating_type": "Heizungstyp",
+          "warm_floor_level": "Warmer-Boden-Stufe",
+          "warm_floor_max_backoff": "Warmer Boden max. Rückzug (°C)",
+          "warm_floor_sustain_push": "Warmer Boden Halte-Push (°C)"
         },
         "data_description": {
           "protect_overheating": "Manche TRVs schließen auch nach Erreichen der Temperatur das Ventil nicht vollständig. Dies kann zu Überhitzungen führen. Ebenso, falls der Radiator viel Restwärme abstrahlt. Diese Option kann dies verhindern.",
@@ -77,7 +87,11 @@
           "calibration_mode": "Wie die Kalibrierung berechnet wird\n***KI zeitbasiert (Standard)***: Lernt mit der Zeit die Heizleistung des Raums und leitet daraus die Kalibrierung ab.\n***Nur externer Sensorversatz***: Gleicht den internen Sensor des TRV mit dem externen Temperatursensor ab. Darüber läuft kein Regler.\n***MPC prädiktiv (Beta)***: Sagt die Raumtemperatur voraus und berechnet daraus eine Ventilöffnung. Lernt das thermische Verhalten des Raums.\n***(KI) MPC v2 (QP + Kalman, experimentell)***: Schätzt den Zustand des Raums mit einem Kalman-Filter und berechnet die Ventilöffnung mit einem modellprädiktiven Regler. Die Einstellung „MPC v2 Raumgröße“ wählt das Raummodell: aus dem Raum gelernt (Automatisch) oder fest für eine Raumgröße (klein, mittel, groß).\n***Aggressiv***: Erhöht die Kalibrierung, solange der Raum heizt, und überspringt die Toleranzverzögerung, damit das TRV früher zu heizen beginnt. Hilfreich, wenn der Raum langsam warm wird.\n***TPI-Regler***: Berechnet die Einschaltdauer der Heizzyklen aus der Temperaturdifferenz.\n***PID-Regler***: Berechnet eine Ventilöffnung aus der Temperaturabweichung mit einem Proportional-, Integral- und Differenzialanteil.\n***Keine Kalibrierung***: Sendet die Zieltemperatur unverändert an das TRV und korrigiert nichts.",
           "no_off_system_mode": "Mit dieser Option sendet Better Thermostat dem TRV seine Mindesttemperatur statt „Aus“. Ein TRV, das seine Mindesttemperatur meldet, gilt als ausgeschaltet: Sind alle TRVs des Raums aus, schaltet sich der Raum aus; wird ein Drehknopf hochgedreht, schaltet er sich wieder ein. Das gilt auch für eine Drehung bei offenem Fenster oder offener Tür; die Heizung wartet dann, bis alle Fenster und Türen geschlossen sind. Ein TRV ohne „Aus“-Modus bekommt seine Mindesttemperatur auch ohne diese Option. Aktiviere sie für ein TRV, dessen „Aus“-Modus nicht funktioniert, oder für ein TRV ohne „Aus“-Modus, dessen Drehknopf Better Thermostat ein- und ausschalten soll.",
           "mpc_v2_plant_preset": "Wird nur vom Kalibrierungsmodus MPC v2 verwendet.\n***Automatisch***: Leitet das Raummodell aus dem ab, was Better Thermostat über den Raum gelernt hat, etwa seine Wärmeverlustrate.\n***Kleiner, mittlerer oder großer Raum***: Startet mit einem festen Raummodell für diese Raumgröße.",
-          "keep_sensor_selection": "Für TRVs, die auf eine externe Temperatur regeln können (Sonoff TRVZB und TRV-ZBT, Aqara SRTS-A01). Aus: Better Thermostat stellt den TRV auf die externe Temperatur um, die es schreibt, auch nach einem Zurücksetzen oder neuen Anlernen. Ein: Der am TRV gewählte Sensor bleibt ausgewählt, und die Raumtemperatur wird weiter in den externen Eingang geschrieben. Ein TRV, der auf seinen eigenen Sensor zurückfällt, wird dann nicht zurückgestellt."
+          "keep_sensor_selection": "Für TRVs, die auf eine externe Temperatur regeln können (Sonoff TRVZB und TRV-ZBT, Aqara SRTS-A01). Aus: Better Thermostat stellt den TRV auf die externe Temperatur um, die es schreibt, auch nach einem Zurücksetzen oder neuen Anlernen. Ein: Der am TRV gewählte Sensor bleibt ausgewählt, und die Raumtemperatur wird weiter in den externen Eingang geschrieben. Ein TRV, der auf seinen eigenen Sensor zurückfällt, wird dann nicht zurückgestellt.",
+          "heating_type": "Fußboden: aktiviert den Warmer-Boden-Modus für dieses Heizgerät. Heizkörper/Fan-Coil-Konvektor/Klima-HVAC: derzeit normales TRV-Verhalten - diese Bezeichnungen existieren, damit eine gemischte Fußbodenheizung+Zweitgerät-Konfiguration jedes Heizgerät korrekt identifizieren kann.",
+          "warm_floor_level": "Wie stark der Warmer-Boden-Modus daran arbeitet, dieses Heizgerät vor vollständigem Leerlauf zu bewahren. Steuert beide Felder unten gemeinsam - wählen Sie 'Benutzerdefiniert', um sie stattdessen direkt einzustellen.\n***1 · Öko***: Sanft, minimaler zusätzlicher Energieverbrauch.\n***2 · Ausgewogen***: Der Standard - ein angemessener Rückzugsspielraum, kein Halte-Push.\n***3 · Warm halten***: Engster Rückzug plus ein kleiner Halte-Push, für Böden, die sich niemals kalt anfühlen dürfen.",
+          "warm_floor_max_backoff": "Wie weit unter der Zieltemperatur der Warmer-Boden-Modus den Sollwert dieses Heizgeräts während eines sonst inaktiven Zyklus abweichen lassen darf. Der tatsächlich verwendete Rückzug wird automatisch von diesem Maximum abwärts skaliert, basierend auf gemessenem Wärmeverlust, Heizleistung und Sonneneinstrahlung, sodass der Boden nur so weit zurückgefahren wird, wie es der Raum sicher verträgt.",
+          "warm_floor_sustain_push": "Bei Kalibrierungsmodi, die den Sollwert im Leerlauf exakt auf die Zieltemperatur festnageln (sodass der obige Rückzug nichts anzuheben hat), wird stattdessen der an das Heizgerät gesendete Sollwert um diesen Betrag über die Zieltemperatur angehoben - nur solange der Raum die Zieltemperatur bereits erreicht hat und dort geblieben ist. Ändert nie die auf der Karte angezeigte Zieltemperatur. 0 (Standard) deaktiviert dies."
         }
       },
       "confirm": {
@@ -132,7 +146,10 @@
           "target_temp_step": "Solltemperatur-Schritt",
           "presets": "Aktivierte Presets",
           "cooler": "Klimagerät AC (optional)",
-          "distribute_valve_by_trv_temperature": "Ventilöffnung nach der eigenen Temperatur jedes TRV aufteilen"
+          "distribute_valve_by_trv_temperature": "Ventilöffnung nach der eigenen Temperatur jedes TRV aufteilen",
+          "underfloor_heating_enabled": "Fußbodenheizung aktivieren",
+          "flow_temp_sensor": "Vorlauftemperatur-Sensor (optional)",
+          "flow_temp_static_c": "Vorlauftemperatur, statischer Ersatzwert (°C)"
         },
         "data_description": {
           "name": "Der Name dieses Thermostats und seines Geräts in Home Assistant.",
@@ -156,7 +173,10 @@
           "target_temp_step": "Um wie viel sich das Ziel pro Schritt ändert. Auto übernimmt den gröbsten Schritt, den deine Thermostate melden.",
           "presets": "Wähle die Presets aus, die für dieses Thermostat verfügbar sein sollen.",
           "cooler": "Optional. Eine Klimaanlage oder eine andere Klima-Entität, die diesen Raum zusätzlich zu den Thermostaten kühlt.",
-          "distribute_valve_by_trv_temperature": "Nur für zwei oder mehr TRVs im Kalibriermodus MPC oder MPC v2. Aus: Jeder TRV erhält dieselbe Ventilöffnung. Ein: Ein TRV, der kälter misst als der wärmste TRV des Raums, öffnet weiter, um 8 % je °C (4,4 % je °F) Unterschied. Verglichen werden die eigenen Messwerte der TRVs, daher braucht ein Sonoff TRVZB oder TRV-ZBT seinen eigenen Sensor als Auswahl und die Option „Sensorauswahl des TRV beibehalten“. Ein über den Offset kalibrierter TRV erhält die Ventilöffnung des Raums."
+          "distribute_valve_by_trv_temperature": "Nur für zwei oder mehr TRVs im Kalibriermodus MPC oder MPC v2. Aus: Jeder TRV erhält dieselbe Ventilöffnung. Ein: Ein TRV, der kälter misst als der wärmste TRV des Raums, öffnet weiter, um 8 % je °C (4,4 % je °F) Unterschied. Verglichen werden die eigenen Messwerte der TRVs, daher braucht ein Sonoff TRVZB oder TRV-ZBT seinen eigenen Sensor als Auswahl und die Option „Sensorauswahl des TRV beibehalten“. Ein über den Offset kalibrierter TRV erhält die Ventilöffnung des Raums.",
+          "underfloor_heating_enabled": "Aktivieren Sie dies, wenn eines Ihrer Heizgeräte eine Fußbodenheizungsschleife ist. Dies schaltet eine Option 'Heizungstyp' pro Heizgerät sowie den Warmer-Boden-Modus frei, der ein niedriges Grundwärmeniveau im Boden hält, anstatt ihn zwischen Heizzyklen vollständig abkühlen zu lassen.",
+          "flow_temp_sensor": "Optionale Vorlauf-/Wassertemperatur für die Warm-Floor-Bedarfsberechnung. Steuert weder die Wärmequelle noch das MPC-v2-Modell.",
+          "flow_temp_static_c": "Optionaler Ersatzwert in °C bei fehlendem Wassersensor. Leer lassen, um diesen Eingang wegzulassen."
         }
       },
       "advanced": {
@@ -171,7 +191,11 @@
           "calibration_mode": "Kalibrierungsmodus",
           "no_off_system_mode": "Mindesttemperatur statt „Aus“ verwenden",
           "mpc_v2_plant_preset": "MPC v2 Raumgröße",
-          "keep_sensor_selection": "Sensorauswahl des TRV beibehalten"
+          "keep_sensor_selection": "Sensorauswahl des TRV beibehalten",
+          "heating_type": "Heizungstyp",
+          "warm_floor_level": "Warmer-Boden-Stufe",
+          "warm_floor_max_backoff": "Warmer Boden max. Rückzug (°C)",
+          "warm_floor_sustain_push": "Warmer Boden Halte-Push (°C)"
         },
         "data_description": {
           "protect_overheating": "Manche TRVs schließen auch nach Erreichen der Temperatur das Ventil nicht vollständig. Dies kann zu Überhitzungen führen. Ebenso falls der Radiator viel Restwärme abstrahlt. Diese Option kann dies verhindern.",
@@ -183,7 +207,11 @@
           "calibration_mode": "Wie die Kalibrierung berechnet wird\n***KI zeitbasiert (Standard)***: Lernt mit der Zeit die Heizleistung des Raums und leitet daraus die Kalibrierung ab.\n***Nur externer Sensorversatz***: Gleicht den internen Sensor des TRV mit dem externen Temperatursensor ab. Darüber läuft kein Regler.\n***MPC prädiktiv (Beta)***: Sagt die Raumtemperatur voraus und berechnet daraus eine Ventilöffnung. Lernt das thermische Verhalten des Raums.\n***(KI) MPC v2 (QP + Kalman, experimentell)***: Schätzt den Zustand des Raums mit einem Kalman-Filter und berechnet die Ventilöffnung mit einem modellprädiktiven Regler. Die Einstellung „MPC v2 Raumgröße“ wählt das Raummodell: aus dem Raum gelernt (Automatisch) oder fest für eine Raumgröße (klein, mittel, groß).\n***Aggressiv***: Erhöht die Kalibrierung, solange der Raum heizt, und überspringt die Toleranzverzögerung, damit das TRV früher zu heizen beginnt. Hilfreich, wenn der Raum langsam warm wird.\n***TPI-Regler***: Berechnet die Einschaltdauer der Heizzyklen aus der Temperaturdifferenz.\n***PID-Regler***: Berechnet eine Ventilöffnung aus der Temperaturabweichung mit einem Proportional-, Integral- und Differenzialanteil.\n***Keine Kalibrierung***: Sendet die Zieltemperatur unverändert an das TRV und korrigiert nichts.",
           "no_off_system_mode": "Mit dieser Option sendet Better Thermostat dem TRV seine Mindesttemperatur statt „Aus“. Ein TRV, das seine Mindesttemperatur meldet, gilt als ausgeschaltet: Sind alle TRVs des Raums aus, schaltet sich der Raum aus; wird ein Drehknopf hochgedreht, schaltet er sich wieder ein. Das gilt auch für eine Drehung bei offenem Fenster oder offener Tür; die Heizung wartet dann, bis alle Fenster und Türen geschlossen sind. Ein TRV ohne „Aus“-Modus bekommt seine Mindesttemperatur auch ohne diese Option. Aktiviere sie für ein TRV, dessen „Aus“-Modus nicht funktioniert, oder für ein TRV ohne „Aus“-Modus, dessen Drehknopf Better Thermostat ein- und ausschalten soll.",
           "mpc_v2_plant_preset": "Wird nur vom Kalibrierungsmodus MPC v2 verwendet.\n***Automatisch***: Leitet das Raummodell aus dem ab, was Better Thermostat über den Raum gelernt hat, etwa seine Wärmeverlustrate.\n***Kleiner, mittlerer oder großer Raum***: Startet mit einem festen Raummodell für diese Raumgröße.",
-          "keep_sensor_selection": "Für TRVs, die auf eine externe Temperatur regeln können (Sonoff TRVZB und TRV-ZBT, Aqara SRTS-A01). Aus: Better Thermostat stellt den TRV auf die externe Temperatur um, die es schreibt, auch nach einem Zurücksetzen oder neuen Anlernen. Ein: Der am TRV gewählte Sensor bleibt ausgewählt, und die Raumtemperatur wird weiter in den externen Eingang geschrieben. Ein TRV, der auf seinen eigenen Sensor zurückfällt, wird dann nicht zurückgestellt."
+          "keep_sensor_selection": "Für TRVs, die auf eine externe Temperatur regeln können (Sonoff TRVZB und TRV-ZBT, Aqara SRTS-A01). Aus: Better Thermostat stellt den TRV auf die externe Temperatur um, die es schreibt, auch nach einem Zurücksetzen oder neuen Anlernen. Ein: Der am TRV gewählte Sensor bleibt ausgewählt, und die Raumtemperatur wird weiter in den externen Eingang geschrieben. Ein TRV, der auf seinen eigenen Sensor zurückfällt, wird dann nicht zurückgestellt.",
+          "heating_type": "Fußboden: aktiviert den Warmer-Boden-Modus für dieses Heizgerät. Heizkörper/Fan-Coil-Konvektor/Klima-HVAC: derzeit normales TRV-Verhalten - diese Bezeichnungen existieren, damit eine gemischte Fußbodenheizung+Zweitgerät-Konfiguration jedes Heizgerät korrekt identifizieren kann.",
+          "warm_floor_level": "Wie stark der Warmer-Boden-Modus daran arbeitet, dieses Heizgerät vor vollständigem Leerlauf zu bewahren. Steuert beide Felder unten gemeinsam - wählen Sie 'Benutzerdefiniert', um sie stattdessen direkt einzustellen.\n***1 · Öko***: Sanft, minimaler zusätzlicher Energieverbrauch.\n***2 · Ausgewogen***: Der Standard - ein angemessener Rückzugsspielraum, kein Halte-Push.\n***3 · Warm halten***: Engster Rückzug plus ein kleiner Halte-Push, für Böden, die sich niemals kalt anfühlen dürfen.",
+          "warm_floor_max_backoff": "Wie weit unter der Zieltemperatur der Warmer-Boden-Modus den Sollwert dieses Heizgeräts während eines sonst inaktiven Zyklus abweichen lassen darf. Der tatsächlich verwendete Rückzug wird automatisch von diesem Maximum abwärts skaliert, basierend auf gemessenem Wärmeverlust, Heizleistung und Sonneneinstrahlung, sodass der Boden nur so weit zurückgefahren wird, wie es der Raum sicher verträgt.",
+          "warm_floor_sustain_push": "Bei Kalibrierungsmodi, die den Sollwert im Leerlauf exakt auf die Zieltemperatur festnageln (sodass der obige Rückzug nichts anzuheben hat), wird stattdessen der an das Heizgerät gesendete Sollwert um diesen Betrag über die Zieltemperatur angehoben - nur solange der Raum die Zieltemperatur bereits erreicht hat und dort geblieben ist. Ändert nie die auf der Karte angezeigte Zieltemperatur. 0 (Standard) deaktiviert dies."
         }
       }
     },
@@ -407,6 +435,23 @@
         "medium_room": "Mittlerer Raum (~20 m², Standard)",
         "large_room": "Großer Raum (~40 m², träge Gebäudehülle)"
       }
+    },
+    "heating_type": {
+      "options": {
+        "radiator": "Heizkörper",
+        "underfloor": "Fußbodenheizung",
+        "convector": "Fan-Coil / Konvektor",
+        "ac_hvac": "Klimaanlage / HVAC"
+      }
+    },
+    "warm_floor_level": {
+      "options": {
+        "level_1": "1 · Öko",
+        "level_2": "2 · Ausgewogen",
+        "level_3": "3 · Warm halten",
+        "custom": "Benutzerdefiniert",
+        "auto": "Auto"
+      }
     }
   },
   "entity": {
@@ -619,6 +664,9 @@
       },
       "pid_error": {
         "name": "PID-Abweichung"
+      },
+      "warm_floor_status": {
+        "name": "Warmboden-Status"
       }
     }
   },

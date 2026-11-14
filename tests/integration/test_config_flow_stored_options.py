@@ -94,6 +94,7 @@ CREATE_USER_INPUT = {
 }
 
 CREATED_OPTIONS = {
+    "underfloor_heating_enabled": False,
     "name": ENTRY_NAME,
     "thermostat": [
         {
@@ -270,6 +271,7 @@ UPDATED_OPTIONS = {
     "off_temperature": 7,
     "target_temp_step": "0.5",
     "presets": ["eco"],
+    "underfloor_heating_enabled": False,
     "cooler": None,
     "door_sensors": None,
     "humidity_sensor": None,

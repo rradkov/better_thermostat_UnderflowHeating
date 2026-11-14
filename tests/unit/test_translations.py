@@ -32,6 +32,7 @@ LANGUAGES = [language for language in ALL_LANGUAGES if language != "en"]
 ENTITY_TRANSLATION_KEYS = {
     "climate": {"better_thermostat"},
     "sensor": {
+        "warm_floor_status",
         "external_temp_ema",
         "external_temp_ema_1h",
         "temp_slope",

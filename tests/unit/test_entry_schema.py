@@ -80,6 +80,9 @@ def _full() -> dict[str, object]:
         "target_temp_step": "0.5",
         "presets": ["eco", "comfort"],
         "distribute_valve_by_trv_temperature": True,
+        "underfloor_heating_enabled": True,
+        "flow_temp_sensor": "sensor.flow",
+        "flow_temp_static_c": 38.0,
     }
 
 
@@ -275,6 +278,9 @@ def test_the_described_keys_are_the_ones_the_constants_hold():
         const.CONF_TEMPERATURE_SENSOR,
     }
     assert BtSettings.__optional_keys__ == {
+        "underfloor_heating_enabled",
+        "flow_temp_sensor",
+        "flow_temp_static_c",
         const.CONF_MODEL,
         const.CONF_HUMIDITY_SENSOR,
         const.CONF_COOLER,
@@ -300,6 +306,10 @@ def test_the_described_keys_are_the_ones_the_constants_hold():
     assert TrvSettings.__optional_keys__ == {const.CONF_MODEL, "advanced"}
     assert TrvAdvanced.__required_keys__ == frozenset()
     assert TrvAdvanced.__optional_keys__ == {
+        "heating_type",
+        "warm_floor_level",
+        "warm_floor_max_backoff",
+        "warm_floor_sustain_push",
         const.CONF_CALIBRATION,
         const.CONF_CALIBRATION_MODE,
         const.CONF_MPC_V2_PLANT_PRESET,

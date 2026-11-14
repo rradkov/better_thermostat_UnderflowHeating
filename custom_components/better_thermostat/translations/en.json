@@ -26,7 +26,10 @@
           "target_temp_max": "Target maximum temperature",
           "target_temp_step": "Target temperature step",
           "presets": "Enabled Presets",
-          "distribute_valve_by_trv_temperature": "Split the valve opening by each TRV's own temperature"
+          "distribute_valve_by_trv_temperature": "Split the valve opening by each TRV's own temperature",
+          "underfloor_heating_enabled": "Enable Underfloor Heating",
+          "flow_temp_sensor": "Heat-source flow/water temperature sensor (optional)",
+          "flow_temp_static_c": "Heat-source flow/water temperature, static fallback (°C)"
         },
         "data_description": {
           "name": "The name of this thermostat and its device in Home Assistant.",
@@ -50,7 +53,10 @@
           "target_temp_max": "The highest target you can set. Auto takes the range your devices report.",
           "target_temp_step": "How far the target moves per step. Auto takes the coarsest step your thermostats report.",
           "presets": "Select the presets you want to be available for this thermostat.",
-          "distribute_valve_by_trv_temperature": "Only for two or more TRVs on the MPC or MPC v2 calibration mode. Off: every TRV gets the same valve opening. On: a TRV that reads colder than the warmest TRV of the room opens further, by 8 % per °C (4.4 % per °F) of difference. The TRVs' own readings are compared, so a Sonoff TRVZB or TRV-ZBT needs its own sensor selected and 'Keep the TRV's sensor selection' on. A TRV calibrated through its offset gets the room's valve opening."
+          "distribute_valve_by_trv_temperature": "Only for two or more TRVs on the MPC or MPC v2 calibration mode. Off: every TRV gets the same valve opening. On: a TRV that reads colder than the warmest TRV of the room opens further, by 8 % per °C (4.4 % per °F) of difference. The TRVs' own readings are compared, so a Sonoff TRVZB or TRV-ZBT needs its own sensor selected and 'Keep the TRV's sensor selection' on. A TRV calibrated through its offset gets the room's valve opening.",
+          "underfloor_heating_enabled": "Turn this on if any of your heaters are underfloor heating (UFH) loops. This unlocks a per-heater 'Heating type' option and Warm Floor mode, which keeps a low background heat level in the floor instead of letting it fully cool between heat calls.",
+          "flow_temp_sensor": "Optional flow/water temperature used by the Warm Floor demand estimate. It does not control the heat source or change the MPC v2 plant model.",
+          "flow_temp_static_c": "Optional fallback in °C when the flow/water sensor is not configured or unavailable. Leave empty to omit this input."
         }
       },
       "advanced": {
@@ -65,7 +71,11 @@
           "calibration_mode": "Calibration mode",
           "no_off_system_mode": "Use the minimum temperature instead of 'off'",
           "mpc_v2_plant_preset": "MPC v2 room size",
-          "keep_sensor_selection": "Keep the TRV's sensor selection"
+          "keep_sensor_selection": "Keep the TRV's sensor selection",
+          "heating_type": "Heating type",
+          "warm_floor_level": "Warm Floor level",
+          "warm_floor_max_backoff": "Warm Floor max backoff (°C)",
+          "warm_floor_sustain_push": "Warm Floor sustain push (°C)"
         },
         "data_description": {
           "protect_overheating": "Some TRVs don't close the valve completely when the temperature is reached. Or the radiator has a lot of rest heat. This can cause overheating. This option can prevent this.",
@@ -77,7 +87,11 @@
           "calibration_mode": "How the calibration is calculated\n***(AI) Time Based (Default)***: Learns the heating power of your room over time and derives the calibration from it.\n***External Sensor Offset Only***: Corrects the TRV's internal sensor with your external temperature sensor. No controller runs on top.\n***MPC Predictive (Beta)***: Predicts the room temperature and calculates a valve opening from it. Learns your room's thermal behaviour.\n***(AI) MPC v2 (QP + Kalman, experimental)***: Estimates the room state with a Kalman filter and calculates a valve opening with a model predictive controller. The MPC v2 room size setting picks the room model: learned from the room (Auto) or fixed for a room size (Small, Medium, Large).\n***Aggressive***: Adds a boost to the calibration while the room is heating and skips the tolerance delay, so the TRV starts heating sooner. Useful if your room heats slowly.\n***TPI Controller***: Calculates heating duty cycles from the temperature difference.\n***PID Controller***: Calculates a valve opening from the temperature error with a proportional, integral and derivative term.\n***No Calibration***: Sends the target temperature to the TRV unchanged and applies no correction.",
           "no_off_system_mode": "With this option, Better Thermostat sends the TRV its minimum temperature in place of 'off'. A TRV turned to its minimum temperature counts as switched off: once every TRV of the room is off, the room switches off, and turning a knob up switches it back on. A turn while a window or door is open counts too; the heating then waits until every window and door is closed. A TRV that offers no 'off' mode receives its minimum temperature without this option. Enable it for a TRV whose 'off' mode does not work, or for a TRV without an 'off' mode whose knob should switch Better Thermostat on and off.",
           "mpc_v2_plant_preset": "Only used by the MPC v2 calibration mode.\n***Auto***: Derives the room model from what Better Thermostat has learned about the room, such as its heat-loss rate.\n***Small, Medium or Large room***: Starts from a fixed room model for that room size.",
-          "keep_sensor_selection": "For TRVs that can regulate on an external temperature (Sonoff TRVZB and TRV-ZBT, Aqara SRTS-A01). Off: Better Thermostat switches the TRV to the external temperature it writes, also after a reset or re-pairing. On: the sensor you selected on the TRV stays selected, and the room temperature is still written to the external input. A TRV that falls back to its own sensor is then not switched back."
+          "keep_sensor_selection": "For TRVs that can regulate on an external temperature (Sonoff TRVZB and TRV-ZBT, Aqara SRTS-A01). Off: Better Thermostat switches the TRV to the external temperature it writes, also after a reset or re-pairing. On: the sensor you selected on the TRV stays selected, and the room temperature is still written to the external input. A TRV that falls back to its own sensor is then not switched back.",
+          "heating_type": "Under: enables Warm Floor mode for this heater. Radiator/Fan-coil-Convector/AC-HVAC: normal TRV behavior for now - these labels exist so a mixed underfloor+secondary-device setup can identify each heater correctly.",
+          "warm_floor_level": "How hard Warm Floor works while the room is at or above the Better Thermostat target. Below target, normal heating owns the heater and Warm Floor sends no maintenance command. At exact target, Warm Floor may maintain the slab while live diagnostics seek a near-zero slope. For Generic Thermostat/on-off heaters the selected level is a dynamic baseline; ON and pause durations are recalculated from heat loss, heating power, temperature slope, short/one-hour EMA, solar/residual warming, target margin, and learned MPC data. Controls both fields below together - pick 'Custom' to set them directly instead.\n***1 · Eco***: Gentle baseline.\n***2 · Balanced***: The default baseline.\n***3 · Keep it Hot***: The strongest baseline; all three levels still adapt to live diagnostics.",
+          "warm_floor_max_backoff": "How far below target temperature Warm Floor is allowed to let this heater's setpoint drift during what would otherwise be an idle cycle. The actual backoff used is automatically scaled down from this maximum based on measured heat loss, heating power, and solar gain, so the floor is only ever backed off as far as the room can safely afford.",
+          "warm_floor_sustain_push": "Optional extra amount above the mandatory Generic Thermostat Warm Floor pulse. During an allowed ON window, the downstream Generic Thermostat setpoint is always raised by at least one valid device step above the Better Thermostat target so its relay can turn on. This value can extend that pulse, never changes the target shown on the card, and 0 (default) means no extra amount."
         }
       },
       "confirm": {
@@ -133,7 +147,10 @@
           "target_temp_step": "Target temperature step",
           "presets": "Enabled Presets",
           "cooler": "The cooling device (optional)",
-          "distribute_valve_by_trv_temperature": "Split the valve opening by each TRV's own temperature"
+          "distribute_valve_by_trv_temperature": "Split the valve opening by each TRV's own temperature",
+          "underfloor_heating_enabled": "Enable Underfloor Heating",
+          "flow_temp_sensor": "Heat-source flow/water temperature sensor (optional)",
+          "flow_temp_static_c": "Heat-source flow/water temperature, static fallback (°C)"
         },
         "data_description": {
           "name": "The name of this thermostat and its device in Home Assistant.",
@@ -157,7 +174,10 @@
           "target_temp_step": "How far the target moves per step. Auto takes the coarsest step your thermostats report.",
           "presets": "Select the presets you want to be available for this thermostat.",
           "cooler": "Optional. An air conditioner or another climate entity that cools this room alongside the thermostats.",
-          "distribute_valve_by_trv_temperature": "Only for two or more TRVs on the MPC or MPC v2 calibration mode. Off: every TRV gets the same valve opening. On: a TRV that reads colder than the warmest TRV of the room opens further, by 8 % per °C (4.4 % per °F) of difference. The TRVs' own readings are compared, so a Sonoff TRVZB or TRV-ZBT needs its own sensor selected and 'Keep the TRV's sensor selection' on. A TRV calibrated through its offset gets the room's valve opening."
+          "distribute_valve_by_trv_temperature": "Only for two or more TRVs on the MPC or MPC v2 calibration mode. Off: every TRV gets the same valve opening. On: a TRV that reads colder than the warmest TRV of the room opens further, by 8 % per °C (4.4 % per °F) of difference. The TRVs' own readings are compared, so a Sonoff TRVZB or TRV-ZBT needs its own sensor selected and 'Keep the TRV's sensor selection' on. A TRV calibrated through its offset gets the room's valve opening.",
+          "underfloor_heating_enabled": "Turn this on if any of your heaters are underfloor heating (UFH) loops. This unlocks a per-heater 'Heating type' option and Warm Floor mode, which keeps a low background heat level in the floor instead of letting it fully cool between heat calls.",
+          "flow_temp_sensor": "Optional flow/water temperature used by the Warm Floor demand estimate. It does not control the heat source or change the MPC v2 plant model.",
+          "flow_temp_static_c": "Optional fallback in °C when the flow/water sensor is not configured or unavailable. Leave empty to omit this input."
         }
       },
       "advanced": {
@@ -172,7 +192,11 @@
           "calibration_mode": "Calibration mode",
           "no_off_system_mode": "Use the minimum temperature instead of 'off'",
           "mpc_v2_plant_preset": "MPC v2 room size",
-          "keep_sensor_selection": "Keep the TRV's sensor selection"
+          "keep_sensor_selection": "Keep the TRV's sensor selection",
+          "heating_type": "Heating type",
+          "warm_floor_level": "Warm Floor level",
+          "warm_floor_max_backoff": "Warm Floor max backoff (°C)",
+          "warm_floor_sustain_push": "Warm Floor sustain push (°C)"
         },
         "data_description": {
           "protect_overheating": "Some TRVs don't close the valve completely when the temperature is reached. Or the radiator has a lot of rest heat. This can cause overheating. This option can prevent this.",
@@ -184,7 +208,11 @@
           "calibration_mode": "How the calibration is calculated\n***(AI) Time Based (Default)***: Learns the heating power of your room over time and derives the calibration from it.\n***External Sensor Offset Only***: Corrects the TRV's internal sensor with your external temperature sensor. No controller runs on top.\n***MPC Predictive (Beta)***: Predicts the room temperature and calculates a valve opening from it. Learns your room's thermal behaviour.\n***(AI) MPC v2 (QP + Kalman, experimental)***: Estimates the room state with a Kalman filter and calculates a valve opening with a model predictive controller. The MPC v2 room size setting picks the room model: learned from the room (Auto) or fixed for a room size (Small, Medium, Large).\n***Aggressive***: Adds a boost to the calibration while the room is heating and skips the tolerance delay, so the TRV starts heating sooner. Useful if your room heats slowly.\n***TPI Controller***: Calculates heating duty cycles from the temperature difference.\n***PID Controller***: Calculates a valve opening from the temperature error with a proportional, integral and derivative term.\n***No Calibration***: Sends the target temperature to the TRV unchanged and applies no correction.",
           "no_off_system_mode": "With this option, Better Thermostat sends the TRV its minimum temperature in place of 'off'. A TRV turned to its minimum temperature counts as switched off: once every TRV of the room is off, the room switches off, and turning a knob up switches it back on. A turn while a window or door is open counts too; the heating then waits until every window and door is closed. A TRV that offers no 'off' mode receives its minimum temperature without this option. Enable it for a TRV whose 'off' mode does not work, or for a TRV without an 'off' mode whose knob should switch Better Thermostat on and off.",
           "mpc_v2_plant_preset": "Only used by the MPC v2 calibration mode.\n***Auto***: Derives the room model from what Better Thermostat has learned about the room, such as its heat-loss rate.\n***Small, Medium or Large room***: Starts from a fixed room model for that room size.",
-          "keep_sensor_selection": "For TRVs that can regulate on an external temperature (Sonoff TRVZB and TRV-ZBT, Aqara SRTS-A01). Off: Better Thermostat switches the TRV to the external temperature it writes, also after a reset or re-pairing. On: the sensor you selected on the TRV stays selected, and the room temperature is still written to the external input. A TRV that falls back to its own sensor is then not switched back."
+          "keep_sensor_selection": "For TRVs that can regulate on an external temperature (Sonoff TRVZB and TRV-ZBT, Aqara SRTS-A01). Off: Better Thermostat switches the TRV to the external temperature it writes, also after a reset or re-pairing. On: the sensor you selected on the TRV stays selected, and the room temperature is still written to the external input. A TRV that falls back to its own sensor is then not switched back.",
+          "heating_type": "Under: enables Warm Floor mode for this heater. Radiator/Fan-coil-Convector/AC-HVAC: normal TRV behavior for now - these labels exist so a mixed underfloor+secondary-device setup can identify each heater correctly.",
+          "warm_floor_level": "How hard Warm Floor works while the room is at or above the Better Thermostat target. Below target, normal heating owns the heater and Warm Floor sends no maintenance command. At exact target, Warm Floor may maintain the slab while live diagnostics seek a near-zero slope. For Generic Thermostat/on-off heaters the selected level is a dynamic baseline; ON and pause durations are recalculated from live diagnostics. Controls both fields below together - pick 'Custom' to set them directly instead.\n***1 · Eco***: Gentle baseline.\n***2 · Balanced***: The default baseline.\n***3 · Keep it Hot***: The strongest baseline; all three levels still adapt to live diagnostics.",
+          "warm_floor_max_backoff": "How far below target temperature Warm Floor is allowed to let this heater's setpoint drift during what would otherwise be an idle cycle. The actual backoff used is automatically scaled down from this maximum based on measured heat loss, heating power, and solar gain, so the floor is only ever backed off as far as the room can safely afford.",
+          "warm_floor_sustain_push": "For calibration modes that pin the setpoint at exactly target once idle (so the backoff above has nothing to raise), push the setpoint sent to the heater this much above target instead - while the room is at or above target and normal heating is idle. Never changes the target temperature you see on the card. 0 (default) disables this."
         }
       }
     },
@@ -413,6 +441,23 @@
         "medium_room": "Medium room (~20 m², standard)",
         "large_room": "Large room (~40 m², slow envelope)"
       }
+    },
+    "heating_type": {
+      "options": {
+        "underfloor": "Under (Underfloor)",
+        "radiator": "Radiator",
+        "convector": "Fan-coil / Convector",
+        "ac_hvac": "Air Conditioner / HVAC"
+      }
+    },
+    "warm_floor_level": {
+      "options": {
+        "level_1": "1 · Eco",
+        "level_2": "2 · Balanced",
+        "level_3": "3 · Keep it Hot",
+        "auto": "Auto",
+        "custom": "Custom"
+      }
     }
   },
   "entity": {
@@ -625,6 +670,9 @@
       },
       "pid_error": {
         "name": "PID Error"
+      },
+      "warm_floor_status": {
+        "name": "Warm Floor Status"
       }
     }
   },
