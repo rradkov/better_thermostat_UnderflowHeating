@@ -39,7 +39,7 @@ jobs:
 
       - name: Run pytest
         run: >-
-          uv run --locked pytest tests
+          uv run --locked pytest tests -n 4
           --cov=custom_components/better_thermostat
           --cov-report=json:coverage.json
           --cov-report=term:skip-covered
