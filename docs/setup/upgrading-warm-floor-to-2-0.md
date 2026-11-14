@@ -51,6 +51,13 @@ retired naming-backlog budget and optional replay without a supplied sequence.
 All 128 modules met their coverage floors; existing floors were not lowered.
 The naming, exception-budget and restated-contract gates also passed.
 
+A separate Home Assistant 2026.11.1 process in WSL was started twice with a
+real Generic Thermostat helper and an input-boolean test output. Normal heating
+handed over to a Warm Floor ON phase, the output switched on, and the 23.5°C
+room target survived restart independently of the temporary heater setpoint.
+The restarted controller recovered an ON phase with a full four-minute minimum.
+This checks software behavior with a simulated output, not a physical actuator.
+
 The port starts at upstream `2.0.0` (`aed2036b`), retaining the previous fork
 `dev` (`3967b2a9`) in its merge history. Calibration algorithms are unchanged.
 Publication targets `dev`; production promotion and releases remain separate.
