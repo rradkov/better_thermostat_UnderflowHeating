@@ -1,6 +1,6 @@
 # Better Thermostat
 
-This repository is a fork of [KartoffelToby/better_thermostat](https://github.com/KartoffelToby/better_thermostat), based on upstream **2.0.0**. It extends Better Thermostat with **Warm Floor** maintenance for underfloor heating, including Generic Thermostat ON/OFF loops and supported setpoint, offset and valve channels.
+This repository is maintained by [rradkov](https://github.com/rradkov) as a fork of [KartoffelToby/better_thermostat](https://github.com/KartoffelToby/better_thermostat), based on upstream **2.0.0**. It extends Better Thermostat with **Warm Floor** maintenance for underfloor heating, including Generic Thermostat ON/OFF loops and supported setpoint, offset and valve channels.
 
 The fork serves varied installations combining underfloor heating with radiators, fan-coils, HVAC or air conditioning. It is independent of the heat source; a compatible Home Assistant climate entity remains responsible for the equipment. Automatic coordination of additional heating/cooling sources is a future development direction.
 
@@ -96,9 +96,3 @@ Built-in quirk fixes are included for 15+ popular models (`TRVZB`, `TRV-ZBT`, `S
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## ☕ Support
-
-If you want to support this project, you can ☕ [**buy a coffee here**](https://www.buymeacoffee.com/kartoffeltoby).
-
-[![Buy me a coffee](https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=kartoffeltoby&button_colour=0ac982&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff)](https://www.buymeacoffee.com/kartoffeltoby)

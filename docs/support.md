@@ -3,9 +3,7 @@ title: Support
 description: Support Better Thermostat development.
 ---
 
-If Better Thermostat saves you energy or improves comfort in your home, you can ☕ [**buy a coffee here**](https://www.buymeacoffee.com/kartoffeltoby).
-
-[![Buy me a coffee](https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=kartoffeltoby&button_colour=0ac982&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff)](https://www.buymeacoffee.com/kartoffeltoby)
+For help with this fork, use [GitHub Discussions](https://github.com/rradkov/better_thermostat_UnderflowHeating/discussions). Report reproducible problems in the [fork issue tracker](https://github.com/rradkov/better_thermostat_UnderflowHeating/issues).
 
 Looking for specific tested TRV models, room sensors, and Zigbee coordinators? Check **[Recommended TRVs, sensors & Zigbee](/working-devices/recommended-devices/)**.
 

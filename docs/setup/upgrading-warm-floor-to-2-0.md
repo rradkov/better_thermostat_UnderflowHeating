@@ -30,6 +30,14 @@ restart behavior. Passing simulated tests is not a guarantee of physical flow
 or correct operation of every possible device. Verify the reported commands and
 device feedback after installing on a test Home Assistant instance.
 
+Dashboard templates from 1.9 must read the status sensor's `circuits` attribute
+instead of `warm_floor_heaters`. Each circuit exposes `phase`,
+`remaining_seconds`, `on_seconds`, `off_seconds`, `requested_setpoint`,
+`write_result` and `reported_heating`. Room temperature, target and trend are
+in `thermal_inputs`; missing values stay unknown. Render a row for each circuit
+so a grouped room does not hide the second heater. Planned ON and a successful
+write are separate from device-reported heating.
+
 ## Validation of the 2.0 port
 
 Validated on 14 November 2026 under WSL Ubuntu 26.04.1, Python 3.14.10 and
