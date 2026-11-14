@@ -3,7 +3,7 @@
 [![GitHub issues](https://img.shields.io/github/issues/rradkov/better_thermostat_UnderflowHeating?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/issues)
 [![Version](https://img.shields.io/badge/Version-1.9.3.1.7-009688?style=for-the-badge)](https://github.com/rradkov/better_thermostat_UnderflowHeating/releases)
 
-A Home Assistant custom integration based on [Better Thermostat](https://github.com/KartoffelToby/better_thermostat), with adaptive underfloor maintenance.
+A Home Assistant custom integration maintained by [rradkov](https://github.com/rradkov), based on [Better Thermostat](https://github.com/KartoffelToby/better_thermostat), with adaptive underfloor maintenance.
 
 Use the [configuration guide](docs/Configuration/configuration.md) for fork features. The [upstream website](https://better-thermostat.org/) documents shared features.
 
