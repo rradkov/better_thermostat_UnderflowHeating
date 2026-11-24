@@ -30,7 +30,7 @@ class FloorReport:
 
 
 @dataclass(frozen=True)
-class WarmFloorAutoState:
+class WarmFloorPolicyState:
     """Policy adaptation only: BT owns filters, trends and plant learning."""
 
     target: float | None = None
@@ -45,23 +45,23 @@ class WarmFloorAutoState:
 
 
 @dataclass(frozen=True)
-class WarmFloorAutoDecision:
+class WarmFloorPolicyDecision:
     """Selected policy and durations, with the shared BT trend."""
 
-    state: WarmFloorAutoState
+    state: WarmFloorPolicyState
     profile: WarmFloorProfile
     policy: str
     reason: str
     slow_slope: float | None
 
 
-def advance_warm_floor_auto(
+def advance_warm_floor_policy(
     inputs: WarmFloorThermalInput,
-    state: WarmFloorAutoState,
+    state: WarmFloorPolicyState,
     report: FloorReport | None,
     *,
     eligible: bool = True,
-) -> WarmFloorAutoDecision:
+) -> WarmFloorPolicyDecision:
     """Adapt every preset on real reports without relearning room physics.
 
     Fixed presets retain their selected level. Auto may choose a level.
@@ -69,7 +69,9 @@ def advance_warm_floor_auto(
     A held report, changed target or changed preset cannot confirm stability.
     """
     if state.target != inputs.target_temperature or state.level != inputs.level:
-        state = WarmFloorAutoState(target=inputs.target_temperature, level=inputs.level)
+        state = WarmFloorPolicyState(
+            target=inputs.target_temperature, level=inputs.level
+        )
     fresh = (
         report is not None
         and math.isfinite(report.timestamp)
@@ -191,4 +193,4 @@ def advance_warm_floor_auto(
         profile = replace(
             profile, off_seconds=min(MAX_OFF_SECONDS, profile.off_seconds)
         )
-    return WarmFloorAutoDecision(state, profile, policy, reason, slope)
+    return WarmFloorPolicyDecision(state, profile, policy, reason, slope)

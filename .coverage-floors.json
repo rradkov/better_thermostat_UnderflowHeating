@@ -36,7 +36,7 @@
   "custom_components/better_thermostat/core/snapshot.py": 100.0,
   "custom_components/better_thermostat/core/watchdog.py": 100.0,
   "custom_components/better_thermostat/core/warm_floor.py": 100.0,
-  "custom_components/better_thermostat/core/warm_floor_auto.py": 100.0,
+  "custom_components/better_thermostat/core/warm_floor_policy.py": 100.0,
   "custom_components/better_thermostat/core/warm_floor_prediction.py": 100.0,
   "custom_components/better_thermostat/device_action.py": 100.0,
   "custom_components/better_thermostat/device_binding.py": 100.0,

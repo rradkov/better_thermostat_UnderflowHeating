@@ -13,10 +13,10 @@ from custom_components.better_thermostat.core.warm_floor import (
     advance_warm_floor,
     compute_warm_floor_profile,
 )
-from custom_components.better_thermostat.core.warm_floor_auto import (
+from custom_components.better_thermostat.core.warm_floor_policy import (
     FloorReport,
-    WarmFloorAutoState,
-    advance_warm_floor_auto,
+    WarmFloorPolicyState,
+    advance_warm_floor_policy,
 )
 
 LEVELS = ["auto", "level_1", "level_2", "level_3"]
@@ -37,8 +37,8 @@ def inputs(room=23.0, **changes):
 
 
 def recovering(level="auto"):
-    return advance_warm_floor_auto(
-        inputs(level=level), WarmFloorAutoState(), FloorReport(3600, 23.0)
+    return advance_warm_floor_policy(
+        inputs(level=level), WarmFloorPolicyState(), FloorReport(3600, 23.0)
     )
 
 
@@ -56,7 +56,7 @@ def test_cooling_uses_bt_trend_and_retains_the_selected_preset(level):
 def test_repeated_ticks_do_not_confirm_stability_or_increase_heat(level):
     initial = decision = recovering(level)
     for _ in range(50):
-        decision = advance_warm_floor_auto(
+        decision = advance_warm_floor_policy(
             inputs(level=level), decision.state, FloorReport(3600, 23.0)
         )
     assert decision.state == initial.state
@@ -66,13 +66,13 @@ def test_repeated_ticks_do_not_confirm_stability_or_increase_heat(level):
 @pytest.mark.parametrize("level", LEVELS)
 def test_continued_cooling_increases_heat_only_on_fresh_spaced_reports(level):
     initial = recovering(level)
-    stronger = advance_warm_floor_auto(
+    stronger = advance_warm_floor_policy(
         inputs(level=level), initial.state, FloorReport(4500, 23.0)
     )
     assert stronger.profile.intensity == pytest.approx(initial.profile.intensity + 0.05)
     assert stronger.profile.on_seconds > initial.profile.on_seconds
     assert stronger.profile.off_seconds <= initial.profile.off_seconds
-    too_soon = advance_warm_floor_auto(
+    too_soon = advance_warm_floor_policy(
         inputs(level=level), stronger.state, FloorReport(4560, 23.0)
     )
     assert too_soon.profile.intensity == stronger.profile.intensity
@@ -84,12 +84,12 @@ def test_stability_requires_new_reports_and_cumulative_temperature_stability(lev
     thermal = inputs(level=level, slow_slope_kelvin_per_min=0)
     initial = decision.profile.intensity
     for timestamp in (4500, 5400, 6300):
-        decision = advance_warm_floor_auto(
+        decision = advance_warm_floor_policy(
             thermal, decision.state, FloorReport(timestamp, 23)
         )
     assert decision.reason == "balancing"
     assert decision.profile.intensity == pytest.approx(initial - 0.05)
-    restored = advance_warm_floor_auto(
+    restored = advance_warm_floor_policy(
         inputs(level=level), decision.state, FloorReport(7200, 23)
     )
     assert restored.reason == "cooling_returned"
@@ -98,7 +98,7 @@ def test_stability_requires_new_reports_and_cumulative_temperature_stability(lev
 
 def test_sensor_silence_cannot_prove_stability():
     decision = recovering()
-    result = advance_warm_floor_auto(
+    result = advance_warm_floor_policy(
         inputs(slow_slope_kelvin_per_min=0), decision.state, FloorReport(10000, 23)
     )
     assert result.state.stable_since is None
@@ -114,7 +114,7 @@ def test_sensor_silence_cannot_prove_stability():
     ],
 )
 def test_residual_heat_and_room_margin_release_recovery(changes, reason):
-    result = advance_warm_floor_auto(
+    result = advance_warm_floor_policy(
         replace(inputs(), **changes), recovering().state, None
     )
     assert result.reason == reason
@@ -123,9 +123,9 @@ def test_residual_heat_and_room_margin_release_recovery(changes, reason):
 
 @pytest.mark.parametrize("slow", [None, float("nan"), float("inf")])
 def test_missing_bt_slow_trend_does_not_create_another_temperature_history(slow):
-    result = advance_warm_floor_auto(
+    result = advance_warm_floor_policy(
         inputs(slow_slope_kelvin_per_min=slow),
-        WarmFloorAutoState(),
+        WarmFloorPolicyState(),
         FloorReport(3600, 23),
     )
     assert result.state.intensity is None
@@ -145,7 +145,7 @@ def test_missing_bt_slow_trend_does_not_create_another_temperature_history(slow)
 )
 def test_missing_repeated_invalid_and_old_reports_are_not_new_evidence(report):
     decision = recovering()
-    result = advance_warm_floor_auto(inputs(), decision.state, report)
+    result = advance_warm_floor_policy(inputs(), decision.state, report)
     assert result.state == decision.state
 
 
@@ -154,7 +154,7 @@ def test_missing_repeated_invalid_and_old_reports_are_not_new_evidence(report):
     [{"target_temperature": 24, "room_temperature": 24}, {"level": "level_1"}],
 )
 def test_target_and_preset_changes_discard_previous_adaptation(changes):
-    result = advance_warm_floor_auto(
+    result = advance_warm_floor_policy(
         replace(inputs(slow_slope_kelvin_per_min=None), **changes),
         recovering().state,
         None,
@@ -165,7 +165,7 @@ def test_target_and_preset_changes_discard_previous_adaptation(changes):
 
 @pytest.mark.parametrize("level", LEVELS)
 def test_normal_heating_and_upstream_blocks_remain_authoritative(level):
-    decision = advance_warm_floor_auto(
+    decision = advance_warm_floor_policy(
         inputs(22.9, level=level), recovering(level).state, None
     )
     assert decision.reason == "normal_heating"
@@ -244,9 +244,9 @@ def test_recovery_discards_the_old_stable_temperature_after_a_new_drop():
         reason="balancing",
         last_report=FloorReport(3600, 23.1),
     )
-    cooling = advance_warm_floor_auto(inputs(), state, FloorReport(4500, 23.0))
+    cooling = advance_warm_floor_policy(inputs(), state, FloorReport(4500, 23.0))
     assert cooling.state.stable_temperature is None
-    stable = advance_warm_floor_auto(
+    stable = advance_warm_floor_policy(
         inputs(slow_slope_kelvin_per_min=0), cooling.state, FloorReport(5400, 23.0)
     )
     assert stable.reason == "stabilizing"
@@ -254,18 +254,18 @@ def test_recovery_discards_the_old_stable_temperature_after_a_new_drop():
 
 
 def test_return_from_warming_reports_observing_until_new_cooling_evidence():
-    warming = advance_warm_floor_auto(
+    warming = advance_warm_floor_policy(
         inputs(slope_kelvin_per_min=0.003), recovering().state, None
     )
-    resumed = advance_warm_floor_auto(inputs(), warming.state, None)
+    resumed = advance_warm_floor_policy(inputs(), warming.state, None)
     assert resumed.reason == "observing"
 
 
 @pytest.mark.parametrize("level", LEVELS)
 def test_only_auto_retains_its_existing_maximum_pause(level):
-    result = advance_warm_floor_auto(
+    result = advance_warm_floor_policy(
         inputs(24, level=level, heat_loss=0.0001, slow_slope_kelvin_per_min=0),
-        WarmFloorAutoState(),
+        WarmFloorPolicyState(),
         None,
     )
     if level == "auto":

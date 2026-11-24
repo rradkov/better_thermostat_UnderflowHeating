@@ -23,11 +23,11 @@ from ..core.warm_floor import (
     advance_warm_floor,
     compute_warm_floor_profile,
 )
-from ..core.warm_floor_auto import (
+from ..core.warm_floor_policy import (
     MAX_OFF_SECONDS,
     FloorReport,
-    WarmFloorAutoState,
-    advance_warm_floor_auto,
+    WarmFloorPolicyState,
+    advance_warm_floor_policy,
 )
 from ..core.warm_floor_prediction import predict_warm_floor
 from .calibration.mpc import build_mpc_group_key, build_mpc_key
@@ -202,24 +202,28 @@ def apply_warm_floor(
             or hold
             or host.kernel_state.control_mode.mode != ControlMode.OPTIMAL
         ):
-            trv.warm_floor_auto_state = WarmFloorAutoState()
+            trv.warm_floor_policy_state = WarmFloorPolicyState()
             policy_reason = "suspended"
             if policy == "auto":
                 policy = "level_2"
         else:
-            auto = advance_warm_floor_auto(
+            policy_decision = advance_warm_floor_policy(
                 thermal,
-                trv.warm_floor_auto_state,
+                trv.warm_floor_policy_state,
                 _room_report(host, room),
                 eligible=not normal,
             )
-            trv.warm_floor_auto_state = auto.state
-            profile, policy, policy_reason = auto.profile, auto.policy, auto.reason
+            trv.warm_floor_policy_state = policy_decision.state
+            profile, policy, policy_reason = (
+                policy_decision.profile,
+                policy_decision.policy,
+                policy_decision.reason,
+            )
             settings = normalize_warm_floor(
                 {**trv.advanced, "warm_floor_level": policy}
             )
             thermal = replace(thermal, max_backoff=settings["warm_floor_max_backoff"])
-            slow_slope = auto.slow_slope
+            slow_slope = policy_decision.slow_slope
             if not normal:
                 prediction = predict_warm_floor(
                     thermal,

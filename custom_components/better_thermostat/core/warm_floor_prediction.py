@@ -1,4 +1,4 @@
-"""Bounded trend projections that can advance an Auto maintenance deadline."""
+"""Bounded trend projections that can advance a maintenance deadline."""
 
 from dataclasses import dataclass, replace
 import math
@@ -10,7 +10,7 @@ from .warm_floor import (
     WarmFloorState,
     WarmFloorThermalInput,
 )
-from .warm_floor_auto import TREND_THRESHOLD
+from .warm_floor_policy import TREND_THRESHOLD
 
 
 @dataclass(frozen=True)

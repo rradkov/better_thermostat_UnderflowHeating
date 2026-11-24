@@ -19,9 +19,9 @@ from custom_components.better_thermostat.core.warm_floor import (
     WarmFloorThermalInput,
     compute_warm_floor_profile,
 )
-from custom_components.better_thermostat.core.warm_floor_auto import (
+from custom_components.better_thermostat.core.warm_floor_policy import (
     FloorReport,
-    WarmFloorAutoState,
+    WarmFloorPolicyState,
 )
 from custom_components.better_thermostat.utils.calibration.mpc import (
     MpcState,
@@ -470,14 +470,14 @@ def test_auto_uses_real_sensor_reports_and_does_not_resample_control_ticks(
             23.0,
             None,
         )
-    assert trv.warm_floor_auto_state.last_report == FloorReport(
+    assert trv.warm_floor_policy_state.last_report == FloorReport(
         hass.states.get(host.sensor_entity_id).last_reported.timestamp(), 23.0
     )
     assert trv.warm_floor_status["decision_reason"] == "recovering"
 
 
 @pytest.mark.parametrize("level", ["level_1", "level_2", "level_3", "custom"])
-def test_fixed_levels_do_not_enter_auto_recovery(hass, level):
+def test_presets_keep_the_selected_level_without_fabricated_evidence(hass, level):
     host, trv, snapshot, desired = host_and_snapshot(hass)
     trv.advanced["warm_floor_level"] = level
     apply_warm_floor(host, trv.entity_id, snapshot, desired, 23.0, None)
@@ -485,7 +485,7 @@ def test_fixed_levels_do_not_enter_auto_recovery(hass, level):
     assert trv.warm_floor_status["decision_reason"] == (
         "fixed" if level == "custom" else "above_band"
     )
-    assert trv.warm_floor_auto_state.last_report is None
+    assert trv.warm_floor_policy_state.last_report is None
 
 
 @pytest.mark.parametrize("reading", [None, "unknown", "unavailable", "24.0"])
@@ -497,7 +497,7 @@ def test_auto_missing_or_not_yet_accepted_reports_do_not_create_history(hass, re
     if reading is not None:
         hass.states.async_set(host.sensor_entity_id, reading)
     apply_warm_floor(host, trv.entity_id, snapshot, desired, 23.0, None)
-    assert trv.warm_floor_auto_state.last_report is None
+    assert trv.warm_floor_policy_state.last_report is None
 
 
 def test_auto_fallback_keeps_the_pause_cap_without_claiming_fresh_room_evidence(hass):
@@ -562,7 +562,7 @@ def test_forecast_advances_a_generic_heater_after_its_full_minimum_pause(hass, f
     trv.advanced["warm_floor_level"] = "auto"
     freezer.move_to(snapshot.now)
     hass.states.async_set(host.sensor_entity_id, "23.02", {"unit_of_measurement": "°C"})
-    trv.warm_floor_auto_state = WarmFloorAutoState(
+    trv.warm_floor_policy_state = WarmFloorPolicyState(
         target=23,
         level="auto",
         last_report=FloorReport(snapshot.now.timestamp() - 3600, 23.22),
@@ -603,7 +603,7 @@ def test_continuous_offset_control_does_not_claim_a_predictive_on_off_pulse(
     trv.advanced["warm_floor_level"] = "auto"
     freezer.move_to(snapshot.now)
     hass.states.async_set(host.sensor_entity_id, "23.02", {"unit_of_measurement": "°C"})
-    trv.warm_floor_auto_state = WarmFloorAutoState(
+    trv.warm_floor_policy_state = WarmFloorPolicyState(
         target=23,
         level="auto",
         last_report=FloorReport(snapshot.now.timestamp() - 3600, 23.22),

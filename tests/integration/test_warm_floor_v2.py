@@ -215,7 +215,7 @@ async def test_auto_recovery_and_stable_taper_reach_both_heaters(hass):
         assert trv.warm_floor_status["decision_level"] == "level_3"
         assert trv.warm_floor_status["decision_reason"] == "recovering"
         assert hass.states.get(entity_id).attributes["temperature"] > 23.0
-        strength = trv.warm_floor_auto_state.intensity
+        strength = trv.warm_floor_policy_state.intensity
         assert strength is not None
         strengths[entity_id] = strength
     host.temperature_slope_1h = 0.0
@@ -227,7 +227,7 @@ async def test_auto_recovery_and_stable_taper_reach_both_heaters(hass):
     await report(23.0, 1800)
     for entity_id, trv in host.real_trvs.items():
         assert trv.warm_floor_status["decision_reason"] == "balancing"
-        strength = trv.warm_floor_auto_state.intensity
+        strength = trv.warm_floor_policy_state.intensity
         assert strength is not None and strength < strengths[entity_id]
     assert host.heat_target_temperature == 23.0
     assert hass.states.get(SENSOR_ID).state == "23.0"
@@ -262,7 +262,7 @@ async def test_predictive_early_start_reaches_both_heaters_without_a_new_report(
         trv.warm_floor_status["phase"] == "off" for trv in host.real_trvs.values()
     )
     counts = {
-        entity: trv.warm_floor_auto_state.last_report
+        entity: trv.warm_floor_policy_state.last_report
         for entity, trv in host.real_trvs.items()
     }
     clock.advance(1)
@@ -270,7 +270,7 @@ async def test_predictive_early_start_reaches_both_heaters_without_a_new_report(
     for entity, trv in host.real_trvs.items():
         assert trv.warm_floor_status["phase"] == "on"
         assert trv.warm_floor_status["decision_reason"] == "anticipating"
-        assert trv.warm_floor_auto_state.last_report == counts[entity]
+        assert trv.warm_floor_policy_state.last_report == counts[entity]
         assert hass.states.get(entity).attributes["temperature"] > 23.02
     assert host.heat_target_temperature == 23
 
