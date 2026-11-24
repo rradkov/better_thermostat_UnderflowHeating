@@ -99,3 +99,35 @@ percentage. `slow_trend_kelvin_per_min` and `trend_observation_span_seconds`
 publish observed long-term evidence; an unavailable trend remains null. The
 short-term slope retains its full precision in control snapshots. Dashboards
 can display both trends separately and must not convert missing evidence to zero.
+
+## Predictive Auto timing
+
+Auto also projects the observed temperature 30 and 60 minutes ahead. It uses
+the less pessimistic rate from the observed half-hour and hourly windows, so
+recent stabilization or warming takes precedence over an older decline. These
+are trend estimates, not measured temperatures or a learned model of the slab.
+Insufficient, implausible or noisy history cannot advance a maintenance pulse.
+
+When the predicted target crossing calls for an earlier start, Auto shortens
+the current OFF deadline against its original start time. It never lengthens a
+pause beyond the ordinary profile or restarts the phase timer. Four minutes OFF
+remain mandatory; a new ON phase also receives its normal minimum. Normal BT
+heating, window/OFF blocks, device limits and upstream command pacing still own
+their existing priorities. Fixed levels and Custom do not use prediction.
+
+The planning lead is 10 minutes when heating gain is unavailable. With a valid
+gain estimate it is four minutes plus the estimated time to deliver 0.1°C,
+bounded to 4–30 minutes. This allowance is not a claim about actuator travel or
+measured floor response. Loss, insulation, water temperature, solar gain and
+disturbance continue to influence the underlying maintenance profile.
+
+While the sensor is quiet, elapsed report age advances the projection (bounded
+to one additional hour) without inventing measurements or confirming stability.
+Continued cooling in the recovery band can raise maintenance intensity by
+0.05 per fresh observation, at most once per 15 minutes, up to 1.0. This lengthens
+ON and shortens OFF; stabilization still reduces strength gradually. Positive
+short-term warming prevents predictive early starts to respect residual heat.
+
+Per-circuit `forecast` diagnostics separate estimated temperatures, minutes to
+target, the planning lead and `advanced_start` from the actual room reading.
+`decision_reason: anticipating` identifies a shortened predictive pause.

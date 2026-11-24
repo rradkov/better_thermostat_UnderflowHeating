@@ -228,3 +228,44 @@ async def test_auto_recovery_and_stable_taper_reach_both_heaters(hass):
         assert strength is not None and strength < strengths[entity_id]
     assert host.heat_target_temperature == 23.0
     assert hass.states.get(SENSOR_ID).state == "23.0"
+
+
+async def test_predictive_early_start_reaches_both_heaters_without_a_new_report(hass):
+    _, host = await start_floor(hass)
+    clock = host.clock
+    assert isinstance(clock, FakeClock)
+    for trv in host.real_trvs.values():
+        trv.advanced["warm_floor_level"] = "auto"
+
+    async def report(value):
+        set_room_sensor(hass, value)
+        hass.states.get(SENSOR_ID).last_reported = clock.now()
+        host.room_temperature = value
+        host.room_temperature_filtered = value
+        host.temperature_slope = 0.0
+
+    await report(23.22)
+    await cycle(host)
+    clock.advance(3600)
+    await report(23.02)
+    for trv in host.real_trvs.values():
+        trv.warm_floor_state = WarmFloorState(
+            WarmFloorPhase.OFF, clock.monotonic() - 239
+        )
+        trv.warm_floor_commanded_phase = "off"
+    await cycle(host)
+    assert all(
+        trv.warm_floor_status["phase"] == "off" for trv in host.real_trvs.values()
+    )
+    counts = {
+        entity: len(trv.warm_floor_auto_state.reports)
+        for entity, trv in host.real_trvs.items()
+    }
+    clock.advance(1)
+    await cycle(host)
+    for entity, trv in host.real_trvs.items():
+        assert trv.warm_floor_status["phase"] == "on"
+        assert trv.warm_floor_status["decision_reason"] == "anticipating"
+        assert len(trv.warm_floor_auto_state.reports) == counts[entity]
+        assert hass.states.get(entity).attributes["temperature"] > 23.02
+    assert host.heat_target_temperature == 23

@@ -4552,6 +4552,7 @@ class BetterThermostat(ClimateEntity, RestoresLastAvailableState):
                         "decision_level",
                         "decision_reason",
                         "slow_trend_kelvin_per_min",
+                        "forecast",
                     )
                 }
                 for entity_id, trv in self.real_trvs.items()

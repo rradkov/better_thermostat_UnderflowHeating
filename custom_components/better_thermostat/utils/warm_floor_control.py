@@ -18,6 +18,7 @@ from ..core.fsm.control_mode import ControlMode
 from ..core.snapshot import HvacMode, WorldSnapshot
 from ..core.warm_floor import (
     WarmFloorObservation,
+    WarmFloorState,
     WarmFloorThermalInput,
     advance_warm_floor,
     compute_warm_floor_profile,
@@ -28,6 +29,7 @@ from ..core.warm_floor_auto import (
     WarmFloorAutoState,
     advance_warm_floor_auto,
 )
+from ..core.warm_floor_prediction import predict_warm_floor
 from .calibration.mpc import build_mpc_group_key, build_mpc_key
 from .helpers import convert_to_float_celsius
 from .underfloor import finite_number, normalize_warm_floor
@@ -107,6 +109,10 @@ def apply_warm_floor(
     if trv.advanced.get("heating_type") != "underfloor":
         return temperature, calibration_offset
     settings = normalize_warm_floor(trv.advanced)
+    generic = any(
+        item["trv"] == entity_id and item["integration"] == "generic_thermostat"
+        for item in host.all_trvs
+    )
     configured_backoff = settings["warm_floor_max_backoff"]
     room = snapshot.room_temperature
     hold = host.kernel_state.control_mode.mode == ControlMode.HOLD
@@ -196,6 +202,7 @@ def apply_warm_floor(
     policy_reason = "fixed"
     slow_slope = None
     observation_span = None
+    prediction = None
     if settings["warm_floor_level"] == "auto":
         profile = replace(
             profile, off_seconds=min(MAX_OFF_SECONDS, profile.off_seconds)
@@ -224,6 +231,18 @@ def apply_warm_floor(
                 auto.slow_slope,
                 auto.observation_span_seconds,
             )
+            if not normal:
+                prediction = predict_warm_floor(
+                    thermal,
+                    auto.state.reports,
+                    profile,
+                    trv.warm_floor_state if generic else WarmFloorState(),
+                    snapshot.now_monotonic,
+                    snapshot.now.timestamp(),
+                )
+                profile = prediction.profile
+                if prediction.advanced_start:
+                    policy_reason = "anticipating"
     state = host.hass.states.get(entity_id)
     reported_action = state.attributes.get("hvac_action") if state is not None else None
     feedback = (
@@ -261,6 +280,11 @@ def apply_warm_floor(
         "decision_reason": policy_reason,
         "slow_trend_kelvin_per_min": slow_slope,
         "trend_observation_span_seconds": observation_span,
+        "forecast": {
+            key: value for key, value in asdict(prediction).items() if key != "profile"
+        }
+        if prediction is not None
+        else None,
         "reported_heating": feedback,
         "write_result": "not_requested",
         "requested_setpoint": None,
@@ -284,10 +308,6 @@ def apply_warm_floor(
                 snapshot.heat_target_temperature,
             )
         return temperature, calibration_offset
-    generic = any(
-        item["trv"] == entity_id and item["integration"] == "generic_thermostat"
-        for item in host.all_trvs
-    )
     sustaining = (
         snapshot.heat_target_temperature
         - settings["warm_floor_max_backoff"] * profile.structural_scale

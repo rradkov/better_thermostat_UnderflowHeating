@@ -19,6 +19,10 @@ from custom_components.better_thermostat.core.warm_floor import (
     WarmFloorThermalInput,
     compute_warm_floor_profile,
 )
+from custom_components.better_thermostat.core.warm_floor_auto import (
+    FloorReport,
+    WarmFloorAutoState,
+)
 from custom_components.better_thermostat.utils.calibration.mpc import (
     MpcState,
     build_mpc_group_key,
@@ -542,3 +546,62 @@ def test_auto_recovery_strengthens_offset_and_valve_channels(hass, freezer):
     assert first is not None and recovered is not None and recovered < first
     assert trv.calibration_balance["valve_percent"] > initial_valve
     assert trv.warm_floor_status["decision_level"] == "level_3"
+
+
+def test_forecast_advances_a_generic_heater_after_its_full_minimum_pause(hass, freezer):
+    host, trv, snapshot, desired = host_and_snapshot(hass)
+    host.sensor_entity_id = "sensor.floor_room"
+    trv.advanced["warm_floor_level"] = "auto"
+    freezer.move_to(snapshot.now)
+    hass.states.async_set(host.sensor_entity_id, "23.02", {"unit_of_measurement": "°C"})
+    trv.warm_floor_auto_state = WarmFloorAutoState(
+        23, (FloorReport(snapshot.now.timestamp() - 3600, 23.22),)
+    )
+    trv.warm_floor_state = WarmFloorState(WarmFloorPhase.OFF, 761)
+    before, _ = apply_warm_floor(
+        host,
+        trv.entity_id,
+        replace(snapshot, room_temperature=23.02),
+        desired,
+        23,
+        None,
+    )
+    assert before is not None and before < 23
+    assert trv.warm_floor_state.started_monotonic == 761
+    after, _ = apply_warm_floor(
+        host,
+        trv.entity_id,
+        replace(snapshot, room_temperature=23.02, now_monotonic=1001),
+        desired,
+        23,
+        None,
+    )
+    assert after is not None and after > 23.4
+    assert trv.warm_floor_status["phase"] == "on"
+    assert trv.warm_floor_status["decision_reason"] == "anticipating"
+    forecast = trv.warm_floor_status["forecast"]
+    assert isinstance(forecast, dict) and forecast["advanced_start"]
+    assert snapshot.heat_target_temperature == 23
+
+
+def test_continuous_offset_control_does_not_claim_a_predictive_on_off_pulse(
+    hass, freezer
+):
+    host, trv, snapshot, desired = host_and_snapshot(hass, generic=False)
+    host.sensor_entity_id = "sensor.floor_room"
+    trv.advanced["warm_floor_level"] = "auto"
+    freezer.move_to(snapshot.now)
+    hass.states.async_set(host.sensor_entity_id, "23.02", {"unit_of_measurement": "°C"})
+    trv.warm_floor_auto_state = WarmFloorAutoState(
+        23, (FloorReport(snapshot.now.timestamp() - 3600, 23.22),)
+    )
+    trv.warm_floor_state = WarmFloorState(WarmFloorPhase.OFF, 0)
+    apply_warm_floor(
+        host, trv.entity_id, replace(snapshot, room_temperature=23.02), desired, 23, 0
+    )
+    forecast = trv.warm_floor_status["forecast"]
+    assert isinstance(forecast, dict)
+    assert forecast["temperature_after_30_minutes"] is not None
+    assert not forecast["advanced_start"]
+    assert trv.warm_floor_status["decision_reason"] == "recovering"
+    assert trv.warm_floor_status["phase"] == "sustaining"

@@ -81,7 +81,8 @@ def test_cooling_after_a_reduction_restores_strong_maintenance():
 
 
 @pytest.mark.parametrize(
-    "room,fast,reason", [(23.21, 0, "above_band"), (23.1, 0.006, "warming")]
+    "room,fast,reason",
+    [(23.21, 0, "above_band"), (23.1, 0.006, "warming"), (23.1, 0.001, "warming")],
 )
 def test_room_margin_and_warming_release_recovery(room, fast, reason):
     decision = advance_warm_floor_auto(
@@ -210,3 +211,32 @@ def test_frequent_changed_reports_keep_enough_history_for_slow_cooling():
     assert len(state.reports) <= 61
     assert decision.slow_slope is not None and decision.slow_slope < 0
     assert decision.policy == "level_3"
+
+
+def test_continued_cooling_strengthens_the_next_pulses_only_on_fresh_evidence():
+    state = WarmFloorAutoState(23.0, (FloorReport(0, 23.3),))
+    initial = advance_warm_floor_auto(inputs(23.2), state, FloorReport(3600, 23.2))
+    stronger = advance_warm_floor_auto(
+        inputs(23.14), initial.state, FloorReport(4500, 23.14)
+    )
+    assert stronger.profile.intensity == pytest.approx(initial.profile.intensity + 0.05)
+    repeated = advance_warm_floor_auto(
+        inputs(23.14), stronger.state, FloorReport(4500, 23.14)
+    )
+    too_soon = advance_warm_floor_auto(
+        inputs(23.13), repeated.state, FloorReport(4560, 23.13)
+    )
+    assert too_soon.profile.intensity == stronger.profile.intensity
+    again = advance_warm_floor_auto(
+        inputs(23.08), too_soon.state, FloorReport(5400, 23.08)
+    )
+    assert again.profile.on_seconds > stronger.profile.on_seconds
+    assert again.profile.off_seconds < stronger.profile.off_seconds
+
+
+def test_continued_cooling_cannot_raise_strength_above_full_duty():
+    state = WarmFloorAutoState(
+        23, (FloorReport(0, 23.3),), 1, None, 0, None, "recovering"
+    )
+    result = advance_warm_floor_auto(inputs(), state, FloorReport(3600, 23))
+    assert result.profile.intensity == 1

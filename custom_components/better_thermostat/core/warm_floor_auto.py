@@ -133,7 +133,7 @@ def advance_warm_floor_auto(
         policy = "level_1"
         state = replace(state, intensity=None, stable_since=None, reason="above_band")
         reason = state.reason
-    elif (inputs.slope_kelvin_per_min or 0.0) > 0.005 or (
+    elif (inputs.slope_kelvin_per_min or 0.0) > TREND_THRESHOLD or (
         fresh and slope is not None and slope > TREND_THRESHOLD and not stable
     ):
         policy = "level_1"
@@ -149,11 +149,22 @@ def advance_warm_floor_auto(
                 state.intensity or 0.0,
                 state.rollback_intensity or 0.0,
             )
+            continuing = state.reason in ("recovering", "cooling_returned")
+            reinforce = (
+                continuing
+                and state.intensity is not None
+                and state.last_reduction is not None
+                and reports[-1].timestamp - state.last_reduction >= REDUCTION_SECONDS
+            )
+            if reinforce:
+                intensity = min(1.0, intensity + INTENSITY_STEP)
             state = replace(
                 state,
                 intensity=intensity,
                 stable_since=None,
-                last_reduction=reports[-1].timestamp,
+                last_reduction=reports[-1].timestamp
+                if not continuing or reinforce
+                else state.last_reduction,
                 reason="cooling_returned"
                 if state.reason in ("balancing", "maintaining")
                 else "recovering",
