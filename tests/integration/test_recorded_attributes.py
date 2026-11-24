@@ -282,3 +282,17 @@ async def test_the_filter_restores_from_the_saved_runtime_state(hass, hass_stora
     bt = await wait_for_startup(hass, entry)
 
     assert bt.room_temperature_filtered == pytest.approx(19.37, abs=0.01)
+
+
+async def test_shared_hourly_diagnostic_updates_after_the_short_filter_settles(hass):
+    bt, clock = await _started_with_a_fake_clock(hass)
+    bt.room_temperature_ema_1h = 21.0
+    before = hass.states.get("sensor.bt_test_temperature_ema_1h")
+    assert before is not None
+    await _ema_tick_writes(hass, bt, clock, 60)
+    after = hass.states.get("sensor.bt_test_temperature_ema_1h")
+    assert bt.room_temperature_ema_1h is not None
+    assert float(after.state) == round(bt.room_temperature_ema_1h, 2)
+    assert float(after.state) < 21.0
+    assert after.attributes["temperature_slope_per_hour"] is not None
+    assert bt.room_temperature_filtered == 20.0

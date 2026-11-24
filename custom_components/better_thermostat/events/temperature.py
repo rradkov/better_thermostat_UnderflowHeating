@@ -97,6 +97,22 @@ def _update_room_temperature_ema(
     self.room_temperature_ema = ema
     # Expose a generic name so consumers don't need to know EMA vs SMA
     self.room_temperature_filtered = round(float(ema), 2)
+    # The diagnostic entity is a reader, never the owner of this filter.
+    # Its continuous-time derivative is (input - EMA) / tau. The input is
+    # BT's existing short EMA, matching the original Temperature EMA 1h.
+    hour_ema = getattr(self, "room_temperature_ema_1h", None)
+    started = getattr(self, "_room_temperature_ema_1h_started_monotonic", None)
+    if hour_ema is None or prev_ts is None or started is None or now_m < started:
+        self.room_temperature_ema_1h = ema
+        self._room_temperature_ema_1h_started_monotonic = now_m
+        self.temperature_slope_1h = None
+    else:
+        alpha_hour = 1.0 - math.exp(-max(0.0, now_m - prev_ts) / 3600.0)
+        hour_ema += alpha_hour * (ema - hour_ema)
+        self.room_temperature_ema_1h = hour_ema
+        self.temperature_slope_1h = (
+            (ema - hour_ema) / 60.0 if now_m - started >= 1800.0 else None
+        )
     return float(ema)
 
 

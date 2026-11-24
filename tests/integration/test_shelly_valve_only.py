@@ -373,6 +373,9 @@ async def test_flow_requires_an_algorithm_with_valve_output(
     if options:
         assert result.get("errors", {}) == {}
         assert result["type"] is FlowResultType.CREATE_ENTRY
+        # Saving options schedules an entry reload. Let that lifecycle finish
+        # before HA tears down the test and checks for orphaned control tasks.
+        await hass.async_block_till_done()
     else:
         assert result["step_id"] == "confirm"
         # The BLU reports HEAT only, so setup retains the existing confirmation.

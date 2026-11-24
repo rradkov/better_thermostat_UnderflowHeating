@@ -421,6 +421,9 @@ def make_bt(
     bt.call_for_heat = True
     bt.ignore_states = False
     bt.clock = FakeClock()
+    bt.room_temperature_ema_1h = None
+    bt.temperature_slope_1h = None
+    bt._room_temperature_ema_1h_started_monotonic = None
     bt.kernel_state = running_kernel_state()
     bt.control_queue_task = asyncio.Queue(maxsize=1)
     bt.window_queue_task = asyncio.Queue(maxsize=1)
@@ -475,6 +478,9 @@ def make_state_attributes_bt(**overrides) -> MagicMock:
     bt.has_contact_sensor = False
     bt.kernel_state = running_kernel_state()
     bt.clock = FakeClock()
+    bt.room_temperature_ema_1h = None
+    bt.temperature_slope_1h = None
+    bt._room_temperature_ema_1h_started_monotonic = None
     bt.temperature_slope = None
     for name, value in overrides.items():
         setattr(bt, name, value)

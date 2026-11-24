@@ -58,6 +58,7 @@ from homeassistant.core import (
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import (
     async_track_state_change_event,
@@ -192,6 +193,7 @@ from .utils.const import (
     DEFAULT_TARGET_TEMP,
     DEPRECATED_STATE_ATTRIBUTES,
     DOMAIN,
+    SIGNAL_ROOM_FILTER_UPDATED,
     SUPPORT_FLAGS,
     VERSION,
     CalibrationMode,
@@ -1166,6 +1168,26 @@ class BetterThermostat(ClimateEntity, RestoresLastAvailableState):
         self.runtime.room_temperature_ema = value
 
     @property
+    def room_temperature_ema_1h(self) -> float | None:
+        """Return the shared one-hour EMA used by diagnostics and control."""
+        return self.runtime.room_temperature_ema_1h
+
+    @room_temperature_ema_1h.setter
+    def room_temperature_ema_1h(self, value: float | None) -> None:
+        """Set the shared one-hour EMA."""
+        self.runtime.room_temperature_ema_1h = value
+
+    @property
+    def temperature_slope_1h(self) -> float | None:
+        """Return the one-hour EMA's rate of change in K/min."""
+        return self.runtime.temperature_slope_1h
+
+    @temperature_slope_1h.setter
+    def temperature_slope_1h(self, value: float | None) -> None:
+        """Set the shared slow temperature trend."""
+        self.runtime.temperature_slope_1h = value
+
+    @property
     def temperature_slope(self) -> float | None:
         """Return the temperature slope in K/min."""
         return self.runtime.temperature_slope
@@ -1559,6 +1581,7 @@ class BetterThermostat(ClimateEntity, RestoresLastAvailableState):
         self.room_temperature_ema_tau_seconds = ROOM_TEMPERATURE_EMA_TAU_S
         self.room_temperature_ema = None
         self._room_temperature_ema_monotonic: float | None = None
+        self._room_temperature_ema_1h_started_monotonic: float | None = None
         self.room_temperature_filtered = None
         # Unified state persistence (replaces per-controller stores). It holds
         # the stored state, and the entity saves through it, once
@@ -4322,21 +4345,55 @@ class BetterThermostat(ClimateEntity, RestoresLastAvailableState):
             pre_save=self._record_runtime_to_state, delay_seconds=delay_seconds
         )
 
+    def _thermal_learning_action(self, logical_action: HVACAction) -> HVACAction | None:
+        """Include reported maintenance heating in BT's existing room learner.
+
+        A requested pulse is not feedback. If any controlled emitter reports
+        heating the room is not passively cooling; otherwise every emitter
+        must confirm idle/off before an idle stretch can teach heat loss.
+        Unknown feedback suspends learning rather than guessing an action.
+        """
+        if (
+            not self.warm_floor_enabled
+            or logical_action != HVACAction.IDLE
+            or not any(
+                trv.advanced.get("heating_type") == "underfloor"
+                for trv in self.real_trvs.values()
+            )
+        ):
+            return logical_action
+        actions: list[object] = []
+        for entity_id in self.real_trvs:
+            state = self.hass.states.get(entity_id)
+            actions.append(
+                state.attributes.get("hvac_action") if state_is_live(state) else None
+            )
+        if "heating" in actions:
+            return HVACAction.HEATING
+        if actions and all(action in ("idle", "off") for action in actions):
+            return HVACAction.IDLE
+        return None
+
     async def calculate_heating_power(self) -> None:
         """Learn effective heating power (°C/min) from completed heating cycles.
 
         Delegates to :class:`HeatingPowerTracker` and handles HA side-effects.
         """
         current_action = self._compute_hvac_action()
+        learning_action = (
+            self._thermal_learning_action(current_action)
+            if self.warm_floor_enabled
+            else current_action
+        )
         outdoor_temperature = self._get_outdoor_temperature()
 
         result = self._heating_tracker.update(
             self.room_temperature,
-            current_action,
+            learning_action or current_action,
             self.clock.utcnow(),
             heat_target_temperature=self.heat_target_temperature,
             outdoor_temperature=outdoor_temperature,
-            learning_paused=self.learning_held,
+            learning_paused=self.learning_held or learning_action is None,
         )
         if self.contact_sensed_open:
             # A cycle that heats against an open window teaches nothing about
@@ -4345,8 +4402,8 @@ class BetterThermostat(ClimateEntity, RestoresLastAvailableState):
             self._heating_tracker.abort_cycle()
 
         if result.action_changed:
-            self.old_attr_hvac_action = result.current_action
-            self.attr_hvac_action = result.current_action
+            self.old_attr_hvac_action = current_action
+            self.attr_hvac_action = current_action
 
         if result.cycle_result is not None or result.action_changed:
             if result.cycle_result and result.cycle_result.power_changed:
@@ -4359,13 +4416,18 @@ class BetterThermostat(ClimateEntity, RestoresLastAvailableState):
         Delegates to :class:`HeatLossTracker` and handles HA side-effects.
         """
         current_action = self._compute_hvac_action()
+        learning_action = (
+            self._thermal_learning_action(current_action)
+            if self.warm_floor_enabled
+            else current_action
+        )
 
         result = self._loss_tracker.update(
             self.room_temperature,
-            current_action,
+            learning_action or current_action,
             self.clock.utcnow(),
             window_open=self.contact_sensed_open,
-            learning_paused=self.learning_held,
+            learning_paused=self.learning_held or learning_action is None,
         )
 
         if result.cycle_result is not None:
@@ -6100,6 +6162,9 @@ class BetterThermostat(ClimateEntity, RestoresLastAvailableState):
             now_ts = self.clock.monotonic()
 
             new_ema = _update_room_temperature_ema(self, float(last_raw))
+            async_dispatcher_send(
+                self.hass, SIGNAL_ROOM_FILTER_UPDATED.format(self.unique_id)
+            )
 
             if old_ema is not None and old_ts is not None:
                 elapsed_minutes = (now_ts - old_ts) / 60.0

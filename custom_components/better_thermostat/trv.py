@@ -163,8 +163,6 @@ class Trv:
         default_factory=WarmFloorAutoState
     )
     warm_floor_status: dict[str, object] = field(default_factory=dict)
-    warm_floor_long_average: float | None = None
-    warm_floor_average_monotonic: float | None = None
     warm_floor_commanded_phase: str | None = None
 
     # -- Reported device state -------------------------------------------

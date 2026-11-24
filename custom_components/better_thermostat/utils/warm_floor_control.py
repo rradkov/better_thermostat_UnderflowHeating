@@ -173,7 +173,8 @@ def apply_warm_floor(
         snapshot.heat_target_temperature,
         slope_kelvin_per_min=snapshot.temperature_slope,
         short_average=snapshot.room_temperature_filtered,
-        long_average=trv.warm_floor_long_average,
+        long_average=host.room_temperature_ema_1h,
+        slow_slope_kelvin_per_min=host.temperature_slope_1h,
         heat_loss=loss,
         heating_power=power,
         insulation=insulation,
@@ -184,36 +185,27 @@ def apply_warm_floor(
         level=settings["warm_floor_level"],
         max_backoff=settings["warm_floor_max_backoff"],
     )
-    # One-hour baseline follows held readings in elapsed time; it is an
-    # estimate, never a fabricated new room-sensor report.
-    previous_time = trv.warm_floor_average_monotonic
-    if trv.warm_floor_long_average is None:
-        trv.warm_floor_long_average = room
-    elif previous_time is not None and not hold:
-        alpha = 1.0 - math.exp(
-            -max(0.0, snapshot.now_monotonic - previous_time) / 3600.0
-        )
-        trv.warm_floor_long_average += alpha * (room - trv.warm_floor_long_average)
-    trv.warm_floor_average_monotonic = snapshot.now_monotonic
     profile = compute_warm_floor_profile(thermal)
     ceiling = min(snapshot.heat_target_temperature + 5.0, trv.max_temp)
     blocked = blocked or room >= ceiling
     policy = settings["warm_floor_level"]
     policy_reason = "fixed"
-    slow_slope = None
-    observation_span = None
+    slow_slope = thermal.slow_slope_kelvin_per_min
     prediction = None
-    if settings["warm_floor_level"] == "auto":
-        profile = replace(
-            profile, off_seconds=min(MAX_OFF_SECONDS, profile.off_seconds)
-        )
+    if settings["warm_floor_level"] != "custom":
+        if settings["warm_floor_level"] == "auto":
+            profile = replace(
+                profile, off_seconds=min(MAX_OFF_SECONDS, profile.off_seconds)
+            )
         if (
             blocked
             or hold
             or host.kernel_state.control_mode.mode != ControlMode.OPTIMAL
         ):
             trv.warm_floor_auto_state = WarmFloorAutoState()
-            policy, policy_reason = "level_2", "suspended"
+            policy_reason = "suspended"
+            if policy == "auto":
+                policy = "level_2"
         else:
             auto = advance_warm_floor_auto(
                 thermal,
@@ -227,18 +219,13 @@ def apply_warm_floor(
                 {**trv.advanced, "warm_floor_level": policy}
             )
             thermal = replace(thermal, max_backoff=settings["warm_floor_max_backoff"])
-            slow_slope, observation_span = (
-                auto.slow_slope,
-                auto.observation_span_seconds,
-            )
+            slow_slope = auto.slow_slope
             if not normal:
                 prediction = predict_warm_floor(
                     thermal,
-                    auto.state.reports,
                     profile,
                     trv.warm_floor_state if generic else WarmFloorState(),
                     snapshot.now_monotonic,
-                    snapshot.now.timestamp(),
                 )
                 profile = prediction.profile
                 if prediction.advanced_start:
@@ -279,7 +266,10 @@ def apply_warm_floor(
         "decision_level": policy,
         "decision_reason": policy_reason,
         "slow_trend_kelvin_per_min": slow_slope,
-        "trend_observation_span_seconds": observation_span,
+        # Retain the published key for existing templates. A shared EMA has
+        # no independent raw-report observation window to report here.
+        "trend_observation_span_seconds": None,
+        "trend_source": "bt_temperature_ema_1h",
         "forecast": {
             key: value for key, value in asdict(prediction).items() if key != "profile"
         }

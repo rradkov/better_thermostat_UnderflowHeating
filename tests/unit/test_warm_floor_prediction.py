@@ -10,24 +10,19 @@ from custom_components.better_thermostat.core.warm_floor import (
     WarmFloorThermalInput,
     advance_warm_floor,
 )
-from custom_components.better_thermostat.core.warm_floor_auto import FloorReport
 from custom_components.better_thermostat.core.warm_floor_prediction import (
     predict_warm_floor,
 )
 
 
-def predict(
-    *, room=23.1, reports=None, phase=None, elapsed=600, timestamp=3600, **inputs
-):
+def predict(*, room=23.1, slow=-0.2 / 60, phase=None, elapsed=600, **inputs):
     return predict_warm_floor(
-        WarmFloorThermalInput(room, 23.0, level="auto", **inputs),
-        (FloorReport(0, room + 0.2), FloorReport(3600, room))
-        if reports is None
-        else reports,
+        WarmFloorThermalInput(
+            room, 23.0, level="auto", slow_slope_kelvin_per_min=slow, **inputs
+        ),
         WarmFloorProfile(600, 3600, 0.5, 0.7),
         WarmFloorState(WarmFloorPhase.OFF, 0) if phase is None else phase,
         elapsed,
-        timestamp,
     )
 
 
@@ -39,8 +34,11 @@ def test_predicted_crossing_shortens_an_existing_pause_without_restarting_it():
     assert result.response_lead_minutes == 14
     assert result.advanced_start
     assert result.profile.off_seconds == pytest.approx(1560)
-    later = predict(heating_power=0.01, elapsed=900, timestamp=3900)
-    assert later.profile.off_seconds == pytest.approx(result.profile.off_seconds)
+    later = predict(heating_power=0.01, elapsed=900)
+    assert later.profile.off_seconds <= 3600
+    assert later.profile.off_seconds - 900 == pytest.approx(
+        result.profile.off_seconds - 600
+    )
 
 
 def test_an_imminent_drop_can_start_at_four_minutes_but_not_before():
@@ -66,28 +64,16 @@ def test_a_weak_emitter_needs_more_lead_than_a_strong_one():
     assert weak.profile.off_seconds < strong.profile.off_seconds
 
 
-@pytest.mark.parametrize(
-    "reports",
-    [
-        (),
-        (FloorReport(0, 23.1),),
-        (FloorReport(0, 23.3), FloorReport(900, 23.1)),
-        (FloorReport(0, 23.3), FloorReport(10800, 23.1)),
-        (FloorReport(0, 30), FloorReport(3600, 23.1)),
-        (FloorReport(0, float("nan")), FloorReport(3600, 23.1)),
-    ],
-)
-def test_insufficient_gapped_or_implausible_evidence_cannot_advance_heating(reports):
-    result = predict(reports=reports)
+@pytest.mark.parametrize("slow", [None, float("nan"), float("inf"), -0.06])
+def test_missing_or_implausible_bt_trends_cannot_advance_heating(slow):
+    result = predict(slow=slow)
     assert result.temperature_after_30_minutes is None
     assert not result.advanced_start
     assert result.profile.off_seconds == 3600
 
 
-def test_recent_stability_takes_precedence_over_an_older_drop():
-    result = predict(
-        reports=(FloorReport(0, 23.3), FloorReport(1800, 23.1), FloorReport(3600, 23.1))
-    )
+def test_recent_bt_stability_takes_precedence_over_an_older_drop():
+    result = predict(slow=0)
     assert result.temperature_after_60_minutes == 23.1
     assert not result.advanced_start
 
@@ -95,11 +81,6 @@ def test_recent_stability_takes_precedence_over_an_older_drop():
 @pytest.mark.parametrize("inputs", [{"slope_kelvin_per_min": 0.001}, {"room": 22.9}])
 def test_residual_warming_and_normal_heating_prevent_an_early_start(inputs):
     result = predict(**inputs)
-    assert not result.advanced_start
-
-
-def test_a_small_change_within_sensor_noise_does_not_advance_the_phase():
-    result = predict(reports=(FloorReport(0, 23.14), FloorReport(1800, 23.1)))
     assert not result.advanced_start
 
 
@@ -112,12 +93,10 @@ def test_a_forecast_cannot_shorten_an_on_phase_or_invent_a_start_time(phase):
     assert not result.advanced_start
 
 
-def test_held_data_can_advance_timing_without_unbounded_extrapolation():
-    first = predict(timestamp=7200)
-    older = predict(timestamp=18000)
-    assert first == older
-    assert first.temperature_after_30_minutes == pytest.approx(22.8)
-    assert predict(timestamp=3000).temperature_after_30_minutes == pytest.approx(23)
+def test_control_ticks_do_not_age_bt_filtered_temperatures_a_second_time():
+    first = predict(elapsed=0)
+    later = predict(elapsed=3600)
+    assert first.temperature_after_60_minutes == later.temperature_after_60_minutes
 
 
 def test_forecast_never_delays_an_already_earlier_pause():

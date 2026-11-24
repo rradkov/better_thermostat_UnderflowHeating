@@ -32,6 +32,7 @@ class WarmFloorThermalInput:
     disturbance: float | None = None
     level: str = "level_2"
     max_backoff: float = 1.5
+    slow_slope_kelvin_per_min: float | None = None
 
 
 @dataclass(frozen=True)
@@ -105,10 +106,61 @@ def compute_warm_floor_profile(inputs: WarmFloorThermalInput) -> WarmFloorProfil
         proximity = 0.1 / excess
         intensity *= _clamp(proximity * (1.0 + cooling + 0.1 * demand), 0.15, 1.0)
     intensity = _clamp(intensity * (1.0 - 0.85 * warming), 0.15, 1.0)
-    on_seconds = MIN_PHASE_SECONDS + 480.0 * (intensity - 0.15) / 0.85
-    off_seconds = MIN_PHASE_SECONDS + 900.0 * (1.0 - intensity) ** 2
-    off_seconds += 900.0 * max(0.0, excess - 0.1) * (1.0 + warming)
-    return WarmFloorProfile(on_seconds, off_seconds, structural, intensity)
+    return profile_for_intensity(inputs, intensity, structural)
+
+
+def _positive(value: float | None) -> float | None:
+    """Accept finite positive BT estimates without manufacturing learned data."""
+    return value if value is not None and math.isfinite(value) and value > 0 else None
+
+
+def profile_for_intensity(
+    inputs: WarmFloorThermalInput, intensity: float, structural: float
+) -> WarmFloorProfile:
+    """Size maintenance from BT's learned net warming and cooling rates.
+
+    Levels choose a small comfort reserve, rather than a fixed pulse length.
+    Loss during the minimum legal pause must also be recovered. Without gain
+    evidence, use minimum probes until BT's existing thermal learner responds.
+    Neither a clock tick nor a requested ON phase is a measured room response.
+    """
+    strength = _clamp(intensity, 0.15, 1.0)
+    slope = inputs.slope_kelvin_per_min or 0.0
+    excess = max(0.0, inputs.room_temperature - inputs.target_temperature)
+    cooling = _positive(inputs.heat_loss)
+    if math.isfinite(slope) and slope < 0:
+        cooling = max(cooling or 0.0, -slope)
+    slow_slope = inputs.slow_slope_kelvin_per_min
+    if (
+        slow_slope is not None
+        and math.isfinite(slow_slope)
+        and slow_slope < 0
+        and slope <= 0
+    ):
+        cooling = max(cooling or 0.0, -slow_slope)
+    heating = _positive(inputs.heating_power)
+    # Residual warming shortens heating even when it came from another source.
+    if math.isfinite(slope) and slope > 0:
+        heating = max(heating or 0.0, slope)
+    band = 0.05 + 0.15 * strength
+    if cooling is None:
+        off_seconds = MIN_PHASE_SECONDS / strength
+        off_seconds += MIN_PHASE_SECONDS * excess / band
+    else:
+        off_seconds = 60.0 * (band * (1.0 - strength) + excess) / cooling
+    if math.isfinite(slope) and slope > 0:
+        off_seconds += MIN_PHASE_SECONDS * slope / (cooling or slope)
+    if heating is None:
+        on_seconds = MIN_PHASE_SECONDS
+    else:
+        reserve = band + (cooling or 0.0) * MIN_PHASE_SECONDS / 60.0
+        on_seconds = 60.0 * max(0.0, reserve - excess) / heating
+    return WarmFloorProfile(
+        max(MIN_PHASE_SECONDS, on_seconds),
+        max(MIN_PHASE_SECONDS, off_seconds),
+        structural,
+        strength,
+    )
 
 
 class WarmFloorPhase(StrEnum):

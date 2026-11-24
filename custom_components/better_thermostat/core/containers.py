@@ -64,6 +64,8 @@ class BtRuntime:
     room_temperature: float | None = None
     room_temperature_filtered: float | None = None
     room_temperature_ema: float | None = None
+    room_temperature_ema_1h: float | None = None
+    temperature_slope_1h: float | None = None
     temperature_slope: float | None = None
     call_for_heat: bool = True
     ignore_states: bool = False

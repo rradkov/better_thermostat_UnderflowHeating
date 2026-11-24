@@ -204,6 +204,8 @@ async def test_auto_recovery_and_stable_taper_reach_both_heaters(hass):
         host.room_temperature = value
         host.room_temperature_filtered = value
         host.temperature_slope = 0.0
+        if host.temperature_slope_1h is None:
+            host.temperature_slope_1h = -0.1 / 60
         await cycle(host)
 
     await report(23.1, 0)
@@ -216,7 +218,8 @@ async def test_auto_recovery_and_stable_taper_reach_both_heaters(hass):
         strength = trv.warm_floor_auto_state.intensity
         assert strength is not None
         strengths[entity_id] = strength
-    await report(23.0, 3600)
+    host.temperature_slope_1h = 0.0
+    await report(23.0, 900)
     assert all(
         trv.warm_floor_status["decision_reason"] == "stabilizing"
         for trv in host.real_trvs.values()
@@ -243,6 +246,7 @@ async def test_predictive_early_start_reaches_both_heaters_without_a_new_report(
         host.room_temperature = value
         host.room_temperature_filtered = value
         host.temperature_slope = 0.0
+        host.temperature_slope_1h = -0.2 / 60
 
     await report(23.22)
     await cycle(host)
@@ -258,7 +262,7 @@ async def test_predictive_early_start_reaches_both_heaters_without_a_new_report(
         trv.warm_floor_status["phase"] == "off" for trv in host.real_trvs.values()
     )
     counts = {
-        entity: len(trv.warm_floor_auto_state.reports)
+        entity: trv.warm_floor_auto_state.last_report
         for entity, trv in host.real_trvs.items()
     }
     clock.advance(1)
@@ -266,6 +270,48 @@ async def test_predictive_early_start_reaches_both_heaters_without_a_new_report(
     for entity, trv in host.real_trvs.items():
         assert trv.warm_floor_status["phase"] == "on"
         assert trv.warm_floor_status["decision_reason"] == "anticipating"
-        assert len(trv.warm_floor_auto_state.reports) == counts[entity]
+        assert trv.warm_floor_auto_state.last_report == counts[entity]
         assert hass.states.get(entity).attributes["temperature"] > 23.02
     assert host.heat_target_temperature == 23
+
+
+async def test_native_bt_learners_include_actual_maintenance_and_residual_heat(hass):
+    from homeassistant.components.climate.const import HVACAction
+
+    _, host = await start_floor(hass)
+    assert isinstance(host.clock, FakeClock)
+    assert host.hvac_action == HVACAction.IDLE
+
+    def feedback(action):
+        for entity_id in host.real_trvs:
+            state = hass.states.get(entity_id)
+            hass.states.async_set(
+                entity_id, "heat", {**state.attributes, "hvac_action": action}
+            )
+
+    feedback("heating")
+    host.room_temperature = 23.4
+    await host.calculate_heating_power()
+    assert host._heating_tracker.start is not None
+    host.clock.advance(900)
+    host.room_temperature = 23.6
+    feedback("idle")
+    await host.calculate_heating_power()
+    host.clock.advance(300)
+    host.room_temperature = 23.7
+    await host.calculate_heating_power()
+    host.clock.advance(300)
+    host.room_temperature = 23.65
+    await host.calculate_heating_power()
+    assert host.last_heating_power_stats
+    assert host.last_heating_power_stats[-1]["delta_kelvin"] == 0.3
+    assert host.hvac_action == HVACAction.IDLE
+
+    await host.calculate_heat_loss()
+    host.clock.advance(1200)
+    host.room_temperature = 23.45
+    await host.calculate_heat_loss()
+    feedback("heating")
+    await host.calculate_heat_loss()
+    assert host.last_heat_loss_stats
+    assert host.last_heat_loss_stats[-1]["delta_kelvin"] == 0.2

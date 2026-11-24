@@ -40,6 +40,7 @@ NORMALIZED_ID_NAMES: Final = f"{DOMAIN}_normalized_id_names"
 # when a calibration algorithm of that entry changed, so the sensor platform
 # adds and removes the entities the algorithms bring.
 SIGNAL_CONFIG_CHANGED: Final = SignalTypeFormat[()]("bt_config_changed_{}")
+SIGNAL_ROOM_FILTER_UPDATED: Final = SignalTypeFormat[()]("bt_room_filter_updated_{}")
 
 
 class _Manifest(TypedDict):

@@ -434,6 +434,7 @@ def test_auto_uses_real_sensor_reports_and_does_not_resample_control_ticks(
 ):
     host, trv, snapshot, desired = host_and_snapshot(hass)
     host.sensor_entity_id = "sensor.floor_room"
+    host.temperature_slope_1h = -0.1 / 60
     trv.advanced["warm_floor_level"] = "auto"
     freezer.move_to("2026-11-24T10:00:00+00:00")
     hass.states.async_set(host.sensor_entity_id, "23.1", {"unit_of_measurement": "°C"})
@@ -469,7 +470,9 @@ def test_auto_uses_real_sensor_reports_and_does_not_resample_control_ticks(
             23.0,
             None,
         )
-    assert len(trv.warm_floor_auto_state.reports) == 2
+    assert trv.warm_floor_auto_state.last_report == FloorReport(
+        hass.states.get(host.sensor_entity_id).last_reported.timestamp(), 23.0
+    )
     assert trv.warm_floor_status["decision_reason"] == "recovering"
 
 
@@ -479,19 +482,22 @@ def test_fixed_levels_do_not_enter_auto_recovery(hass, level):
     trv.advanced["warm_floor_level"] = level
     apply_warm_floor(host, trv.entity_id, snapshot, desired, 23.0, None)
     assert trv.warm_floor_status["decision_level"] == level
-    assert trv.warm_floor_status["decision_reason"] == "fixed"
-    assert trv.warm_floor_auto_state.reports == ()
+    assert trv.warm_floor_status["decision_reason"] == (
+        "fixed" if level == "custom" else "above_band"
+    )
+    assert trv.warm_floor_auto_state.last_report is None
 
 
 @pytest.mark.parametrize("reading", [None, "unknown", "unavailable", "24.0"])
 def test_auto_missing_or_not_yet_accepted_reports_do_not_create_history(hass, reading):
     host, trv, snapshot, desired = host_and_snapshot(hass)
     host.sensor_entity_id = "sensor.floor_room"
+    host.temperature_slope_1h = -0.1 / 60
     trv.advanced["warm_floor_level"] = "auto"
     if reading is not None:
         hass.states.async_set(host.sensor_entity_id, reading)
     apply_warm_floor(host, trv.entity_id, snapshot, desired, 23.0, None)
-    assert trv.warm_floor_auto_state.reports == ()
+    assert trv.warm_floor_auto_state.last_report is None
 
 
 def test_auto_fallback_keeps_the_pause_cap_without_claiming_fresh_room_evidence(hass):
@@ -518,6 +524,7 @@ def test_auto_fallback_keeps_the_pause_cap_without_claiming_fresh_room_evidence(
 def test_auto_recovery_strengthens_offset_and_valve_channels(hass, freezer):
     host, trv, snapshot, desired = host_and_snapshot(hass, generic=False)
     host.sensor_entity_id = "sensor.floor_room"
+    host.temperature_slope_1h = -0.1 / 60
     trv.advanced["warm_floor_level"] = "auto"
     trv.calibration_balance = make_calibration_balance(
         CalibrationMode.HEATING_POWER_CALIBRATION, apply_valve=True
@@ -551,11 +558,14 @@ def test_auto_recovery_strengthens_offset_and_valve_channels(hass, freezer):
 def test_forecast_advances_a_generic_heater_after_its_full_minimum_pause(hass, freezer):
     host, trv, snapshot, desired = host_and_snapshot(hass)
     host.sensor_entity_id = "sensor.floor_room"
+    host.temperature_slope_1h = -0.2 / 60
     trv.advanced["warm_floor_level"] = "auto"
     freezer.move_to(snapshot.now)
     hass.states.async_set(host.sensor_entity_id, "23.02", {"unit_of_measurement": "°C"})
     trv.warm_floor_auto_state = WarmFloorAutoState(
-        23, (FloorReport(snapshot.now.timestamp() - 3600, 23.22),)
+        target=23,
+        level="auto",
+        last_report=FloorReport(snapshot.now.timestamp() - 3600, 23.22),
     )
     trv.warm_floor_state = WarmFloorState(WarmFloorPhase.OFF, 761)
     before, _ = apply_warm_floor(
@@ -589,11 +599,14 @@ def test_continuous_offset_control_does_not_claim_a_predictive_on_off_pulse(
 ):
     host, trv, snapshot, desired = host_and_snapshot(hass, generic=False)
     host.sensor_entity_id = "sensor.floor_room"
+    host.temperature_slope_1h = -0.1 / 60
     trv.advanced["warm_floor_level"] = "auto"
     freezer.move_to(snapshot.now)
     hass.states.async_set(host.sensor_entity_id, "23.02", {"unit_of_measurement": "°C"})
     trv.warm_floor_auto_state = WarmFloorAutoState(
-        23, (FloorReport(snapshot.now.timestamp() - 3600, 23.22),)
+        target=23,
+        level="auto",
+        last_report=FloorReport(snapshot.now.timestamp() - 3600, 23.22),
     )
     trv.warm_floor_state = WarmFloorState(WarmFloorPhase.OFF, 0)
     apply_warm_floor(
@@ -605,3 +618,55 @@ def test_continuous_offset_control_does_not_claim_a_predictive_on_off_pulse(
     assert not forecast["advanced_start"]
     assert trv.warm_floor_status["decision_reason"] == "recovering"
     assert trv.warm_floor_status["phase"] == "sustaining"
+
+
+@pytest.mark.parametrize(
+    "actions,expected",
+    [
+        (["heating"], HVACAction.HEATING),
+        (["heating", None], HVACAction.HEATING),
+        (["idle", "off"], HVACAction.IDLE),
+        (["idle", None], None),
+        ([None], None),
+    ],
+)
+def test_native_bt_learning_uses_reported_maintenance_heating_not_intent(
+    hass, actions, expected
+):
+    from custom_components.better_thermostat.climate import BetterThermostat
+
+    host, trv, _, _ = host_and_snapshot(hass)
+    host.real_trvs.clear()
+    for index, action in enumerate(actions):
+        heater = make_trv(f"climate.loop_{index}")
+        heater.advanced["heating_type"] = "underfloor"
+        host.real_trvs[heater.entity_id] = heater
+        hass.states.async_set(heater.entity_id, "heat", {"hvac_action": action})
+        heater.warm_floor_status = {"phase": "on", "write_result": "sent"}
+    assert BetterThermostat._thermal_learning_action(host, HVACAction.IDLE) == expected
+    assert (
+        BetterThermostat._thermal_learning_action(host, HVACAction.COOLING)
+        == HVACAction.COOLING
+    )
+    host.warm_floor_enabled = False
+    assert (
+        BetterThermostat._thermal_learning_action(host, HVACAction.IDLE)
+        == HVACAction.IDLE
+    )
+
+
+def test_floor_status_uses_native_bt_signals_without_another_filter(hass):
+    host, trv, snapshot, desired = host_and_snapshot(hass)
+    host.room_temperature_ema_1h = 23.456789
+    host.temperature_slope_1h = -0.004321
+    apply_warm_floor(host, trv.entity_id, snapshot, desired, 23, None)
+    thermal = trv.warm_floor_status["thermal_inputs"]
+    assert isinstance(thermal, dict)
+    assert thermal["long_average"] == host.room_temperature_ema_1h
+    assert thermal["slow_slope_kelvin_per_min"] == host.temperature_slope_1h
+    assert thermal["slope_kelvin_per_min"] == snapshot.temperature_slope
+    assert (
+        trv.warm_floor_status["slow_trend_kelvin_per_min"] == host.temperature_slope_1h
+    )
+    assert not hasattr(trv, "warm_floor_long_average")
+    assert trv.warm_floor_status["trend_observation_span_seconds"] is None

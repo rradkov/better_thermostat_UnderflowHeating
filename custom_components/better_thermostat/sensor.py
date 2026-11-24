@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Sequence
 import logging
-import math
-from time import monotonic
 from typing import TYPE_CHECKING, Literal, override
 
 from homeassistant.components.climate.const import HVACMode
@@ -44,6 +42,7 @@ from .utils.const import (
     CONF_CALIBRATION_MODE,
     DOMAIN,
     SIGNAL_CONFIG_CHANGED,
+    SIGNAL_ROOM_FILTER_UPDATED,
     CalibrationMode,
 )
 from .utils.helpers import async_normalize_bt_entity_ids, configured_calibration_mode
@@ -893,42 +892,40 @@ class BetterThermostatExternalTemp1hEMASensor(_BtSensorBase):
     _attr_suggested_display_precision = 2
     _unique_id_suffix = "external_temp_ema_1h"
 
-    def __init__(self, bt_climate: BetterThermostat) -> None:
-        """Initialize the sensor."""
-        super().__init__(bt_climate)
-        self._ema_value: float | None = None
-        self._last_update_ts: float | None = None
-        self._tau_s: float = 3600.0  # 1 hour
+    @override
+    async def async_added_to_hass(self) -> None:
+        """Listen to the shared filter independently of climate state writes."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                SIGNAL_ROOM_FILTER_UPDATED.format(self._bt_climate.unique_id),
+                self._on_filter_update,
+            )
+        )
 
-    def _update_ema(self, new_value: float) -> None:
-        """Update the 1h EMA with a new value."""
-        now = monotonic()
-        prev_ts = self._last_update_ts
-        prev_ema = self._ema_value
-
-        if prev_ts is None or prev_ema is None:
-            ema = float(new_value)
-        else:
-            dt_seconds = max(0.0, now - prev_ts)
-            alpha = 1.0 - math.exp(-dt_seconds / self._tau_s) if dt_seconds > 0 else 0.0
-            ema = prev_ema + alpha * (new_value - prev_ema)
-
-        self._ema_value = ema
-        self._last_update_ts = now
+    @callback
+    def _on_filter_update(self) -> None:
+        """Publish the shared estimate without writing the climate entity."""
+        self._update_state()
+        self.async_write_ha_state()
 
     @override
     def _update_state(self) -> None:
-        """Update state from internal EMA."""
-        value = _get_filtered_temperature(self._bt_climate)
-        if value is not None:
-            try:
-                self._update_ema(float(value))
-                assert self._ema_value is not None  # set by _update_ema
-                self._attr_native_value = round(self._ema_value, 2)
-            except ValueError, TypeError:
-                self._attr_native_value = None
-        else:
-            self._attr_native_value = None
+        """Read BT's shared filter; disabling this sensor cannot stop learning."""
+        value = self._bt_climate.room_temperature_ema_1h
+        self._attr_native_value = round(value, 2) if value is not None else None
+
+    @property
+    @override
+    def extra_state_attributes(self) -> dict[str, float | None]:
+        """Expose the common slow trend in display units, degrees per hour."""
+        slope = self._bt_climate.temperature_slope_1h
+        return {
+            "temperature_slope_per_hour": round(slope * 60.0, 5)
+            if slope is not None
+            else None
+        }
 
 
 class BetterThermostatTempSlopeSensor(_BtSimpleAttributeSensor):

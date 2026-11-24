@@ -19,16 +19,19 @@ _EMA = f"{_CLIMATE}._update_room_temperature_ema"
 
 
 @pytest.fixture
-def bt():
+def bt(hass):
     """Minimal BetterThermostat mock for the periodic EMA tick."""
     mock = ThermostatStandIn()
     mock.device_name = "Test BT"
+    mock.hass = hass
     mock.startup_running = False
     mock.room_temperature = 20.0
     mock.room_temperature_ema = None
     mock._slope_periodic_last_ts = None
     mock.temperature_slope = None
     mock.room_temperature_filtered = None
+    mock.room_temperature_ema_1h = None
+    mock.temperature_slope_1h = None
     mock._minute_tick_attributes = partial(
         BetterThermostat._minute_tick_attributes, mock
     )
@@ -148,3 +151,25 @@ async def test_a_filter_step_alone_writes_the_state(bt):
         await BetterThermostat._async_update_ema_periodic(bt)
     assert bt.temperature_slope == pytest.approx(0.01)
     bt.async_write_ha_state.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_hourly_filter_updates_diagnostics_without_a_climate_state_write(bt):
+    bt.room_temperature_filtered = 23.0
+    bt.room_temperature_ema = 23.0
+    bt.room_temperature_ema_1h = 23.5
+    bt.temperature_slope = 0.0
+    bt._slope_periodic_last_ts = 1000.0
+    bt.clock = FakeClock(monotonic_value=1060.0)
+
+    def update_filter(_host, _temperature):
+        bt.room_temperature_ema_1h = 23.49
+        return 23.0
+
+    with (
+        patch(_EMA, update_filter),
+        patch(f"{_CLIMATE}.async_dispatcher_send") as notify,
+    ):
+        await BetterThermostat._async_update_ema_periodic(bt)
+    notify.assert_called_once()
+    bt.async_write_ha_state.assert_not_called()

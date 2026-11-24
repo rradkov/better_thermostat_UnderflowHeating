@@ -62,72 +62,82 @@ setpoint is not adopted as a new room target; saved room targets take priority,
 and a fresh entry without a saved target uses the ordinary default instead of
 an underfloor heater's temporary setpoint.
 
-## Auto recovery and observed slow trends
+## Shared BT signals and adaptive maintenance
 
-Auto begins with Balanced maintenance while gathering sensor reports. Unlike
-manual Eco, Balanced, Keep it Hot and Custom settings, Auto can adapt its
-maintenance strength. Room readings and their original Home Assistant report
-timestamps are tracked independently per circuit, with bounded two-hour history.
-Control ticks do not create reports or confirm stabilization. History retains
-one report per minute, replacing that minute's value when a new changed reading
-arrives; frequent updates cannot erase older minutes. Unchanged values count
-only when the source sensor has actually reported again in a later minute.
-No report cadence or particular hardware is assumed.
+Warm Floor consumes Better Thermostat's existing short temperature slope,
+Temperature EMA 1h, heating-power tracker and heat-loss tracker. There is no
+second one-hour filter, room-temperature history or thermal learner per circuit.
+The one-hour EMA now belongs to the thermostat, so disabling its diagnostic
+sensor does not stop control updates. The sensor keeps its existing unique id.
+Its `temperature_slope_per_hour` attribute exposes the slow rate in °C/hour.
 
-A trend needs observations spanning at least 30 minutes; the anchor closest to
-one hour is preferred, and gaps over two hours cannot establish a new trend.
-Cooling faster than 0.03°C/hour with an observed change exceeding 0.05°C enters
-Keep it Hot recovery when the room is between the target and target + 0.2°C,
-inclusive. Recovery lengthens ON and shortens OFF. Below target, normal BT
-heating retains ownership; above the band or while warming, recovery is released.
+The short trend remains BT's short-filter slope in K/min. The slow trend is
+the derivative of BT's one-hour EMA: `(short EMA - one-hour EMA) / 60` in K/min.
+It becomes available after 30 minutes of filter warm-up. This is a filtered
+rate, not the raw difference between two sensor reports, a temperature, or a
+promise about next hour's temperature. Display it as °C/hour by multiplying
+by 60; preserve null when unavailable. `slow_trend_kelvin_per_min` in Warm Floor
+Status is an alias of this shared BT value, with `trend_source` identifying it.
+The former `trend_observation_span_seconds` key remains null for compatibility;
+the shared filter does not claim a separate raw-report observation window.
 
-Recovery is held until new reports show a stable range of at most 0.05°C.
-After another 30 minutes of confirmed stability, Auto reduces its intensity by
-0.05 per step, no more often than every 15 minutes and only with a new report.
-Renewed cooling restores strong maintenance. All original actuator minimums,
-upstream blocks and the absolute maintenance ceiling still apply. Fixed levels
-retain their existing behavior. A changed room target or unusable room sensor
-discards the corresponding adaptation; restart begins collecting fresh evidence.
+Eco, Balanced, Keep it Hot and Auto all recalculate ON/OFF from BT's estimated
+net warming/cooling rates, current temperature margin and shared trends.
+The chosen intensity sets a small comfort reserve (0.05–0.2°C). ON estimates
+the time to replenish that reserve and heat lost during the minimum pause,
+using BT's warming rate. OFF uses the available margin and cooling rate.
+Rising temperature reduces the next heating interval and extends the pause.
+A weaker emitter or a slower measured room response can require a pulse much
+longer than 12 minutes: there is no fixed ON maximum or 75% duty ceiling.
+Missing gain estimates use minimum probing pulses, rather than invented gain.
+Custom uses the same duration calculation with its configured backoff/push.
 
-Auto's calculated OFF interval is capped at 60 minutes. Physical response can
-still be delayed by device availability, its own cycle settings and upstream
-write pacing. This cap never forces heating through an upstream block.
+BT's existing heating and loss trackers also see device-reported heating during
+maintenance. An intended ON or a successful write alone is insufficient.
+Any emitter reporting heating prevents the room from being learned as idle;
+otherwise every controlled emitter must confirm idle/off. Unknown feedback
+suspends learning for that interval. Existing learning pause, open-contact and
+cooling exclusions remain in force. This reuses the normal learner, including
+its handling of heat that continues to arrive after heating stops.
 
-The diagnostic fields `decision_level` and `decision_reason` describe the actual
-policy used by the controller, rather than a dashboard classification of a
-percentage. `slow_trend_kelvin_per_min` and `trend_observation_span_seconds`
-publish observed long-term evidence; an unavailable trend remains null. The
-short-term slope retains its full precision in control snapshots. Dashboards
-can display both trends separately and must not convert missing evidence to zero.
+Auto begins with Balanced. Fresh accepted sensor reports and the shared slow
+trend can strengthen maintenance near target. Eco, Balanced and Keep it Hot
+adapt too, while retaining their selected level. Auto can choose a level.
+Cooling faster than 0.03°C/hour near target increases maintenance strength;
+continued cooling can add 0.05 at most once per 15 minutes. A repeated report
+or a control tick is never new evidence for this adaptation.
 
-## Predictive Auto timing
+New reports showing a stable range within 0.05°C and a stable shared slow trend
+start a 30-minute confirmation interval. Confirmed stability reduces strength
+by 0.05 at most once per 15 minutes, stopping at the selected preset baseline
+(or Eco's baseline for Auto). A report gap longer than the confirmation window
+cannot prove stability. Renewed cooling restores strong maintenance. Changing
+the target or level discards policy adaptation; BT's shared room filters and
+learned physical response remain owned by BT.
 
-Auto also projects the observed temperature 30 and 60 minutes ahead. It uses
-the less pessimistic rate from the observed half-hour and hourly windows, so
-recent stabilization or warming takes precedence over an older decline. These
-are trend estimates, not measured temperatures or a learned model of the slab.
-Insufficient, implausible or noisy history cannot advance a maintenance pulse.
+All original safety controls retain priority. ON/OFF minimums remain four
+minutes; device hysteresis, device-specific minimum cycles, limits, write pacing,
+OFF, open contacts, device release and HOLD still apply. Below target, ordinary
+BT room heating takes over. Auto retains its 60-minute maximum planned pause;
+the other presets retain temperature-driven pauses without that extra cap.
+No pause deadline overrides a safety block or forces a device to heat.
 
-When the predicted target crossing calls for an earlier start, Auto shortens
-the current OFF deadline against its original start time. It never lengthens a
-pause beyond the ordinary profile or restarts the phase timer. Four minutes OFF
-remain mandatory; a new ON phase also receives its normal minimum. Normal BT
-heating, window/OFF blocks, device limits and upstream command pacing still own
-their existing priorities. Fixed levels and Custom do not use prediction.
+## Predictive timing
 
-The planning lead is 10 minutes when heating gain is unavailable. With a valid
-gain estimate it is four minutes plus the estimated time to deliver 0.1°C,
-bounded to 4–30 minutes. This allowance is not a claim about actuator travel or
-measured floor response. Loss, insulation, water temperature, solar gain and
-disturbance continue to influence the underlying maintenance profile.
+All four adaptive presets may shorten an OFF deadline using BT's shared slow
+trend, while a positive short trend prevents early starts. The prediction never
+extends the ordinary pause or resets its start. Four minutes OFF remain mandatory.
+Custom uses the physical duration calculation without predictive early starts.
 
-While the sensor is quiet, elapsed report age advances the projection (bounded
-to one additional hour) without inventing measurements or confirming stability.
-Continued cooling in the recovery band can raise maintenance intensity by
-0.05 per fresh observation, at most once per 15 minutes, up to 1.0. This lengthens
-ON and shortens OFF; stabilization still reduces strength gradually. Positive
-short-term warming prevents predictive early starts to respect residual heat.
+The planning lead remains 10 minutes when gain is unavailable. With valid gain,
+it is four minutes plus the estimated time to deliver 0.1°C, bounded to 4–30
+minutes. This is a planning allowance, not a learned actuator or floor delay.
 
-Per-circuit `forecast` diagnostics separate estimated temperatures, minutes to
-target, the planning lead and `advanced_start` from the actual room reading.
+The 30/60-minute temperatures remain conditional trend projections. They do
+not simulate the thermal effect of future heating pulses. The shared BT filter
+already advances between reports; prediction does not extrapolate report age a
+second time. Estimates do not replace actual room measurements.
+
+Per-circuit `forecast` separates estimated temperatures, minutes to target,
+planning lead and `advanced_start` from the actual room reading.
 `decision_reason: anticipating` identifies a shortened predictive pause.
