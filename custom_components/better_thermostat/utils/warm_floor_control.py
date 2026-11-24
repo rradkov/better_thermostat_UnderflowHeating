@@ -22,13 +22,32 @@ from ..core.warm_floor import (
     advance_warm_floor,
     compute_warm_floor_profile,
 )
+from ..core.warm_floor_auto import (
+    MAX_OFF_SECONDS,
+    FloorReport,
+    WarmFloorAutoState,
+    advance_warm_floor_auto,
+)
 from .calibration.mpc import build_mpc_group_key, build_mpc_key
 from .helpers import convert_to_float_celsius
 from .underfloor import finite_number, normalize_warm_floor
+from .watcher import room_sensor_reading
 
 if TYPE_CHECKING:
     from ..climate import BetterThermostat
     from ..trv import Trv
+
+
+def _room_report(host: BetterThermostat, room: float) -> FloorReport | None:
+    """Read a genuine accepted sensor report, never the control tick's time."""
+    sensor = getattr(host, "sensor_entity_id", None)
+    state = host.hass.states.get(sensor) if sensor else None
+    if state is None:
+        return None
+    reading = room_sensor_reading(host, state)
+    if reading is None or not math.isclose(reading, room, abs_tol=0.005):
+        return None
+    return FloorReport(state.last_reported.timestamp(), reading)
 
 
 def record_warm_floor_write(
@@ -88,6 +107,7 @@ def apply_warm_floor(
     if trv.advanced.get("heating_type") != "underfloor":
         return temperature, calibration_offset
     settings = normalize_warm_floor(trv.advanced)
+    configured_backoff = settings["warm_floor_max_backoff"]
     room = snapshot.room_temperature
     hold = host.kernel_state.control_mode.mode == ControlMode.HOLD
     if host.kernel_state.control_mode.mode == ControlMode.SENSOR_FALLBACK:
@@ -172,6 +192,38 @@ def apply_warm_floor(
     profile = compute_warm_floor_profile(thermal)
     ceiling = min(snapshot.heat_target_temperature + 5.0, trv.max_temp)
     blocked = blocked or room >= ceiling
+    policy = settings["warm_floor_level"]
+    policy_reason = "fixed"
+    slow_slope = None
+    observation_span = None
+    if settings["warm_floor_level"] == "auto":
+        profile = replace(
+            profile, off_seconds=min(MAX_OFF_SECONDS, profile.off_seconds)
+        )
+        if (
+            blocked
+            or hold
+            or host.kernel_state.control_mode.mode != ControlMode.OPTIMAL
+        ):
+            trv.warm_floor_auto_state = WarmFloorAutoState()
+            policy, policy_reason = "level_2", "suspended"
+        else:
+            auto = advance_warm_floor_auto(
+                thermal,
+                trv.warm_floor_auto_state,
+                _room_report(host, room),
+                eligible=not normal,
+            )
+            trv.warm_floor_auto_state = auto.state
+            profile, policy, policy_reason = auto.profile, auto.policy, auto.reason
+            settings = normalize_warm_floor(
+                {**trv.advanced, "warm_floor_level": policy}
+            )
+            thermal = replace(thermal, max_backoff=settings["warm_floor_max_backoff"])
+            slow_slope, observation_span = (
+                auto.slow_slope,
+                auto.observation_span_seconds,
+            )
     state = host.hass.states.get(entity_id)
     reported_action = state.attributes.get("hvac_action") if state is not None else None
     feedback = (
@@ -205,6 +257,10 @@ def apply_warm_floor(
         "on_seconds": profile.on_seconds,
         "off_seconds": profile.off_seconds,
         "intensity": profile.intensity,
+        "decision_level": policy,
+        "decision_reason": policy_reason,
+        "slow_trend_kelvin_per_min": slow_slope,
+        "trend_observation_span_seconds": observation_span,
         "reported_heating": feedback,
         "write_result": "not_requested",
         "requested_setpoint": None,
@@ -282,8 +338,15 @@ def apply_warm_floor(
                     + settings["warm_floor_sustain_push"] * profile.structural_scale,
                 )
         if calibration_offset is not None and trv.current_temperature is not None:
+            offset_floor = sustaining
+            if thermal.level == "auto":
+                # Offsets actuate in the opposite direction to setpoints:
+                # stronger maintenance lowers the temperature seen by the TRV.
+                offset_floor = snapshot.heat_target_temperature - (
+                    configured_backoff * profile.structural_scale * profile.intensity
+                )
             calibration_offset = min(
-                calibration_offset, sustaining - trv.current_temperature
+                calibration_offset, offset_floor - trv.current_temperature
             )
         if balance is not None and balance.get("apply_valve"):
             balance["valve_percent"] = max(

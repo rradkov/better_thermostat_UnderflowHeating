@@ -40,6 +40,7 @@ from custom_components.better_thermostat.utils.helpers import (
 )
 
 from .core.warm_floor import WarmFloorState
+from .core.warm_floor_auto import WarmFloorAutoState
 
 if TYPE_CHECKING:
     from custom_components.better_thermostat.adapters.delegate import (
@@ -158,6 +159,9 @@ class Trv:
     calibration: CalibrationOutput | None = None
     advanced: TrvAdvanced = field(default_factory=TrvAdvanced)
     warm_floor_state: WarmFloorState = field(default_factory=WarmFloorState)
+    warm_floor_auto_state: WarmFloorAutoState = field(
+        default_factory=WarmFloorAutoState
+    )
     warm_floor_status: dict[str, object] = field(default_factory=dict)
     warm_floor_long_average: float | None = None
     warm_floor_average_monotonic: float | None = None

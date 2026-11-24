@@ -7,6 +7,7 @@ Assistant states are read and condensed into the immutable
 
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
@@ -28,6 +29,17 @@ def _as_float(self: BetterThermostat, value: str | float | None) -> float | None
     snapshot must carry the same numbers the rest of BT computes with.
     """
     return convert_to_float(value, self.device_name, "build_snapshot()")
+
+
+def _as_slope(value: str | float | None) -> float | None:
+    """Preserve rates below the temperature converter's 0.01-degree grid."""
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        slope = float(value)
+    except TypeError, ValueError, OverflowError:
+        return None
+    return slope if math.isfinite(slope) else None
 
 
 def _build_trv_reported(
@@ -113,7 +125,7 @@ def build_snapshot(self: BetterThermostat) -> WorldSnapshot:
         # reads the value that is still None then.
         room_temperature=_as_float(self, self.native_current_temperature),
         room_temperature_filtered=_as_float(self, self.room_temperature_filtered),
-        temperature_slope=_as_float(self, self.temperature_slope),
+        temperature_slope=_as_slope(self.temperature_slope),
         call_for_heat=self.call_for_heat,
         window_open=_raw_window_open(self),
         preset_mode=parse_preset(self.preset_mode),

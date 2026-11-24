@@ -4544,7 +4544,15 @@ class BetterThermostat(ClimateEntity, RestoresLastAvailableState):
             dev_specific["warm_floor"] = {
                 entity_id: {
                     key: trv.warm_floor_status.get(key)
-                    for key in ("phase", "reason", "remaining_seconds", "write_result")
+                    for key in (
+                        "phase",
+                        "reason",
+                        "remaining_seconds",
+                        "write_result",
+                        "decision_level",
+                        "decision_reason",
+                        "slow_trend_kelvin_per_min",
+                    )
                 }
                 for entity_id, trv in self.real_trvs.items()
                 if trv.advanced.get("heating_type") == "underfloor"

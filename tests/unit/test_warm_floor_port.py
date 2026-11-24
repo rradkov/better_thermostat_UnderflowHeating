@@ -423,3 +423,122 @@ def test_failed_or_repeated_writes_do_not_restart_the_phase_timer():
     trv.warm_floor_status["phase"] = None
     record_warm_floor_write(trv, "setpoint", "sent", 23.0, 350.0)
     assert trv.warm_floor_commanded_phase is None
+
+
+def test_auto_uses_real_sensor_reports_and_does_not_resample_control_ticks(
+    hass, freezer
+):
+    host, trv, snapshot, desired = host_and_snapshot(hass)
+    host.sensor_entity_id = "sensor.floor_room"
+    trv.advanced["warm_floor_level"] = "auto"
+    freezer.move_to("2026-11-24T10:00:00+00:00")
+    hass.states.async_set(host.sensor_entity_id, "23.1", {"unit_of_measurement": "°C"})
+    apply_warm_floor(
+        host,
+        trv.entity_id,
+        replace(snapshot, room_temperature=23.1),
+        desired,
+        23.0,
+        None,
+    )
+    freezer.move_to("2026-11-24T11:00:00+00:00")
+    hass.states.async_set(host.sensor_entity_id, "23.0", {"unit_of_measurement": "°C"})
+    apply_warm_floor(
+        host,
+        trv.entity_id,
+        replace(snapshot, room_temperature=23.0, now_monotonic=4600),
+        desired,
+        23.0,
+        None,
+    )
+    assert trv.warm_floor_status["decision_level"] == "level_3"
+    assert trv.warm_floor_status["decision_reason"] == "recovering"
+    assert trv.warm_floor_status["slow_trend_kelvin_per_min"] == pytest.approx(
+        -0.1 / 60
+    )
+    for elapsed in (4700, 5000, 8000):
+        apply_warm_floor(
+            host,
+            trv.entity_id,
+            replace(snapshot, room_temperature=23.0, now_monotonic=elapsed),
+            desired,
+            23.0,
+            None,
+        )
+    assert len(trv.warm_floor_auto_state.reports) == 2
+    assert trv.warm_floor_status["decision_reason"] == "recovering"
+
+
+@pytest.mark.parametrize("level", ["level_1", "level_2", "level_3", "custom"])
+def test_fixed_levels_do_not_enter_auto_recovery(hass, level):
+    host, trv, snapshot, desired = host_and_snapshot(hass)
+    trv.advanced["warm_floor_level"] = level
+    apply_warm_floor(host, trv.entity_id, snapshot, desired, 23.0, None)
+    assert trv.warm_floor_status["decision_level"] == level
+    assert trv.warm_floor_status["decision_reason"] == "fixed"
+    assert trv.warm_floor_auto_state.reports == ()
+
+
+@pytest.mark.parametrize("reading", [None, "unknown", "unavailable", "24.0"])
+def test_auto_missing_or_not_yet_accepted_reports_do_not_create_history(hass, reading):
+    host, trv, snapshot, desired = host_and_snapshot(hass)
+    host.sensor_entity_id = "sensor.floor_room"
+    trv.advanced["warm_floor_level"] = "auto"
+    if reading is not None:
+        hass.states.async_set(host.sensor_entity_id, reading)
+    apply_warm_floor(host, trv.entity_id, snapshot, desired, 23.0, None)
+    assert trv.warm_floor_auto_state.reports == ()
+
+
+def test_auto_fallback_keeps_the_pause_cap_without_claiming_fresh_room_evidence(hass):
+    host, trv, snapshot, desired = host_and_snapshot(hass)
+    trv.advanced["warm_floor_level"] = "auto"
+    host.kernel_state = replace(
+        host.kernel_state,
+        control_mode=ControlModeState(mode=ControlMode.SENSOR_FALLBACK),
+    )
+    host.room_temperature = 27.0
+    apply_warm_floor(
+        host,
+        trv.entity_id,
+        replace(snapshot, room_temperature=None),
+        desired,
+        23.0,
+        None,
+    )
+    off_seconds = trv.warm_floor_status["off_seconds"]
+    assert isinstance(off_seconds, float) and off_seconds <= 3600
+    assert trv.warm_floor_status["decision_reason"] == "suspended"
+
+
+def test_auto_recovery_strengthens_offset_and_valve_channels(hass, freezer):
+    host, trv, snapshot, desired = host_and_snapshot(hass, generic=False)
+    host.sensor_entity_id = "sensor.floor_room"
+    trv.advanced["warm_floor_level"] = "auto"
+    trv.calibration_balance = make_calibration_balance(
+        CalibrationMode.HEATING_POWER_CALIBRATION, apply_valve=True
+    )
+    freezer.move_to("2026-11-24T10:00:00+00:00")
+    hass.states.async_set(host.sensor_entity_id, "23.1", {"unit_of_measurement": "°C"})
+    _, first = apply_warm_floor(
+        host,
+        trv.entity_id,
+        replace(snapshot, room_temperature=23.1),
+        desired,
+        None,
+        7.0,
+    )
+    initial_valve = trv.calibration_balance["valve_percent"]
+    freezer.move_to("2026-11-24T11:00:00+00:00")
+    hass.states.async_set(host.sensor_entity_id, "23.0", {"unit_of_measurement": "°C"})
+    _, recovered = apply_warm_floor(
+        host,
+        trv.entity_id,
+        replace(snapshot, room_temperature=23.0, now_monotonic=4600),
+        desired,
+        None,
+        7.0,
+    )
+    assert first is not None and recovered is not None and recovered < first
+    assert trv.calibration_balance["valve_percent"] > initial_valve
+    assert trv.warm_floor_status["decision_level"] == "level_3"

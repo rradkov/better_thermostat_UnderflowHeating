@@ -68,6 +68,20 @@ def _make_bt() -> MagicMock:
 
 
 # Entity attribute -> snapshot field, value from _make_bt.
+@pytest.mark.parametrize("slope", [-0.1 / 60, 0.1 / 60, -0.00001])
+def test_slow_rates_survive_the_snapshot_without_temperature_grid_rounding(slope):
+    bt = _make_bt()
+    bt.temperature_slope = slope
+    assert build_snapshot(bt).temperature_slope == slope
+
+
+@pytest.mark.parametrize("slope", [None, True, "bad", float("nan"), float("inf"), {}])
+def test_an_unusable_rate_is_unknown_in_the_snapshot(slope):
+    bt = _make_bt()
+    bt.temperature_slope = slope
+    assert build_snapshot(bt).temperature_slope is None
+
+
 COMPLETENESS_TABLE = [
     ("heat_target_temperature", "heat_target_temperature", 21.5),
     ("cool_target_temperature", "cool_target_temperature", 24.0),

@@ -21,6 +21,7 @@ from custom_components.better_thermostat.utils.scheduler import request_control_
 from .conftest import (
     BT_ENTITY,
     DOMAIN,
+    SENSOR_ID,
     WRITE_BUDGET,
     build_devices,
     click_through_the_options,
@@ -187,3 +188,43 @@ async def test_custom_settings_survive_the_options_form_and_flow_updates(hass):
         assert bundle["advanced"]["warm_floor_level"] == "custom"
         assert bundle["advanced"]["warm_floor_max_backoff"] == 0.8
         assert bundle["advanced"]["warm_floor_sustain_push"] == 0.4
+
+
+async def test_auto_recovery_and_stable_taper_reach_both_heaters(hass):
+    _, host = await start_floor(hass)
+    clock = host.clock
+    assert isinstance(clock, FakeClock)
+    for trv in host.real_trvs.values():
+        trv.advanced["warm_floor_level"] = "auto"
+
+    async def report(value, elapsed):
+        clock.advance(elapsed)
+        set_room_sensor(hass, value)
+        hass.states.get(SENSOR_ID).last_reported = clock.now()
+        host.room_temperature = value
+        host.room_temperature_filtered = value
+        host.temperature_slope = 0.0
+        await cycle(host)
+
+    await report(23.1, 0)
+    await report(23.0, 3600)
+    strengths = {}
+    for entity_id, trv in host.real_trvs.items():
+        assert trv.warm_floor_status["decision_level"] == "level_3"
+        assert trv.warm_floor_status["decision_reason"] == "recovering"
+        assert hass.states.get(entity_id).attributes["temperature"] > 23.0
+        strength = trv.warm_floor_auto_state.intensity
+        assert strength is not None
+        strengths[entity_id] = strength
+    await report(23.0, 3600)
+    assert all(
+        trv.warm_floor_status["decision_reason"] == "stabilizing"
+        for trv in host.real_trvs.values()
+    )
+    await report(23.0, 1800)
+    for entity_id, trv in host.real_trvs.items():
+        assert trv.warm_floor_status["decision_reason"] == "balancing"
+        strength = trv.warm_floor_auto_state.intensity
+        assert strength is not None and strength < strengths[entity_id]
+    assert host.heat_target_temperature == 23.0
+    assert hass.states.get(SENSOR_ID).state == "23.0"
