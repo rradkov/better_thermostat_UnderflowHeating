@@ -35,7 +35,7 @@ from .device_profiles import GENERIC_HEAT_TRV, SPARE_HEAT_TRV, GroupScenario
 FLOOR_PAIR = GroupScenario("floor_pair", (GENERIC_HEAT_TRV, SPARE_HEAT_TRV))
 
 
-async def start_floor(hass, *, saved=True, boost=False, custom=False, predictive=True):
+async def start_floor(hass, *, saved=True, boost=False, custom=False):
     set_room_sensor(hass, 23.4)
     await build_devices(hass, *FLOOR_PAIR.profiles)
     template = make_entry(FLOOR_PAIR)
@@ -51,7 +51,6 @@ async def start_floor(hass, *, saved=True, boost=False, custom=False, predictive
             "advanced": {
                 **bundle["advanced"],
                 "heating_type": "underfloor",
-                **({} if predictive else {"calibration_mode": "tpi_calibration"}),
                 "warm_floor_level": "custom" if custom else "level_2",
                 "warm_floor_max_backoff": 0.8,
                 "warm_floor_sustain_push": 0.4,
@@ -191,8 +190,8 @@ async def test_custom_settings_survive_the_options_form_and_flow_updates(hass):
         assert bundle["advanced"]["warm_floor_sustain_push"] == 0.4
 
 
-async def test_fallback_auto_recovery_and_stable_taper_reach_both_heaters(hass):
-    _, host = await start_floor(hass, predictive=False)
+async def test_auto_recovery_and_stable_taper_reach_both_heaters(hass):
+    _, host = await start_floor(hass)
     clock = host.clock
     assert isinstance(clock, FakeClock)
     for trv in host.real_trvs.values():
@@ -234,41 +233,8 @@ async def test_fallback_auto_recovery_and_stable_taper_reach_both_heaters(hass):
     assert hass.states.get(SENSOR_ID).state == "23.0"
 
 
-async def test_shared_predictive_command_reaches_both_relays_before_a_drop(hass):
+async def test_predictive_early_start_reaches_both_heaters_without_a_new_report(hass):
     _, host = await start_floor(hass)
-    clock = host.clock
-    assert isinstance(clock, FakeClock)
-    set_room_sensor(hass, 23.02)
-    host.room_temperature = host.room_temperature_filtered = 23.02
-    for trv in host.real_trvs.values():
-        trv.advanced["warm_floor_level"] = "auto"
-        trv.advanced["calibration_mode"] = "mpc_v2_calibration"
-        trv.warm_floor_state = WarmFloorState(
-            WarmFloorPhase.OFF, clock.monotonic() - 239, model_demand=0
-        )
-        trv.warm_floor_commanded_phase = "off"
-    await cycle(host)
-    assert all(
-        trv.warm_floor_status["phase"] == "off" for trv in host.real_trvs.values()
-    )
-    clock.advance(1)
-    await cycle(host)
-    for entity, trv in host.real_trvs.items():
-        assert trv.calibration_balance is not None
-        percent = trv.calibration_balance["valve_percent"]
-        assert percent > 0, trv.calibration_balance
-        assert trv.warm_floor_status["model_demand_percent"] == percent
-        assert trv.warm_floor_status["decision_reason"] == "model_heating"
-        assert trv.warm_floor_status["control_source"] == "bt_mpc_v2_calibration"
-        assert trv.warm_floor_status["forecast"] is None
-        assert trv.warm_floor_status["phase"] == "on"
-        assert hass.states.get(entity).attributes["temperature"] > 23.02
-    assert host.heat_target_temperature == 23
-    assert host.room_temperature > host.heat_target_temperature
-
-
-async def test_fallback_early_start_reaches_both_heaters_without_a_new_report(hass):
-    _, host = await start_floor(hass, predictive=False)
     clock = host.clock
     assert isinstance(clock, FakeClock)
     for trv in host.real_trvs.values():

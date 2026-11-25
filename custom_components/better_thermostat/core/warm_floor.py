@@ -7,7 +7,7 @@ outside it. A phase is planned intent, not proof that an actuator moved.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from enum import StrEnum
 import math
 
@@ -43,26 +43,6 @@ class WarmFloorProfile:
     off_seconds: float
     structural_scale: float
     intensity: float
-
-
-def profile_for_model_demand(
-    profile: WarmFloorProfile, demand: float
-) -> WarmFloorProfile:
-    """Translate BT's predictive opening into relay duty, without a second model.
-
-    The existing thermal profile sizes the pulse. Lengthen it only when needed
-    to preserve the requested duty and the minimum legal pause together.
-    Zero and full demand are held by the phase machine, without forced probes.
-    """
-    if demand <= 0.0 or demand >= 1.0:
-        return replace(profile, intensity=demand)
-    on = max(profile.on_seconds, MIN_PHASE_SECONDS * demand / (1.0 - demand))
-    return replace(
-        profile,
-        on_seconds=on,
-        off_seconds=on * (1.0 - demand) / demand,
-        intensity=demand,
-    )
 
 
 def _clamp(value: float, lower: float, upper: float) -> float:
@@ -197,7 +177,6 @@ class WarmFloorState:
     phase: WarmFloorPhase = WarmFloorPhase.OFF
     started_monotonic: float | None = None
     recovered: bool = False
-    model_demand: float | None = None
 
 
 @dataclass(frozen=True)
@@ -219,7 +198,6 @@ class WarmFloorObservation:
     hold: bool = False
     normal_heating: bool = False
     reported_heating: bool | None = None
-    model_demand: float | None = None
 
 
 @dataclass(frozen=True)
@@ -250,10 +228,6 @@ def advance_warm_floor(
         observation.off_seconds,
     )
     valid = all(math.isfinite(value) for value in values)
-    demand = observation.model_demand
-    valid = valid and (
-        demand is None or (math.isfinite(demand) and 0.0 <= demand <= 1.0)
-    )
     if not valid or observation.blocked:
         # Repeated blocked cycles must not move the closing deadline forward.
         stopped = state
@@ -283,12 +257,7 @@ def advance_warm_floor(
             if observation.reported_heating is True
             else WarmFloorPhase.OFF
         )
-        state = WarmFloorState(
-            phase,
-            now,
-            observation.reported_heating is not None,
-            0.0 if demand is not None and phase is WarmFloorPhase.OFF else demand,
-        )
+        state = WarmFloorState(phase, now, observation.reported_heating is not None)
         remaining = (
             MIN_PHASE_SECONDS
             if state.recovered
@@ -298,7 +267,6 @@ def advance_warm_floor(
             state, phase is WarmFloorPhase.ON, remaining, "startup"
         )
 
-    started = state.started_monotonic
     duration = (
         observation.on_seconds
         if state.phase is WarmFloorPhase.ON
@@ -309,34 +277,14 @@ def advance_warm_floor(
     # minimum interval, rather than a whole newly calculated maintenance phase.
     if state.recovered:
         duration = MIN_PHASE_SECONDS
-    if demand is not None:
-        # A zero model command can stop a pulse early for residual heat.
-        # Full demand can end a pause early, but neither breaks minimum cycles.
-        stop = state.phase is WarmFloorPhase.ON and demand == 0.0
-        start = state.phase is WarmFloorPhase.OFF and (
-            demand == 1.0 or (demand > 0.0 and not state.model_demand)
-        )
-        if stop or start:
-            duration = MIN_PHASE_SECONDS
-        elif (state.phase is WarmFloorPhase.OFF and demand == 0.0) or (
-            state.phase is WarmFloorPhase.ON and demand == 1.0
-        ):
-            return WarmFloorDecision(
-                replace(state, model_demand=demand),
-                state.phase is WarmFloorPhase.ON,
-                None,
-                "maintenance",
-            )
-        if not start:
-            state = replace(state, model_demand=demand)
-    remaining = max(0.0, started + duration - now)
+    remaining = max(0.0, state.started_monotonic + duration - now)
     if remaining == 0.0:
         phase = (
             WarmFloorPhase.OFF
             if state.phase is WarmFloorPhase.ON
             else WarmFloorPhase.ON
         )
-        state = WarmFloorState(phase, now, model_demand=demand)
+        state = WarmFloorState(phase, now)
         remaining = max(
             MIN_PHASE_SECONDS,
             observation.on_seconds

@@ -124,36 +124,6 @@ No pause deadline overrides a safety block or forces a device to heat.
 
 ## Predictive timing
 
-When the selected BT calibration supplies a valid MPC or MPC v2 command,
-all four adaptive presets consume that same per-circuit predictive demand.
-Warm Floor does not run another optimiser, train another model, or substitute
-its trend projection for the model's decision. The existing BT model owns
-heat loss, stored emitter heat, disturbances and the installation's response.
-
-For Generic Thermostat circuits, Warm Floor translates the distributed model
-percentage to relay duty. Existing thermal estimates size the ON pulse; the
-OFF interval preserves the requested ratio while both phases remain at least
-four minutes. Newly positive demand ends an existing pause after its minimum
-interval, even above target. Zero demand ends an ON pulse after its minimum
-interval and then coasts without periodic probes. Full demand can continue
-without a forced pause or an ON ceiling. Actual device reports remain separate
-from planned phases; device hysteresis, minimum cycles and write limits still
-decide whether a request is applied.
-
-Native setpoint, offset and direct-valve channels retain BT's original model
-command. Warm Floor adds no minimum valve opening or offset/setpoint floor that
-could defeat predictive coasting. Presets do not multiply or override model
-demand. Custom retains its explicitly configured maintenance behavior.
-
-The status exposes `control_source`, `model_demand_percent` and decisions
-`model_heating` / `model_coasting`. A model-driven command does not publish a
-linear trend as a predicted room temperature: `forecast` is absent on this path.
-Below target, ordinary BT heating retains control. OFF, open contacts, HOLD,
-release, reachability and the outgoing safety hull retain priority.
-
-Without a usable predictive model command, the existing shared-estimate
-maintenance remains available; no additional model is created:
-
 All four adaptive presets may shorten an OFF deadline using BT's shared slow
 trend, while a positive short trend prevents early starts. The prediction never
 extends the ordinary pause or resets its start. Four minutes OFF remain mandatory.
