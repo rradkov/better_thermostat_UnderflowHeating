@@ -4,6 +4,8 @@ from dataclasses import replace
 
 import pytest
 
+from custom_components.better_thermostat.core.desired import Suppression
+from custom_components.better_thermostat.core.snapshot import HvacMode
 from custom_components.better_thermostat.core.warm_floor import (
     WarmFloorObservation,
     WarmFloorPhase,
@@ -186,3 +188,28 @@ def test_unusable_model_output_keeps_existing_fallback(hass, percent):
     )
     apply_warm_floor(host, trv.entity_id, snapshot, desired, 23, None)
     assert trv.warm_floor_status["model_demand_percent"] is None
+
+
+@pytest.mark.parametrize("block", ["off", "window", "door", "hold", "normal"])
+def test_full_model_request_preserves_upstream_commands(hass, block):
+    host, trv, snapshot, desired = host_and_snapshot(hass)
+    trv.calibration_balance = make_calibration_balance(
+        CalibrationMode.MPC_V2_CALIBRATION,
+        {"tau_room_min": 480, "D_hat_K_per_min": 0},
+        valve_percent=100,
+    )
+    if block == "off":
+        desired = replace(desired, hvac_mode=HvacMode.OFF)
+    elif block in ("window", "door"):
+        desired = replace(desired, suppression=Suppression(block))
+    else:
+        snapshot = replace(snapshot, room_temperature=None if block == "hold" else 22)
+    assert apply_warm_floor(host, trv.entity_id, snapshot, desired, 15, -2) == (15, -2)
+    assert trv.warm_floor_status["phase"] is None
+    assert trv.warm_floor_status["reason"] == (
+        "hold"
+        if block == "hold"
+        else "normal_heating"
+        if block == "normal"
+        else "blocked"
+    )
