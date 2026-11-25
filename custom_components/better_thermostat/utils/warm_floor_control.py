@@ -22,6 +22,7 @@ from ..core.warm_floor import (
     WarmFloorThermalInput,
     advance_warm_floor,
     compute_warm_floor_profile,
+    profile_for_model_demand,
 )
 from ..core.warm_floor_policy import (
     MAX_OFF_SECONDS,
@@ -192,7 +193,32 @@ def apply_warm_floor(
     policy_reason = "fixed"
     slow_slope = thermal.slow_slope_kelvin_per_min
     prediction = None
-    if settings["warm_floor_level"] != "custom":
+    model_demand = None
+    model_source = None
+    if (
+        settings["warm_floor_level"] != "custom"
+        and balance is not None
+        and balance["controller"] in ("mpc_calibration", "mpc_v2_calibration")
+        and math.isfinite(balance["valve_percent"])
+        and 0.0 <= balance["valve_percent"] <= 100.0
+        and host.kernel_state.control_mode.mode == ControlMode.OPTIMAL
+    ):
+        # Calibration has already run once for this cycle (and once per group).
+        # Consume its distributed command; never step or train another model.
+        model_demand = balance["valve_percent"] / 100.0
+        model_source = "bt_" + balance["controller"]
+        profile = profile_for_model_demand(profile, model_demand)
+        policy_reason = (
+            "suspended"
+            if blocked or hold
+            else "normal_heating"
+            if normal
+            else "model_heating"
+            if model_demand > 0.0
+            else "model_coasting"
+        )
+        trv.warm_floor_policy_state = WarmFloorPolicyState()
+    elif settings["warm_floor_level"] != "custom":
         if settings["warm_floor_level"] == "auto":
             profile = replace(
                 profile, off_seconds=min(MAX_OFF_SECONDS, profile.off_seconds)
@@ -254,6 +280,7 @@ def apply_warm_floor(
             hold,
             normal,
             feedback,
+            model_demand,
         ),
         trv.warm_floor_state,
     )
@@ -274,6 +301,10 @@ def apply_warm_floor(
         # no independent raw-report observation window to report here.
         "trend_observation_span_seconds": None,
         "trend_source": "bt_temperature_ema_1h",
+        "control_source": model_source or "bt_shared_thermal_estimates",
+        "model_demand_percent": model_demand * 100.0
+        if model_demand is not None
+        else None,
         "forecast": {
             key: value for key, value in asdict(prediction).items() if key != "profile"
         }
@@ -340,6 +371,11 @@ def apply_warm_floor(
                 )
                 * step
             )
+    elif model_demand is not None:
+        # Native setpoint, offset and valve channels already carry the same
+        # predictive command. A maintenance floor would defeat model coasting.
+        trv.warm_floor_status["phase"] = "model"
+        trv.warm_floor_status["remaining_seconds"] = None
     else:
         trv.warm_floor_status["phase"] = "sustaining"
         trv.warm_floor_status["remaining_seconds"] = None

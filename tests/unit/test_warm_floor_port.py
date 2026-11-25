@@ -288,7 +288,7 @@ def test_mpc_uses_available_thermal_estimates(hass, group, learned):
     apply_warm_floor(
         host, trv.entity_id, replace(snapshot, solar_intensity=1.0), desired, 15.0, None
     )
-    assert trv.calibration_balance["valve_percent"] > 0
+    assert trv.calibration_balance["valve_percent"] == 0
     thermal = trv.warm_floor_status["thermal_inputs"]
     assert isinstance(thermal, dict)
     assert thermal["solar_gain"] == (0.02 if learned else None)
