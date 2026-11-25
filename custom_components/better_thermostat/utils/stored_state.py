@@ -125,6 +125,8 @@ StoredFilterState = TypedDict(  # noqa: UP013
         "external_temp_ema": float | None,
         "temp_slope": float | None,
         "room_temperature_ema_recorded_at": float | None,
+        "room_temperature_ema_1h": float | None,
+        "room_temperature_ema_1h_observed_seconds": float | None,
     },
 )
 

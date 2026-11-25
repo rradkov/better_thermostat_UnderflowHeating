@@ -52,6 +52,8 @@ PLATEAU_ACCEPT_WINDOW = 120
 
 # Default time constant of the room-temperature EMA, in seconds
 ROOM_TEMPERATURE_EMA_TAU_S = 300.0
+ROOM_TEMPERATURE_EMA_1H_TAU_S = 3600.0
+ROOM_TEMPERATURE_EMA_1H_WARMUP_S = 1800.0
 
 
 def _update_room_temperature_ema(
@@ -102,16 +104,35 @@ def _update_room_temperature_ema(
     # BT's existing short EMA, matching the original Temperature EMA 1h.
     hour_ema = getattr(self, "room_temperature_ema_1h", None)
     started = getattr(self, "_room_temperature_ema_1h_started_monotonic", None)
+    restored_observed = getattr(
+        self, "_room_temperature_ema_1h_restore_observed_seconds", None
+    )
+    if restored_observed is not None:
+        self._room_temperature_ema_1h_restore_observed_seconds = None
+        # Rebase at the first live sample: HA's startup wait is not evidence
+        # either. Recheck the gap in case startup itself took a long time.
+        if (
+            prev_ts is not None
+            and 0.0 <= now_m - prev_ts <= ROOM_TEMPERATURE_EMA_1H_WARMUP_S
+        ):
+            started = now_m - restored_observed
+            self._room_temperature_ema_1h_started_monotonic = started
+        else:
+            hour_ema = None
     if hour_ema is None or prev_ts is None or started is None or now_m < started:
         self.room_temperature_ema_1h = ema
         self._room_temperature_ema_1h_started_monotonic = now_m
         self.temperature_slope_1h = None
     else:
-        alpha_hour = 1.0 - math.exp(-max(0.0, now_m - prev_ts) / 3600.0)
+        alpha_hour = 1.0 - math.exp(
+            -max(0.0, now_m - prev_ts) / ROOM_TEMPERATURE_EMA_1H_TAU_S
+        )
         hour_ema += alpha_hour * (ema - hour_ema)
         self.room_temperature_ema_1h = hour_ema
         self.temperature_slope_1h = (
-            (ema - hour_ema) / 60.0 if now_m - started >= 1800.0 else None
+            (ema - hour_ema) / 60.0
+            if now_m - started >= ROOM_TEMPERATURE_EMA_1H_WARMUP_S
+            else None
         )
     return float(ema)
 

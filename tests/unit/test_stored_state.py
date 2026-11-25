@@ -193,6 +193,8 @@ def _populated_state() -> RuntimeState:
             room_temperature_ema=20.7,
             temperature_slope=0.0021,
             room_temperature_ema_recorded_at=1700000016.0,
+            room_temperature_ema_1h=20.9,
+            room_temperature_ema_1h_observed_seconds=1800.0,
         ),
     )
 

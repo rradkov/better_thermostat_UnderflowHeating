@@ -58,6 +58,17 @@ async def test_skips_while_startup_running(bt):
         await BetterThermostat._async_update_ema_periodic(bt)
     ema.assert_not_called()
     bt.async_write_ha_state.assert_not_called()
+    bt.schedule_save_state.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_a_quiet_tick_still_checkpoints_filter_history(bt):
+    """Stable displayed temperatures cannot leave the restart checkpoint stale."""
+    bt._minute_tick_attributes = lambda: dict[str, object]()
+    with patch(_EMA, _filter_update(20.0)):
+        await BetterThermostat._async_update_ema_periodic(bt)
+    bt.async_write_ha_state.assert_not_called()
+    bt.schedule_save_state.assert_called_once_with()
 
 
 @pytest.mark.asyncio

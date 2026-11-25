@@ -295,6 +295,8 @@ class TestSerializeDeserializeRoundtrip:
             "external_temp_ema": 20.4,
             "temp_slope": 0.002,
             "room_temperature_ema_recorded_at": 1700000000.5,
+            "room_temperature_ema_1h": None,
+            "room_temperature_ema_1h_observed_seconds": None,
         }
         assert restored.filters == original.filters
 

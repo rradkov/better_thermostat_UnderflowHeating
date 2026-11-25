@@ -117,6 +117,7 @@ from .events.cooler import COOLING_MODES, trigger_cooler_change
 from .events.door import door_queue, trigger_door_change
 from .events.temperature import (
     EXTERNAL_TEMPERATURE_WRITE_TIMEOUT_S,
+    ROOM_TEMPERATURE_EMA_1H_WARMUP_S,
     ROOM_TEMPERATURE_EMA_TAU_S,
     _update_room_temperature_ema,
     temperature_filter_lock,
@@ -1582,6 +1583,7 @@ class BetterThermostat(ClimateEntity, RestoresLastAvailableState):
         self.room_temperature_ema = None
         self._room_temperature_ema_monotonic: float | None = None
         self._room_temperature_ema_1h_started_monotonic: float | None = None
+        self._room_temperature_ema_1h_restore_observed_seconds: float | None = None
         self.room_temperature_filtered = None
         # Unified state persistence (replaces per-controller stores). It holds
         # the stored state, and the entity saves through it, once
@@ -4310,6 +4312,23 @@ class BetterThermostat(ClimateEntity, RestoresLastAvailableState):
             and age_seconds <= self.room_temperature_ema_tau_seconds
         ):
             self.temperature_slope = filters.temperature_slope
+        # Resume only a recent, valid slow filter. Downtime cannot complete
+        # its warm-up, and host reboots cannot preserve monotonic timestamps.
+        # Missing metadata in older stores simply retains cold-start behavior.
+        observed = filters.room_temperature_ema_1h_observed_seconds
+        raw_age = self.clock.utcnow().timestamp() - recorded_at
+        if (
+            filters.room_temperature_ema_1h is not None
+            and observed is not None
+            and math.isfinite(filters.room_temperature_ema_1h)
+            and math.isfinite(observed)
+            and 0.0 <= observed <= ROOM_TEMPERATURE_EMA_1H_WARMUP_S
+            and 0.0 <= raw_age <= ROOM_TEMPERATURE_EMA_1H_WARMUP_S
+        ):
+            self.room_temperature_ema_1h = filters.room_temperature_ema_1h
+            self._room_temperature_ema_1h_restore_observed_seconds = observed
+            # The first live filter update derives the current slope, using
+            # the existing EMA math rather than restoring a stale derivative.
 
     def _record_runtime_to_state(self) -> None:
         """Push the entity-held thermal stats and filters into the StateManager."""
@@ -4319,6 +4338,18 @@ class BetterThermostat(ClimateEntity, RestoresLastAvailableState):
             )
         )
         ema_monotonic = self._room_temperature_ema_monotonic
+        hour_started = self._room_temperature_ema_1h_started_monotonic
+        observed = getattr(
+            self, "_room_temperature_ema_1h_restore_observed_seconds", None
+        )
+        if observed is None:
+            observed = (
+                min(ROOM_TEMPERATURE_EMA_1H_WARMUP_S, ema_monotonic - hour_started)
+                if ema_monotonic is not None
+                and hour_started is not None
+                and ema_monotonic >= hour_started
+                else None
+            )
         self.state_mgr.record_filters(
             FilterState(
                 room_temperature_ema=self.room_temperature_ema,
@@ -4327,6 +4358,8 @@ class BetterThermostat(ClimateEntity, RestoresLastAvailableState):
                 if ema_monotonic is None
                 else self.clock.utcnow().timestamp()
                 - (self.clock.monotonic() - ema_monotonic),
+                room_temperature_ema_1h=self.room_temperature_ema_1h,
+                room_temperature_ema_1h_observed_seconds=observed,
             )
         )
 
@@ -6182,6 +6215,9 @@ class BetterThermostat(ClimateEntity, RestoresLastAvailableState):
                     )
 
             self._slope_periodic_last_ts = now_ts
+            # Checkpoint the shared filters even when rounded entity values
+            # do not change. The existing Store coalesces and flushes saves.
+            self.schedule_save_state()
 
             _LOGGER.debug(
                 "better_thermostat %s: periodic EMA result=%.3f",

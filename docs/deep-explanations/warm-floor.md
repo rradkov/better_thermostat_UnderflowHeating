@@ -124,6 +124,21 @@ No pause deadline overrides a safety block or forces a device to heat.
 
 ## Predictive timing
 
+BT checkpoints its shared one-hour EMA and completed warm-up duration through
+the existing per-entry StateManager. An ordinary restart resumes both filters;
+the first live reading derives the slow slope again, without a new 30-minute
+wait if the saved filter was mature. Partial warm-up also resumes. Neither
+downtime nor HA's startup wait counts as observed filter history, and persisted
+durations are rebased onto the new host's monotonic clock after a reboot.
+
+Missing or malformed metadata, future wall-clock stamps, a gap exceeding
+30 minutes, or recovery from a failed sensor starts the slow filter afresh.
+The gap is checked again at the first live sample if HA startup takes longer.
+The minute tick checkpoints even when rounded entity values stay unchanged;
+normal Store coalescing and shutdown flushing still handle the write.
+Existing stores without this metadata need one initial warm-up after upgrading.
+There is no separate Warm Floor history, and maintenance policy is unchanged.
+
 All four adaptive presets may shorten an OFF deadline using BT's shared slow
 trend, while a positive short trend prevents early starts. The prediction never
 extends the ordinary pause or resets its start. Four minutes OFF remain mandatory.

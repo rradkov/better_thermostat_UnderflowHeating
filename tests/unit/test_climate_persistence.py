@@ -30,6 +30,8 @@ def test_record_runtime_pushes_thermal_and_filters():
     bt.temperature_slope = 0.0012
     bt.clock = FakeClock(now_value=_NOW, monotonic_value=1000.0)
     bt._room_temperature_ema_monotonic = 960.0
+    bt.room_temperature_ema_1h = None
+    bt._room_temperature_ema_1h_started_monotonic = None
 
     BetterThermostat._record_runtime_to_state(bt)
 
@@ -55,6 +57,8 @@ def test_a_filter_never_updated_is_saved_without_a_time():
     bt.temperature_slope = None
     bt.clock = FakeClock(now_value=_NOW, monotonic_value=1000.0)
     bt._room_temperature_ema_monotonic = None
+    bt.room_temperature_ema_1h = None
+    bt._room_temperature_ema_1h_started_monotonic = None
 
     BetterThermostat._record_runtime_to_state(bt)
 

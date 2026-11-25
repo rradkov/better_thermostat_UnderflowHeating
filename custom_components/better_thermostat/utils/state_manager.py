@@ -25,8 +25,10 @@ Usage in climate.py
 Schema migration
 ----------------
 When ``load()`` reads a store file without a ``"version"`` key it applies
-``_migrate_v0_to_v1`` which fills in schema defaults.  Future schema
-changes bump ``CURRENT_VERSION`` and add a new migration function.
+``_migrate_v0_to_v1`` which fills in schema defaults. Changes that require
+data conversion bump ``CURRENT_VERSION`` and add a migration function.
+Additive filter metadata defaults to None when absent; older readers ignore
+the extra keys, keeping the existing store usable across a downgrade.
 
 One-time data migration from the four legacy Store files is handled by
 ``migrate_v0_stores`` (see ``utils/migrate_v0_stores.py``).
@@ -199,11 +201,18 @@ class FilterState:
     room_temperature_ema_recorded_at : float | None
         Wall-clock time the EMA was last updated at, in seconds since the
         epoch. A restart reads the downtime off it.
+    room_temperature_ema_1h : float | None
+        Shared one-hour EMA, updated at the same time as the short EMA.
+    room_temperature_ema_1h_observed_seconds : float | None
+        Completed warm-up time at that update, capped at the warm-up interval.
+        This is a duration, never a persisted monotonic-clock timestamp.
     """
 
     room_temperature_ema: float | None = None
     temperature_slope: float | None = None
     room_temperature_ema_recorded_at: float | None = None
+    room_temperature_ema_1h: float | None = None
+    room_temperature_ema_1h_observed_seconds: float | None = None
 
 
 @dataclass
@@ -413,6 +422,8 @@ def write_filters(filters: FilterState) -> StoredFilterState:
         "external_temp_ema": filters.room_temperature_ema,
         "temp_slope": filters.temperature_slope,
         "room_temperature_ema_recorded_at": filters.room_temperature_ema_recorded_at,
+        "room_temperature_ema_1h": filters.room_temperature_ema_1h,
+        "room_temperature_ema_1h_observed_seconds": filters.room_temperature_ema_1h_observed_seconds,
     }
 
 
@@ -1267,6 +1278,12 @@ def _deserialize(
         room_temperature_ema_recorded_at=_stored_optional_number(
             filters_raw, "filters", "room_temperature_ema_recorded_at"
         ),
+        room_temperature_ema_1h=_stored_optional_number(
+            filters_raw, "filters", "room_temperature_ema_1h"
+        ),
+        room_temperature_ema_1h_observed_seconds=_stored_optional_number(
+            filters_raw, "filters", "room_temperature_ema_1h_observed_seconds"
+        ),
     )
 
     # A legacy "presets" section is ignored: preset temperatures are UI
@@ -1753,6 +1770,10 @@ class StateManager:
             temperature_slope=finite_or_none(filters.temperature_slope),
             room_temperature_ema_recorded_at=finite_or_none(
                 filters.room_temperature_ema_recorded_at
+            ),
+            room_temperature_ema_1h=finite_or_none(filters.room_temperature_ema_1h),
+            room_temperature_ema_1h_observed_seconds=finite_or_none(
+                filters.room_temperature_ema_1h_observed_seconds
             ),
         )
         self._dirty = True
